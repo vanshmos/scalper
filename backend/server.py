@@ -1,89 +1,100 @@
-from fastapi import FastAPI, APIRouter
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, APIRouter, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import asyncio
 import logging
-from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
-from datetime import datetime, timezone
+from contextlib import asynccontextmanager
 
+from engine import Engine
+from telegram_bot import TelegramNotifier
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+# Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("server")
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Env
+mongo_url = os.environ.get('MONGO_URL', "mongodb://localhost:27017")
+db_name = os.environ.get('DB_NAME', "scalper_db")
 
-# Create the main app without a prefix
-app = FastAPI()
+# Components
+telegram = TelegramNotifier()
+engine = Engine(telegram_bot=telegram)
 
-# Create a router with the /api prefix
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    logger.info("Starting Engine...")
+    asyncio.create_task(engine.start())
+    yield
+    # Shutdown
+    engine.running = False
+    logger.info("Engine Stopped")
+
+app = FastAPI(lifespan=lifespan)
 api_router = APIRouter(prefix="/api")
 
-
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
-
-# Include the router in the main app
-app.include_router(api_router)
-
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# WS Manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except:
+                self.disconnect(connection)
+
+manager = ConnectionManager()
+
+# Background Broadcaster
+async def broadcast_state():
+    while True:
+        await asyncio.sleep(0.5) # 2Hz Update
+        state = {
+            "price": engine.state.price,
+            "regime": engine.state.regime,
+            "gates_passed": engine.state.gates_passed,
+            "indicators": engine.state.indicators,
+            "signal_status": engine.signal_state.status,
+            "forming_since": engine.signal_state.forming_since,
+            "current_signal": engine.signal_state.current_signal,
+            "warmup_progress": engine.state.warmup_progress,
+            "is_warmed_up": engine.state.is_warmed_up
+        }
+        await manager.broadcast(state)
+
+@app.on_event("startup")
+async def start_broadcaster():
+    asyncio.create_task(broadcast_state())
+
+@api_router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text() # Keep alive
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+@api_router.get("/health")
+async def health():
+    return {"status": "ok", "warmup": engine.state.warmup_progress}
+
+app.include_router(api_router)
