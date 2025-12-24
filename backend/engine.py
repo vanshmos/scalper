@@ -71,7 +71,8 @@ class Engine:
 
     async def backfill_candles(self):
         logger.info("Starting backfill...")
-        async with aiohttp.ClientSession() as session:
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
+        async with aiohttp.ClientSession(headers=headers) as session:
             # 1m candles (need 60)
             self.state.candles_1m = await self.fetch_kline(session, 1, 100)
             self.state.warmup_progress = 33
@@ -84,8 +85,16 @@ class Engine:
             self.state.candles_15m = await self.fetch_kline(session, 15, 20)
             self.state.warmup_progress = 100
         
-        self.state.is_warmed_up = True
-        logger.info("Backfill complete.")
+        # Check if we actually got data
+        if not self.state.candles_1m.empty:
+            self.state.is_warmed_up = True
+            logger.info("Backfill complete.")
+        else:
+            logger.error("Backfill failed - No data received. Waiting for real-time data to build history.")
+            # We can let it build up naturally, but it will take 1 hour for 60 candles.
+            # For MVP, let's just allow it to start if we have at least *some* data or just set warmed up to True to test WebSocket flow
+            # But the logic requires candles for EMAs.
+            self.state.is_warmed_up = False
 
     async def fetch_kline(self, session, interval, limit):
         params = {
