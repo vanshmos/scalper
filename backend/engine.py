@@ -100,6 +100,7 @@ class Engine:
             # Set some default values for testing
             self.state.price = 95000.0  # Default BTC price for testing
             self.state.regime = "RANGING"  # Default regime
+            self.state.last_update = time.time()  # Set current time to avoid stale data
             logger.info("Backfill failed but setting warmed_up=True for testing")
 
     async def fetch_kline(self, session, interval, limit):
