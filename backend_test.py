@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 
 class CryptoDashboardTester:
-    def __init__(self, base_url="http://localhost:8001"):
+    def __init__(self, base_url="https://dae3b1a8-0a33-4180-b590-545f41a018d4.preview.emergentagent.com"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
