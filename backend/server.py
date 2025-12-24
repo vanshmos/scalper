@@ -28,7 +28,6 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(engine.start())
     # Start broadcaster
     asyncio.create_task(broadcast_state())
-    logger.info("Started broadcaster")
     yield
     # Shutdown
     engine.running = False
@@ -73,18 +72,17 @@ async def broadcast_state():
         state = {
             "price": engine.state.price,
             "regime": engine.state.regime,
+            "trends": engine.state.trends, # Added trends to broadcast
             "gates_passed": engine.state.gates_passed,
             "indicators": engine.state.indicators,
             "signal_status": engine.signal_state.status,
             "forming_since": engine.signal_state.forming_since,
             "current_signal": engine.signal_state.current_signal,
             "warmup_progress": engine.state.warmup_progress,
-            "is_warmed_up": engine.state.is_warmed_up
+            "is_warmed_up": engine.state.is_warmed_up,
+            "backfill_error": engine.state.backfill_error
         }
-        logger.info(f"Broadcasting state to {len(manager.active_connections)} connections: price={state['price']}, regime={state['regime']}")
         await manager.broadcast(state)
-
-# Removed - broadcaster now started in lifespan
 
 @api_router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

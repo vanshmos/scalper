@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # Constants
 SYMBOL = "BTCUSDT"
 BYBIT_WS_URL = "wss://stream.bybit.com/v5/public/linear"
-BYBIT_REST_URL = "https://api.bytick.com/v5/market/kline"
+BYBIT_REST_URL = "https://api.bybit.com/v5/market/kline"
 
 class MarketState:
     def __init__(self):
@@ -26,6 +26,7 @@ class MarketState:
         self.candles_5m = pd.DataFrame()
         self.candles_15m = pd.DataFrame()
         self.regime = "UNCLEAR"
+        self.trends = {"1m": "NEUTRAL", "5m": "NEUTRAL", "15m": "NEUTRAL"}
         self.gates_passed = False
         self.indicators = {
             "obi": 0.0,
@@ -38,6 +39,7 @@ class MarketState:
         self.is_warmed_up = False
         self.warmup_progress = 0
         self.last_update = 0
+        self.backfill_error = False
 
 class SignalState:
     def __init__(self):
@@ -60,8 +62,8 @@ class Engine:
 
     async def start(self):
         self.running = True
-        # Start Backfill
-        await self.backfill_candles()
+        # Start Backfill with retry
+        asyncio.create_task(self.backfill_loop())
         
         # Start WS Loop
         asyncio.create_task(self.ws_loop())
@@ -69,41 +71,51 @@ class Engine:
         # Start Processing Loop (1s interval)
         asyncio.create_task(self.processing_loop())
 
+    async def backfill_loop(self):
+        retry_delay = 5
+        while self.running and not self.state.is_warmed_up:
+            try:
+                await self.backfill_candles()
+                if self.state.is_warmed_up:
+                    self.state.backfill_error = False
+                    break
+            except Exception as e:
+                logger.error(f"Backfill loop error: {e}")
+                self.state.backfill_error = True
+            
+            logger.info(f"Retrying backfill in {retry_delay}s...")
+            await asyncio.sleep(retry_delay)
+            retry_delay = min(retry_delay * 2, 60) # Cap at 60s
+
     async def backfill_candles(self):
         logger.info("Starting backfill...")
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
+        # Try multiple endpoints or mirrors if possible, but here we just retry standard
+        headers = {"User-Agent": "Mozilla/5.0"}
         async with aiohttp.ClientSession(headers=headers) as session:
             # 1m candles (need 60)
-            self.state.candles_1m = await self.fetch_kline(session, 1, 100)
+            c1m = await self.fetch_kline(session, 1, 100)
+            if c1m.empty: raise Exception("Failed to fetch 1m candles")
+            self.state.candles_1m = c1m
             self.state.warmup_progress = 33
             
             # 5m candles (need 20)
-            self.state.candles_5m = await self.fetch_kline(session, 5, 50)
+            c5m = await self.fetch_kline(session, 5, 50)
+            if c5m.empty: raise Exception("Failed to fetch 5m candles")
+            self.state.candles_5m = c5m
             self.state.warmup_progress = 66
             
             # 15m candles (need 8)
-            self.state.candles_15m = await self.fetch_kline(session, 15, 20)
+            c15m = await self.fetch_kline(session, 15, 20)
+            if c15m.empty: raise Exception("Failed to fetch 15m candles")
+            self.state.candles_15m = c15m
             self.state.warmup_progress = 100
         
-        # Check if we actually got data
-        if not self.state.candles_1m.empty:
-            self.state.is_warmed_up = True
-            logger.info("Backfill complete.")
-        else:
-            logger.error("Backfill failed - No data received. Waiting for real-time data to build history.")
-            # We can let it build up naturally, but it will take 1 hour for 60 candles.
-            # For MVP, let's just allow it to start if we have at least *some* data or just set warmed up to True to test WebSocket flow
-            # But the logic requires candles for EMAs.
-            # TESTING: Set warmed up to True to test WebSocket flow even without backfill data
-            self.state.is_warmed_up = True
-            self.state.warmup_progress = 100
-            # Set some default values for testing
-            self.state.price = 95000.0  # Default BTC price for testing
-            self.state.regime = "RANGING"  # Default regime
-            self.state.last_update = time.time()  # Set current time to avoid stale data
-            logger.info("Backfill failed but setting warmed_up=True for testing")
+        self.state.is_warmed_up = True
+        logger.info("Backfill complete.")
 
     async def fetch_kline(self, session, interval, limit):
+        # Using bybit.com. If blocked, the loop will retry. 
+        # In a real deployed env, might need a proxy or different mirror.
         params = {
             "category": "linear",
             "symbol": SYMBOL,
@@ -111,17 +123,23 @@ class Engine:
             "limit": limit
         }
         try:
-            async with session.get(BYBIT_REST_URL, params=params) as resp:
+            async with session.get(BYBIT_REST_URL, params=params, timeout=5) as resp:
+                if resp.status != 200:
+                    logger.warning(f"Backfill HTTP {resp.status}")
+                    return pd.DataFrame()
+                    
                 data = await resp.json()
                 if data['retCode'] == 0:
                     df = pd.DataFrame(data['result']['list'], columns=['startTime', 'open', 'high', 'low', 'close', 'volume', 'turnover'])
                     df = df.astype(float)
                     df['startTime'] = pd.to_datetime(df['startTime'], unit='ms')
                     df = df.sort_values('startTime').reset_index(drop=True)
-                    # Calculate EMAs here for initial state
+                    # Calculate EMAs
                     df['ema20'] = df['close'].ewm(span=20, adjust=False).mean()
                     df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
+                    
                     if interval == 5:
+                        # Ensure we have enough data for ATR (14 periods)
                         df['tr'] = np.maximum(
                             df['high'] - df['low'],
                             np.maximum(
@@ -132,7 +150,7 @@ class Engine:
                         df['atr'] = df['tr'].rolling(window=14).mean()
                     return df
         except Exception as e:
-            logger.error(f"Backfill error: {e}")
+            logger.error(f"Fetch kline error: {e}")
         return pd.DataFrame()
 
     async def ws_loop(self):
@@ -142,7 +160,6 @@ class Engine:
                     self.ws_connected = True
                     logger.info("Connected to Bybit WS")
                     
-                    # Subscribe
                     await websocket.send(json.dumps({
                         "op": "subscribe",
                         "args": [
@@ -159,7 +176,7 @@ class Engine:
             except Exception as e:
                 self.ws_connected = False
                 logger.error(f"WS Error: {e}")
-                await asyncio.sleep(5)  # Backoff
+                await asyncio.sleep(5)
 
     def handle_ws_message(self, data):
         topic = data.get('topic', '')
@@ -167,7 +184,6 @@ class Engine:
         self.state.last_update = ts
 
         if 'orderbook' in topic:
-            # Snapshot or Delta
             type_ = data.get('type')
             if type_ == 'snapshot':
                 self.state.orderbook = {
@@ -175,18 +191,8 @@ class Engine:
                     "asks": [[float(x[0]), float(x[1])] for x in data['data']['a']]
                 }
             elif type_ == 'delta':
-                # Simple overwrite for MVP - usually need robust update logic but snapshot comes often enough or we can re-sub
-                # Actually, standard delta handling is complex. For MVP, we'll rely on periodic snapshots if possible, 
-                # but Bybit sends delta. To avoid complexity of local orderbook management, 
-                # we'll approximate OBI from the top levels provided in delta updates or wait for logic that just uses latest best bid/ask from tickers
-                # Optimization: For OBI, we really need the full book. 
-                # Let's just update the specific levels if possible, or request snapshot periodically?
-                # For this specific task, I'll implement a simplified update: 
-                # update the levels in our local book.
                 for b in data['data']['b']:
                     price, size = float(b[0]), float(b[1])
-                    # Update or remove
-                    # This is O(N) which is slow for Python list, but N=50 is small.
                     found = False
                     for i, existing in enumerate(self.state.orderbook['bids']):
                         if existing[0] == price:
@@ -214,7 +220,7 @@ class Engine:
                             break
                     if not found and size > 0:
                         self.state.orderbook['asks'].append([price, size])
-                        self.state.orderbook['asks'].sort(key=lambda x: x[0]) # Ascending for asks
+                        self.state.orderbook['asks'].sort(key=lambda x: x[0])
                         self.state.orderbook['asks'] = self.state.orderbook['asks'][:50]
 
             self.calculate_obi()
@@ -223,24 +229,16 @@ class Engine:
             for t in data['data']:
                 price = float(t['p'])
                 size = float(t['v'])
-                side = t['S'] # Buy/Sell
+                side = t['S']
                 self.state.price = price
                 self.state.trades.append({'price': price, 'size': size, 'side': side, 'time': ts})
                 self.update_candle(price, size, ts)
 
-        elif 'tickers' in topic:
-            if 'data' in data:
-                # Funding rate or mark price if needed
-                pass
-
     def update_candle(self, price, size, ts):
-        # Current minute timestamp
         current_min = int(ts // 60) * 60
         
         if self.current_1m_candle is None or self.current_1m_candle['startTime'] != current_min:
-            # New candle started
             if self.current_1m_candle:
-                # Finalize previous candle
                 self.finalize_candle(self.current_1m_candle)
             
             self.current_1m_candle = {
@@ -252,7 +250,6 @@ class Engine:
                 'volume': size
             }
         else:
-            # Update current
             c = self.current_1m_candle
             c['high'] = max(c['high'], price)
             c['low'] = min(c['low'], price)
@@ -260,20 +257,16 @@ class Engine:
             c['volume'] += size
 
     def finalize_candle(self, candle):
-        # Convert to DF format and append
         row = pd.DataFrame([candle])
         row['startTime'] = pd.to_datetime(row['startTime'], unit='s')
         
-        # Recalc indicators on entire series (efficient enough for small DF)
         self.state.candles_1m = pd.concat([self.state.candles_1m, row]).tail(100)
         self.state.candles_1m['ema20'] = self.state.candles_1m['close'].ewm(span=20, adjust=False).mean()
         self.state.candles_1m['ema50'] = self.state.candles_1m['close'].ewm(span=50, adjust=False).mean()
 
-        # Update 5m and 15m if needed
         self.resample_candles()
 
     def resample_candles(self):
-        # Simple resampling from 1m
         if len(self.state.candles_1m) > 0:
             df = self.state.candles_1m.set_index('startTime')
             
@@ -283,7 +276,6 @@ class Engine:
             }).dropna()
             c5['ema20'] = c5['close'].ewm(span=20, adjust=False).mean()
             c5['ema50'] = c5['close'].ewm(span=50, adjust=False).mean()
-            # ATR
             c5['tr'] = np.maximum(
                 c5['high'] - c5['low'],
                 np.maximum(
@@ -306,7 +298,6 @@ class Engine:
         if not self.state.orderbook['bids'] or not self.state.orderbook['asks']:
             return
         
-        # Top 10 levels
         bids = self.state.orderbook['bids'][:10]
         asks = self.state.orderbook['asks'][:10]
         
@@ -315,46 +306,36 @@ class Engine:
         total = bid_vol + ask_vol
         
         raw_obi = (bid_vol - ask_vol) / total if total > 0 else 0
-        # Smoothing 0.3
         self.state.indicators['obi'] = (0.3 * raw_obi) + (0.7 * self.state.indicators.get('obi', 0))
 
         # Gate Checks
         best_bid = self.state.orderbook['bids'][0][0]
         best_ask = self.state.orderbook['asks'][0][0]
-        spread_pct = (best_ask - best_bid) / best_bid * 10000 # bps
-        self.state.indicators['spread'] = spread_pct
+        # Spread in bps: (Ask - Bid) / Bid * 10000
+        spread_bps = (best_ask - best_bid) / best_bid * 10000 
+        self.state.indicators['spread'] = spread_bps
         
-        # Depth check (Top of book - assume top 10 is "top of book" depth? 
-        # Requirement says "Top of book depth above 250000 USD". 
-        # Usually implies top level or top X. I'll sum value of top 10 levels.)
         bid_val = sum(b[0] * b[1] for b in bids)
         ask_val = sum(a[0] * a[1] for a in asks)
-        min_depth = min(bid_val, ask_val) # Conservative
+        min_depth = min(bid_val, ask_val)
         self.state.indicators['depth'] = min_depth
 
     def calculate_cvd(self):
-        # CVD 1m and 5m
         now = time.time()
         trades_list = list(self.state.trades)
         
+        # 1m
         buy_vol_1m = sum(t['size'] for t in trades_list if t['side'] == 'Buy' and t['time'] > now - 60)
         sell_vol_1m = sum(t['size'] for t in trades_list if t['side'] == 'Sell' and t['time'] > now - 60)
-        cvd_1m = buy_vol_1m - sell_vol_1m
-        
-        # Normalize CVD? Requirement just says "CVD 5m above 0.15". 
-        # 0.15 is likely relative or normalized, as raw volume is huge (BTC). 
-        # Or maybe it means 0.15 *Ratio*? "CVD is buy volume minus sell volume".
-        # If the requirement says "above 0.15", it implies a ratio (delta / total) or specific normalization.
-        # Assuming Ratio: (Buy - Sell) / (Buy + Sell). Range -1 to 1.
         total_1m = buy_vol_1m + sell_vol_1m
         ratio_1m = (buy_vol_1m - sell_vol_1m) / total_1m if total_1m > 0 else 0
         
+        # 5m
         buy_vol_5m = sum(t['size'] for t in trades_list if t['side'] == 'Buy' and t['time'] > now - 300)
         sell_vol_5m = sum(t['size'] for t in trades_list if t['side'] == 'Sell' and t['time'] > now - 300)
         total_5m = buy_vol_5m + sell_vol_5m
         ratio_5m = (buy_vol_5m - sell_vol_5m) / total_5m if total_5m > 0 else 0
 
-        # Smooth
         self.state.indicators['cvd_1m'] = (0.3 * ratio_1m) + (0.7 * self.state.indicators.get('cvd_1m', 0))
         self.state.indicators['cvd_5m'] = (0.3 * ratio_5m) + (0.7 * self.state.indicators.get('cvd_5m', 0))
 
@@ -362,10 +343,10 @@ class Engine:
         while self.running:
             await asyncio.sleep(1)
             
+            # If not warmed up, we can't do indicators or regime properly
             if not self.state.is_warmed_up:
                 continue
                 
-            # Stale check
             if time.time() - self.state.last_update > 10:
                 logger.warning("Data stale")
                 self.state.regime = "UNCLEAR"
@@ -377,28 +358,38 @@ class Engine:
             await self.manage_signals()
 
     def determine_regime(self):
-        # 5m and 15m alignment
         if len(self.state.candles_5m) < 2 or len(self.state.candles_15m) < 2:
             return
 
         c5 = self.state.candles_5m.iloc[-1]
         c15 = self.state.candles_15m.iloc[-1]
         
-        # Calculate slopes (simple diff from prev)
         slope_5 = c5['ema20'] - self.state.candles_5m.iloc[-2]['ema20']
         slope_15 = c15['ema20'] - self.state.candles_15m.iloc[-2]['ema20']
 
-        bull = (c5['ema20'] > c5['ema50']) and (slope_5 > 0) and \
-               (c15['ema20'] > c15['ema50']) and (slope_15 > 0)
-               
-        bear = (c5['ema20'] < c5['ema50']) and (slope_5 < 0) and \
-               (c15['ema20'] < c15['ema50']) and (slope_15 < 0)
+        # Determine Trends for frontend
+        self.state.trends["5m"] = "BULL" if (c5['ema20'] > c5['ema50'] and slope_5 > 0) else "BEAR" if (c5['ema20'] < c5['ema50'] and slope_5 < 0) else "NEUTRAL"
+        self.state.trends["15m"] = "BULL" if (c15['ema20'] > c15['ema50'] and slope_15 > 0) else "BEAR" if (c15['ema20'] < c15['ema50'] and slope_15 < 0) else "NEUTRAL"
+        
+        # 1m Trend (for pullback check)
+        if not self.state.candles_1m.empty:
+            c1 = self.state.candles_1m.iloc[-1]
+            slope_1 = c1['ema20'] - self.state.candles_1m.iloc[-2]['ema20'] if len(self.state.candles_1m) > 1 else 0
+            self.state.trends["1m"] = "BULL" if (c1['ema20'] > c1['ema50'] and slope_1 > 0) else "BEAR" if (c1['ema20'] < c1['ema50'] and slope_1 < 0) else "NEUTRAL"
 
-        # Chaotic Check
+        bull = self.state.trends["5m"] == "BULL" and self.state.trends["15m"] == "BULL"
+        bear = self.state.trends["5m"] == "BEAR" and self.state.trends["15m"] == "BEAR"
+
         atr = c5['atr']
-        # Baseline ATR? Rolling mean of ATR? Requirement: "ATR above 2x rolling baseline"
-        # We need historical ATR. 
-        atr_baseline = self.state.candles_5m['atr'].rolling(window=20).mean().iloc[-1]
+        if pd.isna(atr): atr = 0
+        
+        # Rolling baseline 20 periods
+        if len(self.state.candles_5m) >= 20:
+             atr_baseline = self.state.candles_5m['atr'].rolling(window=20).mean().iloc[-1]
+             if pd.isna(atr_baseline): atr_baseline = atr
+        else:
+             atr_baseline = atr
+
         is_chaotic = (atr > 2 * atr_baseline) or (self.state.indicators['spread'] > 5)
 
         if is_chaotic:
@@ -418,54 +409,41 @@ class Engine:
     async def manage_signals(self):
         now = time.time()
         
-        # Expire Active
         if self.signal_state.status == "ACTIVE":
             if now > self.signal_state.active_until:
                 self.signal_state.status = "IDLE"
                 self.signal_state.cooldown_until = now + 600
                 self.signal_state.current_signal = None
-            return # No new signals while active
+            return 
 
-        # Cooldown
         if now < self.signal_state.cooldown_until:
             return
 
-        # Check conditions
         if not self.state.gates_passed or "TRENDING" not in self.state.regime:
             self.reset_forming()
             return
 
-        # Trend Continuation Logic
         is_long = self.state.regime == "TRENDING_BULL"
         
-        # Structure Alignment
-        # Already checked in Regime? Requirement: "Structure aligned on 5m and 15m same direction"
-        # Yes, implied by TRENDING regime definition provided.
-        
-        # CVD Strength
         cvd_ok = (self.state.indicators['cvd_5m'] > 0.15) if is_long else (self.state.indicators['cvd_5m'] < -0.15)
         
-        # Pullback Quality: Price within 0.3% of EMA20 on 1m
         if len(self.state.candles_1m) < 1: return
         last_price = self.state.price
         ema20_1m = self.state.candles_1m.iloc[-1]['ema20']
         dist_pct = abs(last_price - ema20_1m) / ema20_1m * 100
         pullback_ok = dist_pct < 0.3
         
-        # OBI Support
         obi_ok = (self.state.indicators['obi'] > 0.12) if is_long else (self.state.indicators['obi'] < -0.12)
         
-        # Price not broken EMA50
         ema50_1m = self.state.candles_1m.iloc[-1]['ema50']
         structure_hold = (last_price > ema50_1m) if is_long else (last_price < ema50_1m)
 
         if cvd_ok and pullback_ok and obi_ok and structure_hold:
-            # Score
-            score = 30 # Structure (implied)
+            score = 30 
             score += 25 if cvd_ok else 0
             score += 20 if pullback_ok else 0
             score += 20 if obi_ok else 0
-            score += 5 # Funding context (skipped for MVP/Default)
+            score += 5
             
             if score > 70:
                 if self.signal_state.status == "IDLE":
@@ -488,9 +466,11 @@ class Engine:
     async def activate_signal(self, is_long, score):
         self.signal_state.status = "ACTIVE"
         now = time.time()
-        self.signal_state.active_until = now + 300 # 5 mins
+        self.signal_state.active_until = now + 300 
         
         atr = self.state.candles_5m.iloc[-1]['atr']
+        if pd.isna(atr) or atr == 0: atr = 100 # Fallback safety
+        
         entry = self.state.price
         
         sl_dist = 1.5 * atr
@@ -528,4 +508,3 @@ class Engine:
         
         if self.telegram:
             await self.telegram.send_signal(signal)
-

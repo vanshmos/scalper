@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { SignalCard } from "./SignalCard";
-import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw } from "lucide-react";
+import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle } from "lucide-react";
 
 const WS_URL = process.env.REACT_APP_BACKEND_URL.replace('http', 'ws') + '/api/ws';
 
@@ -38,7 +38,7 @@ export default function Dashboard() {
         </div>
     );
 
-    const { price, regime, gates_passed, indicators, signal_status, current_signal, warmup_progress, is_warmed_up } = data;
+    const { price, regime, trends, gates_passed, indicators, signal_status, current_signal, warmup_progress, is_warmed_up, backfill_error } = data;
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-6 font-mono">
@@ -81,10 +81,11 @@ export default function Dashboard() {
                          {!is_warmed_up ? (
                              <div className="space-y-2">
                                  <div className="flex justify-between text-xs text-slate-400">
-                                     <span>Warmup Progress</span>
+                                     <span>Warmup Progress {backfill_error && "(Retrying...)"}</span>
                                      <span>{warmup_progress}%</span>
                                  </div>
-                                 <Progress value={warmup_progress} className="h-2 bg-slate-800" indicatorClassName="bg-blue-500" data-testid="warmup-progress" />
+                                 <Progress value={warmup_progress} className="h-2 bg-slate-800" indicatorClassName={backfill_error ? "bg-amber-500" : "bg-blue-500"} data-testid="warmup-progress" />
+                                 {backfill_error && <div className="flex items-center gap-1 text-xs text-amber-500"><AlertTriangle className="h-3 w-3" /> Backfill Failed - Retrying</div>}
                              </div>
                          ) : (
                              <div className="flex items-center gap-4 text-emerald-400 text-sm" data-testid="system-ready">
@@ -98,6 +99,17 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left Column: Indicators */}
                 <div className="lg:col-span-1 space-y-4">
+                     <Card className="bg-slate-900 border-slate-800">
+                         <CardHeader><CardTitle className="text-lg flex items-center gap-2"><BarChart2 className="h-4 w-4" /> Structure</CardTitle></CardHeader>
+                         <CardContent className="space-y-4">
+                            <div className="grid grid-cols-3 gap-2 text-center">
+                                <TrendBox label="1m" trend={trends?.['1m']} />
+                                <TrendBox label="5m" trend={trends?.['5m']} />
+                                <TrendBox label="15m" trend={trends?.['15m']} />
+                            </div>
+                         </CardContent>
+                     </Card>
+
                     <Card className="bg-slate-900 border-slate-800">
                         <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Activity className="h-4 w-4" /> Indicators</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
@@ -135,6 +147,22 @@ export default function Dashboard() {
             </div>
         </div>
     );
+}
+
+const TrendBox = ({ label, trend }) => {
+    const isBull = trend === 'BULL';
+    const isBear = trend === 'BEAR';
+    const bg = isBull ? 'bg-emerald-500/10 border-emerald-500/20' : isBear ? 'bg-rose-500/10 border-rose-500/20' : 'bg-slate-800 border-slate-700';
+    const text = isBull ? 'text-emerald-400' : isBear ? 'text-rose-400' : 'text-slate-400';
+    const Icon = isBull ? TrendingUp : isBear ? TrendingDown : Activity;
+
+    return (
+        <div className={`border rounded p-2 flex flex-col items-center ${bg}`}>
+            <span className="text-xs text-slate-500 uppercase mb-1">{label}</span>
+            <Icon className={`h-4 w-4 mb-1 ${text}`} />
+            <span className={`text-xs font-bold ${text}`}>{trend}</span>
+        </div>
+    )
 }
 
 const IndicatorRow = ({ label, value, format, threshold }) => {
