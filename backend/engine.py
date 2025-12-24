@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # Constants
 SYMBOL = "BTCUSDT"
 BYBIT_WS_URL = "wss://stream.bybit.com/v5/public/linear"
-BYBIT_REST_URL = "https://api.bybit.com/v5/market/kline"
+BYBIT_REST_URL = "https://api.bytick.com/v5/market/kline"
 
 class MarketState:
     def __init__(self):
