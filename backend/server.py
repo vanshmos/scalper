@@ -26,6 +26,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Engine...")
     asyncio.create_task(engine.start())
+    # Start broadcaster
+    asyncio.create_task(broadcast_state())
+    logger.info("Started broadcaster")
     yield
     # Shutdown
     engine.running = False
