@@ -78,6 +78,7 @@ async def broadcast_state():
             "warmup_progress": engine.state.warmup_progress,
             "is_warmed_up": engine.state.is_warmed_up
         }
+        logger.info(f"Broadcasting state to {len(manager.active_connections)} connections: price={state['price']}, regime={state['regime']}")
         await manager.broadcast(state)
 
 @app.on_event("startup")
