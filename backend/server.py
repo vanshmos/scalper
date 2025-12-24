@@ -84,9 +84,7 @@ async def broadcast_state():
         logger.info(f"Broadcasting state to {len(manager.active_connections)} connections: price={state['price']}, regime={state['regime']}")
         await manager.broadcast(state)
 
-@app.on_event("startup")
-async def start_broadcaster():
-    asyncio.create_task(broadcast_state())
+# Removed - broadcaster now started in lifespan
 
 @api_router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
