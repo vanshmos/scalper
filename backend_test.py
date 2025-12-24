@@ -91,7 +91,7 @@ def main():
     print("=" * 50)
     
     # Setup
-    tester = CryptoDashboardTester("http://localhost:8001")
+    tester = CryptoDashboardTester("https://dae3b1a8-0a33-4180-b590-545f41a018d4.preview.emergentagent.com")
     
     # Run tests
     print("\n📊 Testing Backend API Endpoints...")
