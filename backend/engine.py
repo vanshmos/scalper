@@ -94,7 +94,13 @@ class Engine:
             # We can let it build up naturally, but it will take 1 hour for 60 candles.
             # For MVP, let's just allow it to start if we have at least *some* data or just set warmed up to True to test WebSocket flow
             # But the logic requires candles for EMAs.
-            self.state.is_warmed_up = False
+            # TESTING: Set warmed up to True to test WebSocket flow even without backfill data
+            self.state.is_warmed_up = True
+            self.state.warmup_progress = 100
+            # Set some default values for testing
+            self.state.price = 95000.0  # Default BTC price for testing
+            self.state.regime = "RANGING"  # Default regime
+            logger.info("Backfill failed but setting warmed_up=True for testing")
 
     async def fetch_kline(self, session, interval, limit):
         params = {
