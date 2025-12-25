@@ -302,7 +302,7 @@ class Engine:
         self.state.indicators['depth'] = min_depth
         
         current_smoothed = self.state.indicators.get('smoothed_depth', 0.0)
-        smoothed = (0.3 * min_depth) + (0.7 * current_smoothed)
+        smoothed = (0.1 * min_depth) + (0.9 * current_smoothed)
         self.state.indicators['smoothed_depth'] = smoothed
 
     def calculate_cvd(self):
