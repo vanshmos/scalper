@@ -49,9 +49,15 @@ class MarketState:
         self.warmup_progress = 0
         self.last_update = 0
         self.backfill_error = False
+        self.backfill_error_msg = ""
         self.backfill_retries = 0
         self.backfill_failed_final = False
         self.funding_regime = "NEUTRAL"
+        
+        # Debug Stats
+        self.ws_msg_count = 0
+        self.ws_last_time = time.time()
+        self.ws_rate = 0.0
 
 class SignalState:
     def __init__(self):
@@ -92,6 +98,7 @@ class Engine:
                 logger.error("Backfill failed after max retries. Stopping backfill and enabling real-time only mode.")
                 self.state.backfill_failed_final = True
                 self.state.backfill_error = True
+                self.state.backfill_error_msg = f"Failed after {max_retries} retries (HTTP 403 Forbidden)"
                 # CRITICAL: Allow real-time processing to start even if backfill failed
                 self.state.is_warmed_up = True 
                 break
@@ -101,11 +108,13 @@ class Engine:
                 if self.state.is_warmed_up:
                     self.state.backfill_error = False
                     self.state.backfill_failed_final = False
+                    self.state.backfill_error_msg = ""
                     break
             except Exception as e:
                 self.state.backfill_retries += 1
                 logger.error(f"Backfill loop error (Attempt {self.state.backfill_retries}/{max_retries}): {e}")
                 self.state.backfill_error = True
+                self.state.backfill_error_msg = str(e)
             
             logger.info(f"Retrying backfill in {retry_delay}s...")
             await asyncio.sleep(retry_delay)
@@ -144,6 +153,8 @@ class Engine:
             async with session.get(BYBIT_REST_URL, params=params, timeout=5) as resp:
                 if resp.status != 200:
                     logger.warning(f"Backfill HTTP {resp.status}")
+                    if resp.status == 403:
+                        raise Exception(f"HTTP 403 Forbidden (IP Blocked)")
                     return pd.DataFrame()
                     
                 data = await resp.json()
@@ -169,6 +180,7 @@ class Engine:
                     return df
         except Exception as e:
             logger.error(f"Fetch kline error: {e}")
+            raise e # Re-raise for loop
         return pd.DataFrame()
 
     async def ws_loop(self):
@@ -187,10 +199,22 @@ class Engine:
                         ]
                     }))
 
+                    last_rate_update = time.time()
+                    msg_count = 0
+
                     while True:
                         msg = await websocket.recv()
                         data = json.loads(msg)
                         self.handle_ws_message(data)
+                        
+                        # WS Rate Calc
+                        msg_count += 1
+                        now = time.time()
+                        if now - last_rate_update >= 1.0:
+                            self.state.ws_rate = msg_count / (now - last_rate_update)
+                            msg_count = 0
+                            last_rate_update = now
+
             except Exception as e:
                 self.ws_connected = False
                 logger.error(f"WS Error: {e}")
