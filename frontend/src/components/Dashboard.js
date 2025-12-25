@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { SignalCard } from "./SignalCard";
-import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle, ChevronDown, ChevronUp, Terminal } from "lucide-react";
+import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle, ChevronDown, ChevronUp, Terminal, Info } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const WS_URL = process.env.REACT_APP_BACKEND_URL.replace('http', 'ws') + '/api/ws';
@@ -109,23 +109,17 @@ export default function Dashboard() {
                             <div className="text-sm text-slate-500 uppercase tracking-wider">System Status</div>
                             <div className="text-xs text-slate-600">{connected ? 'WS CONNECTED' : 'WS DISCONNECTED'}</div>
                          </div>
-                         {!is_warmed_up && !backfill_failed_final ? (
+                         {!is_warmed_up ? (
                              <div className="space-y-2">
                                  <div className="flex justify-between text-xs text-slate-400">
-                                     <span>Warmup Progress {backfill_error && "(Retrying...)"}</span>
+                                     <span>Building History (Live Mode)</span>
                                      <span>{warmup_progress}%</span>
                                  </div>
-                                 <Progress value={warmup_progress} className="h-2 bg-slate-800" indicatorClassName={backfill_error ? "bg-amber-500" : "bg-blue-500"} data-testid="warmup-progress" />
-                                 {backfill_error && <div className="flex items-center gap-1 text-xs text-amber-500"><AlertTriangle className="h-3 w-3" /> Backfill Failed - Retrying</div>}
-                             </div>
-                         ) : backfill_failed_final ? (
-                             <div className="flex flex-col gap-2">
-                                 <div className="flex items-center gap-2 text-rose-400 text-sm font-bold">
-                                     <XCircle className="h-4 w-4" /> Backfill Failed - Data Unavailable
+                                 <Progress value={warmup_progress} className="h-2 bg-slate-800" indicatorClassName="bg-blue-500" data-testid="warmup-progress" />
+                                 <div className="flex items-start gap-2 text-xs text-blue-400 bg-blue-500/10 p-2 rounded">
+                                     <Info className="h-4 w-4 shrink-0" />
+                                     <p>Collecting live candle data. Need 60m history for valid indicators. Engine active but signals may be delayed.</p>
                                  </div>
-                                 <p className="text-xs text-slate-400">
-                                     Unable to fetch historical data. Engine is running in real-time mode.
-                                 </p>
                              </div>
                          ) : (
                              <div className="flex items-center gap-4 text-emerald-400 text-sm" data-testid="system-ready">
@@ -241,7 +235,7 @@ export default function Dashboard() {
                         <div className="space-y-2">
                             <h4 className="text-slate-500 font-bold uppercase">Backfill Diagnostics</h4>
                             <div className={`p-2 rounded ${backfill_failed_final ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900 text-slate-400'}`}>
-                                {debug?.backfill_error_msg || "No errors"}
+                                {debug?.backfill_error_msg || "Disabled (Live Mode)"}
                             </div>
                             <div className="mt-2">
                                 <Button 
