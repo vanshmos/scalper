@@ -34,12 +34,17 @@ class MarketState:
             "cvd_5m": 0.0,
             "atr": 0.0,
             "spread": 0.0,
-            "depth": 0.0
+            "depth": 0.0,
+            "funding_rate": 0.0,
+            "open_interest": 0.0,
+            "oi_change_5m": 0.0
         }
+        self.oi_history = deque(maxlen=600) # Store (ts, oi) tuples for last ~10 mins (1s updates)
         self.is_warmed_up = False
         self.warmup_progress = 0
         self.last_update = 0
         self.backfill_error = False
+        self.funding_regime = "NEUTRAL" # NEUTRAL, EXTREME_LONG_FUNDING, EXTREME_SHORT_FUNDING
 
 class SignalState:
     def __init__(self):
@@ -233,6 +238,28 @@ class Engine:
                 self.state.price = price
                 self.state.trades.append({'price': price, 'size': size, 'side': side, 'time': ts})
                 self.update_candle(price, size, ts)
+        
+        elif 'tickers' in topic:
+            # Parse funding and open interest
+            if 'data' in data:
+                d = data['data']
+                if 'fundingRate' in d:
+                    # Funding rate comes as string decimal "0.0001"
+                    try:
+                        self.state.indicators['funding_rate'] = float(d['fundingRate']) * 100 # Convert to percentage
+                    except: pass
+                
+                if 'openInterest' in d:
+                    try:
+                         # Use openInterestValue if available (Quote currency value)
+                        if 'openInterestValue' in d:
+                            self.state.indicators['open_interest'] = float(d['openInterestValue'])
+                        else:
+                            # Fallback: OI * Price
+                            oi_size = float(d['openInterest'])
+                            self.state.indicators['open_interest'] = oi_size * self.state.price
+                    except: pass
+
 
     def update_candle(self, price, size, ts):
         current_min = int(ts // 60) * 60
@@ -339,6 +366,24 @@ class Engine:
         self.state.indicators['cvd_1m'] = (0.3 * ratio_1m) + (0.7 * self.state.indicators.get('cvd_1m', 0))
         self.state.indicators['cvd_5m'] = (0.3 * ratio_5m) + (0.7 * self.state.indicators.get('cvd_5m', 0))
 
+    def update_oi_change(self):
+        now = time.time()
+        current_oi = self.state.indicators['open_interest']
+        
+        # Add current point
+        self.state.oi_history.append((now, current_oi))
+        
+        # Remove old points (> 5 mins)
+        while self.state.oi_history and self.state.oi_history[0][0] < now - 300:
+            self.state.oi_history.popleft()
+            
+        # Calculate change
+        if len(self.state.oi_history) > 1:
+            old_oi = self.state.oi_history[0][1]
+            if old_oi > 0:
+                change = (current_oi - old_oi) / old_oi * 100
+                self.state.indicators['oi_change_5m'] = change
+
     async def processing_loop(self):
         while self.running:
             await asyncio.sleep(1)
@@ -352,6 +397,7 @@ class Engine:
                 self.state.regime = "UNCLEAR"
                 continue
 
+            self.update_oi_change()
             self.calculate_cvd()
             self.determine_regime()
             self.check_gates()
@@ -391,6 +437,15 @@ class Engine:
              atr_baseline = atr
 
         is_chaotic = (atr > 2 * atr_baseline) or (self.state.indicators['spread'] > 5)
+
+        # Funding Regime
+        funding = self.state.indicators['funding_rate']
+        if funding > 0.03:
+            self.state.funding_regime = "EXTREME_LONG_FUNDING"
+        elif funding < -0.02:
+            self.state.funding_regime = "EXTREME_SHORT_FUNDING"
+        else:
+            self.state.funding_regime = "NEUTRAL"
 
         if is_chaotic:
             self.state.regime = "CHAOTIC"
@@ -444,6 +499,25 @@ class Engine:
             score += 20 if pullback_ok else 0
             score += 20 if obi_ok else 0
             score += 5
+
+            # Funding Bonus/Penalty
+            funding = self.state.indicators['funding_rate']
+            reasons = ["Structure Aligned", "CVD Strength", "OBI Support"]
+            
+            if is_long:
+                if funding < 0: # Shorts paying longs (supportive)
+                    score += 5
+                    reasons.append(f"Funding Supportive ({funding:.3f}%)")
+                if funding > 0.03: # Crowded longs (risk)
+                    score -= 5
+                    reasons.append(f"Caution: Extreme Long Funding ({funding:.3f}%)")
+            else: # Short
+                if funding > 0: # Longs paying shorts (supportive)
+                    score += 5
+                    reasons.append(f"Funding Supportive ({funding:.3f}%)")
+                if funding < -0.02: # Crowded shorts (risk)
+                    score -= 5
+                    reasons.append(f"Caution: Extreme Short Funding ({funding:.3f}%)")
             
             if score > 70:
                 if self.signal_state.status == "IDLE":
@@ -452,7 +526,7 @@ class Engine:
                     logger.info("Signal FORMING...")
                 elif self.signal_state.status == "FORMING":
                     if now - self.signal_state.forming_since >= 30:
-                        await self.activate_signal(is_long, score)
+                        await self.activate_signal(is_long, score, reasons)
             else:
                 self.reset_forming()
         else:
@@ -463,7 +537,7 @@ class Engine:
             self.signal_state.status = "IDLE"
             self.signal_state.forming_since = 0
 
-    async def activate_signal(self, is_long, score):
+    async def activate_signal(self, is_long, score, reasons):
         self.signal_state.status = "ACTIVE"
         now = time.time()
         self.signal_state.active_until = now + 300 
@@ -499,7 +573,7 @@ class Engine:
             "tp2_pct": round((abs(entry-tp2)/entry)*100, 2),
             "rr_ratio": round(tp1_dist/sl_dist, 2),
             "confidence": score,
-            "reasons": ["Structure Aligned", "CVD Strength", "OBI Support"],
+            "reasons": reasons,
             "timestamp": now
         }
         
