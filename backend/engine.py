@@ -28,7 +28,10 @@ class MarketState:
         self.regime = "UNCLEAR"
         self.trends = {"1m": "NEUTRAL", "5m": "NEUTRAL", "15m": "NEUTRAL"}
         self.gates_passed = False
-        # Initialize with None to indicate missing data for frontend
+        self.gate_state_depth = "FAIL"
+        self.gate_state_spread = "FAIL"
+        self.last_gate_change = 0
+        
         self.indicators = {
             "obi": None,
             "cvd_1m": None,
@@ -36,18 +39,19 @@ class MarketState:
             "atr": None,
             "spread": None,
             "depth": None,
+            "smoothed_depth": 0.0,
             "funding_rate": None,
             "open_interest": None,
             "oi_change_5m": None
         }
-        self.oi_history = deque(maxlen=600) # Store (ts, oi) tuples for last ~10 mins (1s updates)
+        self.oi_history = deque(maxlen=600) 
         self.is_warmed_up = False
         self.warmup_progress = 0
         self.last_update = 0
         self.backfill_error = False
         self.backfill_retries = 0
         self.backfill_failed_final = False
-        self.funding_regime = "NEUTRAL" # NEUTRAL, EXTREME_LONG_FUNDING, EXTREME_SHORT_FUNDING
+        self.funding_regime = "NEUTRAL"
 
 class SignalState:
     def __init__(self):
@@ -55,7 +59,7 @@ class SignalState:
         self.forming_since = 0
         self.active_until = 0
         self.cooldown_until = 0
-        self.current_signal = None  # Dict with details
+        self.current_signal = None 
         self.history = []
 
 class Engine:
@@ -105,26 +109,22 @@ class Engine:
             
             logger.info(f"Retrying backfill in {retry_delay}s...")
             await asyncio.sleep(retry_delay)
-            retry_delay = min(retry_delay * 2, 60) # Cap at 60s
+            retry_delay = min(retry_delay * 2, 60) 
 
     async def backfill_candles(self):
         logger.info("Starting backfill...")
-        # Try multiple endpoints or mirrors if possible, but here we just retry standard
         headers = {"User-Agent": "Mozilla/5.0"}
         async with aiohttp.ClientSession(headers=headers) as session:
-            # 1m candles (need 60)
             c1m = await self.fetch_kline(session, 1, 100)
             if c1m.empty: raise Exception("Failed to fetch 1m candles")
             self.state.candles_1m = c1m
             self.state.warmup_progress = 33
             
-            # 5m candles (need 20)
             c5m = await self.fetch_kline(session, 5, 50)
             if c5m.empty: raise Exception("Failed to fetch 5m candles")
             self.state.candles_5m = c5m
             self.state.warmup_progress = 66
             
-            # 15m candles (need 8)
             c15m = await self.fetch_kline(session, 15, 20)
             if c15m.empty: raise Exception("Failed to fetch 15m candles")
             self.state.candles_15m = c15m
@@ -134,8 +134,6 @@ class Engine:
         logger.info("Backfill complete.")
 
     async def fetch_kline(self, session, interval, limit):
-        # Using bybit.com. If blocked, the loop will retry. 
-        # In a real deployed env, might need a proxy or different mirror.
         params = {
             "category": "linear",
             "symbol": SYMBOL,
@@ -159,7 +157,6 @@ class Engine:
                     df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
                     
                     if interval == 5:
-                        # Ensure we have enough data for ATR (14 periods)
                         df['tr'] = np.maximum(
                             df['high'] - df['low'],
                             np.maximum(
@@ -167,7 +164,8 @@ class Engine:
                                 abs(df['low'] - df['close'].shift(1))
                             )
                         )
-                        df['atr'] = df['tr'].rolling(window=14).mean()
+                        # ATR with min_periods=1 to start immediately
+                        df['atr'] = df['tr'].rolling(window=14, min_periods=1).mean()
                     return df
         except Exception as e:
             logger.error(f"Fetch kline error: {e}")
@@ -243,7 +241,6 @@ class Engine:
                         self.state.orderbook['asks'].sort(key=lambda x: x[0])
                         self.state.orderbook['asks'] = self.state.orderbook['asks'][:50]
             
-            # Log periodic check
             if int(ts) % 10 == 0:
                  logger.info(f"Orderbook Levels: Bids={len(self.state.orderbook['bids'])}, Asks={len(self.state.orderbook['asks'])}")
 
@@ -259,22 +256,18 @@ class Engine:
                 self.update_candle(price, size, ts)
         
         elif 'tickers' in topic:
-            # Parse funding and open interest
             if 'data' in data:
                 d = data['data']
                 if 'fundingRate' in d:
-                    # Funding rate comes as string decimal "0.0001"
                     try:
-                        self.state.indicators['funding_rate'] = float(d['fundingRate']) * 100 # Convert to percentage
+                        self.state.indicators['funding_rate'] = float(d['fundingRate']) * 100 
                     except: pass
                 
                 if 'openInterest' in d:
                     try:
-                         # Use openInterestValue if available (Quote currency value)
                         if 'openInterestValue' in d:
                             self.state.indicators['open_interest'] = float(d['openInterestValue'])
                         else:
-                            # Fallback: OI * Price
                             oi_size = float(d['openInterest'])
                             self.state.indicators['open_interest'] = oi_size * self.state.price
                     except: pass
@@ -329,12 +322,13 @@ class Engine:
                     abs(c5['low'] - c5['close'].shift(1))
                 )
             )
-            c5['atr'] = c5['tr'].rolling(window=14).mean()
+            # Use min_periods=1 to get ATR immediately
+            c5['atr'] = c5['tr'].rolling(window=14, min_periods=1).mean()
             self.state.candles_5m = c5.reset_index()
             
-            # Log ATR check
             if not c5.empty:
-                logger.info(f"5m Candles: {len(c5)}, Latest ATR: {c5.iloc[-1]['atr']}")
+                last = c5.iloc[-1]
+                logger.info(f"5m Candle: H={last['high']}, L={last['low']}, C={last['close']}, ATR={last['atr']}")
 
             # 15m
             c15 = df.resample('15min').agg({
@@ -363,30 +357,34 @@ class Engine:
         # Gate Checks
         best_bid = self.state.orderbook['bids'][0][0]
         best_ask = self.state.orderbook['asks'][0][0]
-        # Spread in bps: (Ask - Bid) / Bid * 10000
-        spread_bps = (best_ask - best_bid) / best_bid * 10000 
+        mid_price = (best_ask + best_bid) / 2
+        # Spread in bps: (Ask - Bid) / Mid * 10000
+        spread_bps = (best_ask - best_bid) / mid_price * 10000 
         self.state.indicators['spread'] = spread_bps
         
-        # Log Spread Check
         if int(time.time()) % 10 == 0:
             logger.info(f"Spread Calc: Bid={best_bid}, Ask={best_ask}, Spread={spread_bps:.4f} bps")
         
+        # Depth with smoothing
         bid_val = sum(b[0] * b[1] for b in bids)
         ask_val = sum(a[0] * a[1] for a in asks)
         min_depth = min(bid_val, ask_val)
         self.state.indicators['depth'] = min_depth
+        
+        # Smooth Depth
+        current_smoothed = self.state.indicators.get('smoothed_depth', 0.0)
+        smoothed = (0.3 * min_depth) + (0.7 * current_smoothed)
+        self.state.indicators['smoothed_depth'] = smoothed
 
     def calculate_cvd(self):
         now = time.time()
         trades_list = list(self.state.trades)
         
-        # 1m
         buy_vol_1m = sum(t['size'] for t in trades_list if t['side'] == 'Buy' and t['time'] > now - 60)
         sell_vol_1m = sum(t['size'] for t in trades_list if t['side'] == 'Sell' and t['time'] > now - 60)
         total_1m = buy_vol_1m + sell_vol_1m
         ratio_1m = (buy_vol_1m - sell_vol_1m) / total_1m if total_1m > 0 else 0
         
-        # 5m
         buy_vol_5m = sum(t['size'] for t in trades_list if t['side'] == 'Buy' and t['time'] > now - 300)
         sell_vol_5m = sum(t['size'] for t in trades_list if t['side'] == 'Sell' and t['time'] > now - 300)
         total_5m = buy_vol_5m + sell_vol_5m
@@ -402,22 +400,17 @@ class Engine:
         self.state.indicators['cvd_5m'] = (0.3 * ratio_5m) + (0.7 * current_cvd_5m)
         
         if int(now) % 10 == 0:
-            logger.info(f"CVD Calc: Trades={len(trades_list)}, Buy1m={buy_vol_1m}, Sell1m={sell_vol_1m}, Raw1m={ratio_1m:.3f}, Smoothed1m={self.state.indicators['cvd_1m']:.3f}")
-
+            logger.info(f"CVD Calc: Trades={len(trades_list)}, Smoothed1m={self.state.indicators['cvd_1m']:.3f}")
 
     def update_oi_change(self):
         now = time.time()
         current_oi = self.state.indicators['open_interest']
         if current_oi is None: return
 
-        # Add current point
         self.state.oi_history.append((now, current_oi))
-        
-        # Remove old points (> 5 mins)
         while self.state.oi_history and self.state.oi_history[0][0] < now - 300:
             self.state.oi_history.popleft()
             
-        # Calculate change
         if len(self.state.oi_history) > 1:
             old_oi = self.state.oi_history[0][1]
             if old_oi > 0:
@@ -428,7 +421,6 @@ class Engine:
         while self.running:
             await asyncio.sleep(1)
             
-            # If not warmed up, we can't do indicators or regime properly
             if not self.state.is_warmed_up:
                 continue
                 
@@ -453,11 +445,9 @@ class Engine:
         slope_5 = c5['ema20'] - self.state.candles_5m.iloc[-2]['ema20']
         slope_15 = c15['ema20'] - self.state.candles_15m.iloc[-2]['ema20']
 
-        # Determine Trends for frontend
         self.state.trends["5m"] = "BULL" if (c5['ema20'] > c5['ema50'] and slope_5 > 0) else "BEAR" if (c5['ema20'] < c5['ema50'] and slope_5 < 0) else "NEUTRAL"
         self.state.trends["15m"] = "BULL" if (c15['ema20'] > c15['ema50'] and slope_15 > 0) else "BEAR" if (c15['ema20'] < c15['ema50'] and slope_15 < 0) else "NEUTRAL"
         
-        # 1m Trend (for pullback check)
         if not self.state.candles_1m.empty:
             c1 = self.state.candles_1m.iloc[-1]
             slope_1 = c1['ema20'] - self.state.candles_1m.iloc[-2]['ema20'] if len(self.state.candles_1m) > 1 else 0
@@ -468,9 +458,8 @@ class Engine:
 
         atr = c5['atr']
         if pd.isna(atr): atr = 0
-        self.state.indicators['atr'] = atr # Update state for dashboard
+        self.state.indicators['atr'] = atr
         
-        # Rolling baseline 20 periods
         if len(self.state.candles_5m) >= 20:
              atr_baseline = self.state.candles_5m['atr'].rolling(window=20).mean().iloc[-1]
              if pd.isna(atr_baseline): atr_baseline = atr
@@ -482,7 +471,6 @@ class Engine:
         
         is_chaotic = (atr > 2 * atr_baseline) or (spread > 5)
 
-        # Funding Regime
         funding = self.state.indicators.get('funding_rate')
         if funding:
             if funding > 0.03:
@@ -502,12 +490,43 @@ class Engine:
             self.state.regime = "RANGING"
 
     def check_gates(self):
+        now = time.time()
         spread = self.state.indicators.get('spread')
-        depth = self.state.indicators.get('depth')
+        depth = self.state.indicators.get('smoothed_depth') # Use smoothed
         
-        spread_ok = spread is not None and spread < 1.5
-        depth_ok = depth is not None and depth > 250000
-        self.state.gates_passed = spread_ok and depth_ok
+        if spread is None or depth is None:
+            return
+
+        # Hysteresis for Depth
+        # PASS if > 250k. FAIL if < 200k.
+        if self.state.gate_state_depth == "PASS":
+            if depth < 200000:
+                if self.should_flip_gate(now):
+                    self.state.gate_state_depth = "FAIL"
+        else: # FAIL
+            if depth > 250000:
+                if self.should_flip_gate(now):
+                    self.state.gate_state_depth = "PASS"
+
+        # Hysteresis for Spread
+        # PASS if < 1.5. FAIL if > 2.0.
+        if self.state.gate_state_spread == "PASS":
+            if spread > 2.0:
+                if self.should_flip_gate(now):
+                    self.state.gate_state_spread = "FAIL"
+        else: # FAIL
+            if spread < 1.5:
+                if self.should_flip_gate(now):
+                    self.state.gate_state_spread = "PASS"
+
+        self.state.gates_passed = (self.state.gate_state_depth == "PASS") and (self.state.gate_state_spread == "PASS")
+
+    def should_flip_gate(self, now):
+        # 3 second debounce
+        if now - self.state.last_gate_change > 3:
+            self.state.last_gate_change = now
+            return True
+        return False
 
     async def manage_signals(self):
         now = time.time()
@@ -528,12 +547,9 @@ class Engine:
 
         is_long = self.state.regime == "TRENDING_BULL"
         
-        # Check indicators exist
         cvd_5m = self.state.indicators.get('cvd_5m')
         obi = self.state.indicators.get('obi')
-        
-        if cvd_5m is None or obi is None:
-            return
+        if cvd_5m is None or obi is None: return
 
         cvd_ok = (cvd_5m > 0.15) if is_long else (cvd_5m < -0.15)
         
@@ -555,23 +571,22 @@ class Engine:
             score += 20 if obi_ok else 0
             score += 5
 
-            # Funding Bonus/Penalty
             funding = self.state.indicators.get('funding_rate')
             reasons = ["Structure Aligned", "CVD Strength", "OBI Support"]
             
             if funding:
                 if is_long:
-                    if funding < 0: # Shorts paying longs (supportive)
+                    if funding < 0:
                         score += 5
                         reasons.append(f"Funding Supportive ({funding:.3f}%)")
-                    if funding > 0.03: # Crowded longs (risk)
+                    if funding > 0.03:
                         score -= 5
                         reasons.append(f"Caution: Extreme Long Funding ({funding:.3f}%)")
-                else: # Short
-                    if funding > 0: # Longs paying shorts (supportive)
+                else: 
+                    if funding > 0:
                         score += 5
                         reasons.append(f"Funding Supportive ({funding:.3f}%)")
-                    if funding < -0.02: # Crowded shorts (risk)
+                    if funding < -0.02:
                         score -= 5
                         reasons.append(f"Caution: Extreme Short Funding ({funding:.3f}%)")
             
@@ -599,7 +614,7 @@ class Engine:
         self.signal_state.active_until = now + 300 
         
         atr = self.state.candles_5m.iloc[-1]['atr']
-        if pd.isna(atr) or atr == 0: atr = 100 # Fallback safety
+        if pd.isna(atr) or atr == 0: atr = 100 
         
         entry = self.state.price
         
