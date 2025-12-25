@@ -85,9 +85,11 @@ class Engine:
         
         while self.running and not self.state.is_warmed_up:
             if self.state.backfill_retries >= max_retries:
-                logger.error("Backfill failed after max retries. Stopping backfill.")
+                logger.error("Backfill failed after max retries. Stopping backfill and enabling real-time only mode.")
                 self.state.backfill_failed_final = True
                 self.state.backfill_error = True
+                # CRITICAL: Allow real-time processing to start even if backfill failed
+                self.state.is_warmed_up = True 
                 break
                 
             try:
