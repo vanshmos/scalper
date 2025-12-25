@@ -67,8 +67,12 @@ manager = ConnectionManager()
 
 import math
 import numpy as np
+import pandas as pd
+from datetime import datetime
 
 def clean_nans(obj):
+    if obj is None:
+        return None
     if isinstance(obj, float):
         if math.isnan(obj) or math.isinf(obj):
             return None
@@ -81,46 +85,52 @@ def clean_nans(obj):
         return int(obj)
     elif isinstance(obj, (np.float64, np.float32)):
         return clean_nans(float(obj))
+    elif isinstance(obj, (datetime, pd.Timestamp)):
+        return obj.isoformat()
     return obj
 
 # Background Broadcaster
 async def broadcast_state():
     while True:
-        await asyncio.sleep(0.5) # 2Hz Update
-        
-        # Prepare Debug Info
-        debug = {
-            "candle_count_1m": len(engine.state.candles_1m),
-            "candle_count_5m": len(engine.state.candles_5m),
-            "candle_count_15m": len(engine.state.candles_15m),
-            "trade_buffer_size": len(engine.state.trades),
-            "oldest_trade": engine.state.trades[0]['time'] if len(engine.state.trades) > 0 else 0,
-            "newest_trade": engine.state.trades[-1]['time'] if len(engine.state.trades) > 0 else 0,
-            "backfill_error_msg": engine.state.backfill_error_msg,
-            "ws_rate": engine.state.ws_rate,
-            "last_candle_1m": engine.state.candles_1m.iloc[-1].to_dict() if not engine.state.candles_1m.empty else None,
-            "last_candle_5m": engine.state.candles_5m.iloc[-1].to_dict() if not engine.state.candles_5m.empty else None,
-        }
+        try:
+            await asyncio.sleep(0.5) # 2Hz Update
+            
+            # Prepare Debug Info
+            debug = {
+                "candle_count_1m": len(engine.state.candles_1m),
+                "candle_count_5m": len(engine.state.candles_5m),
+                "candle_count_15m": len(engine.state.candles_15m),
+                "trade_buffer_size": len(engine.state.trades),
+                "oldest_trade": engine.state.trades[0]['time'] if len(engine.state.trades) > 0 else 0,
+                "newest_trade": engine.state.trades[-1]['time'] if len(engine.state.trades) > 0 else 0,
+                "backfill_error_msg": engine.state.backfill_error_msg,
+                "ws_rate": engine.state.ws_rate,
+                "last_candle_1m": engine.state.candles_1m.iloc[-1].to_dict() if not engine.state.candles_1m.empty else None,
+                "last_candle_5m": engine.state.candles_5m.iloc[-1].to_dict() if not engine.state.candles_5m.empty else None,
+            }
 
-        state = {
-            "price": engine.state.price,
-            "regime": engine.state.regime,
-            "trends": engine.state.trends, # Added trends to broadcast
-            "gates_passed": engine.state.gates_passed,
-            "indicators": engine.state.indicators,
-            "signal_status": engine.signal_state.status,
-            "forming_since": engine.signal_state.forming_since,
-            "current_signal": engine.signal_state.current_signal,
-            "warmup_progress": engine.state.warmup_progress,
-            "is_warmed_up": engine.state.is_warmed_up,
-            "backfill_error": engine.state.backfill_error,
-            "backfill_failed_final": engine.state.backfill_failed_final,
-            "debug": debug # Include debug info
-        }
-        
-        # Clean NaNs before broadcasting
-        cleaned_state = clean_nans(state)
-        await manager.broadcast(cleaned_state)
+            state = {
+                "price": engine.state.price,
+                "regime": engine.state.regime,
+                "trends": engine.state.trends, # Added trends to broadcast
+                "gates_passed": engine.state.gates_passed,
+                "indicators": engine.state.indicators,
+                "signal_status": engine.signal_state.status,
+                "forming_since": engine.signal_state.forming_since,
+                "current_signal": engine.signal_state.current_signal,
+                "warmup_progress": engine.state.warmup_progress,
+                "is_warmed_up": engine.state.is_warmed_up,
+                "backfill_error": engine.state.backfill_error,
+                "backfill_failed_final": engine.state.backfill_failed_final,
+                "debug": debug # Include debug info
+            }
+            
+            # Clean NaNs and serialization issues before broadcasting
+            cleaned_state = clean_nans(state)
+            await manager.broadcast(cleaned_state)
+        except Exception as e:
+            logger.error(f"Broadcast error: {e}")
+            await asyncio.sleep(1) # Prevent tight loop on error
 
 @api_router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
