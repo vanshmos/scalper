@@ -93,7 +93,7 @@ export default function Dashboard() {
                                      <XCircle className="h-4 w-4" /> Backfill Failed - Data Unavailable
                                  </div>
                                  <p className="text-xs text-slate-400">
-                                     Unable to fetch historical data (API Error). Engine is running in real-time only mode. Indicators like ATR will normalize as new candles form.
+                                     Unable to fetch historical data. Engine is running in real-time mode.
                                  </p>
                              </div>
                          ) : (
@@ -151,8 +151,8 @@ export default function Dashboard() {
                             </div>
                             <div className="flex justify-between items-center py-2">
                                 <span className="text-slate-400">Depth ($)</span>
-                                <span className={`font-mono ${indicators?.depth < 250000 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                                    {indicators?.depth ? `$${(indicators?.depth / 1000).toFixed(0)}k` : '-'}
+                                <span className={`font-mono ${indicators?.smoothed_depth < 250000 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                    {indicators?.smoothed_depth ? `$${(indicators?.smoothed_depth / 1000).toFixed(0)}k` : '-'}
                                 </span>
                             </div>
                         </CardContent>
