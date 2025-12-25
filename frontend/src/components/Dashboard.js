@@ -118,10 +118,10 @@ export default function Dashboard() {
                                 <span className="text-slate-400">Open Interest</span>
                                 <div className="text-right">
                                     <div className="font-mono text-slate-200">
-                                        ${(indicators?.open_interest / 1000000).toFixed(2)}M
+                                        {indicators?.open_interest ? `$${(indicators?.open_interest / 1000000).toFixed(2)}M` : '-'}
                                     </div>
                                     <div className={`text-xs ${indicators?.oi_change_5m > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                        {indicators?.oi_change_5m > 0 ? '+' : ''}{indicators?.oi_change_5m?.toFixed(2)}% (5m)
+                                        {indicators?.oi_change_5m ? `${indicators?.oi_change_5m > 0 ? '+' : ''}${indicators?.oi_change_5m?.toFixed(2)}% (5m)` : '-'}
                                     </div>
                                 </div>
                             </div>
@@ -132,18 +132,18 @@ export default function Dashboard() {
                             
                             <div className="flex justify-between items-center py-2 border-b border-slate-800">
                                 <span className="text-slate-400">ATR (Volatility)</span>
-                                <span className="font-mono text-slate-200">{indicators?.atr?.toFixed(2)}</span>
+                                <span className="font-mono text-slate-200">{indicators?.atr?.toFixed(2) ?? '-'}</span>
                             </div>
                             <div className="flex justify-between items-center py-2 border-b border-slate-800">
                                 <span className="text-slate-400">Spread (bps)</span>
                                 <span className={`font-mono ${indicators?.spread > 1.5 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                                    {indicators?.spread?.toFixed(2)}
+                                    {indicators?.spread?.toFixed(2) ?? '-'}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center py-2">
                                 <span className="text-slate-400">Depth ($)</span>
                                 <span className={`font-mono ${indicators?.depth < 250000 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                                    ${(indicators?.depth / 1000).toFixed(0)}k
+                                    {indicators?.depth ? `$${(indicators?.depth / 1000).toFixed(0)}k` : '-'}
                                 </span>
                             </div>
                         </CardContent>
@@ -181,22 +181,25 @@ const TrendBox = ({ label, trend }) => {
 
 const IndicatorRow = ({ label, value, format, threshold, isPercentage, suffix = "" }) => {
     let color = 'text-slate-400';
+    const displayValue = value === null || value === undefined ? '-' : value.toFixed(label === "Funding Rate" ? 4 : 2);
     
-    if (label === "Funding Rate") {
-        if (value > 0.03 || value < -0.02) color = 'text-rose-400';
-        else if ((value > 0.01 && value <= 0.03) || (value >= -0.02 && value < -0.01)) color = 'text-amber-400';
-        else if (value >= -0.01 && value <= 0.01) color = 'text-emerald-400';
-    } else {
-        const isBull = value > threshold;
-        const isBear = value < -threshold;
-        color = isBull ? 'text-emerald-400' : isBear ? 'text-rose-400' : 'text-slate-400';
+    if (value !== null && value !== undefined) {
+        if (label === "Funding Rate") {
+            if (value > 0.03 || value < -0.02) color = 'text-rose-400';
+            else if ((value > 0.01 && value <= 0.03) || (value >= -0.02 && value < -0.01)) color = 'text-amber-400';
+            else if (value >= -0.01 && value <= 0.01) color = 'text-emerald-400';
+        } else {
+            const isBull = value > threshold;
+            const isBear = value < -threshold;
+            color = isBull ? 'text-emerald-400' : isBear ? 'text-rose-400' : 'text-slate-400';
+        }
     }
     
     return (
         <div className="flex justify-between items-center py-2 border-b border-slate-800 last:border-0">
             <span className="text-slate-400">{label}</span>
             <span className={`font-mono font-bold ${color}`} data-testid={`indicator-${label.split(' ')[0]}`}>
-                {value?.toFixed(label === "Funding Rate" ? 4 : 2)}{suffix}
+                {displayValue}{value !== null && value !== undefined ? suffix : ''}
             </span>
         </div>
     );
