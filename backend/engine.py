@@ -28,22 +28,25 @@ class MarketState:
         self.regime = "UNCLEAR"
         self.trends = {"1m": "NEUTRAL", "5m": "NEUTRAL", "15m": "NEUTRAL"}
         self.gates_passed = False
+        # Initialize with None to indicate missing data for frontend
         self.indicators = {
-            "obi": 0.0,
-            "cvd_1m": 0.0,
-            "cvd_5m": 0.0,
-            "atr": 0.0,
-            "spread": 0.0,
-            "depth": 0.0,
-            "funding_rate": 0.0,
-            "open_interest": 0.0,
-            "oi_change_5m": 0.0
+            "obi": None,
+            "cvd_1m": None,
+            "cvd_5m": None,
+            "atr": None,
+            "spread": None,
+            "depth": None,
+            "funding_rate": None,
+            "open_interest": None,
+            "oi_change_5m": None
         }
         self.oi_history = deque(maxlen=600) # Store (ts, oi) tuples for last ~10 mins (1s updates)
         self.is_warmed_up = False
         self.warmup_progress = 0
         self.last_update = 0
         self.backfill_error = False
+        self.backfill_retries = 0
+        self.backfill_failed_final = False
         self.funding_regime = "NEUTRAL" # NEUTRAL, EXTREME_LONG_FUNDING, EXTREME_SHORT_FUNDING
 
 class SignalState:
@@ -78,14 +81,24 @@ class Engine:
 
     async def backfill_loop(self):
         retry_delay = 5
+        max_retries = 5
+        
         while self.running and not self.state.is_warmed_up:
+            if self.state.backfill_retries >= max_retries:
+                logger.error("Backfill failed after max retries. Stopping backfill.")
+                self.state.backfill_failed_final = True
+                self.state.backfill_error = True
+                break
+                
             try:
                 await self.backfill_candles()
                 if self.state.is_warmed_up:
                     self.state.backfill_error = False
+                    self.state.backfill_failed_final = False
                     break
             except Exception as e:
-                logger.error(f"Backfill loop error: {e}")
+                self.state.backfill_retries += 1
+                logger.error(f"Backfill loop error (Attempt {self.state.backfill_retries}/{max_retries}): {e}")
                 self.state.backfill_error = True
             
             logger.info(f"Retrying backfill in {retry_delay}s...")
@@ -227,6 +240,10 @@ class Engine:
                         self.state.orderbook['asks'].append([price, size])
                         self.state.orderbook['asks'].sort(key=lambda x: x[0])
                         self.state.orderbook['asks'] = self.state.orderbook['asks'][:50]
+            
+            # Log periodic check
+            if int(ts) % 10 == 0:
+                 logger.info(f"Orderbook Levels: Bids={len(self.state.orderbook['bids'])}, Asks={len(self.state.orderbook['asks'])}")
 
             self.calculate_obi()
 
@@ -312,6 +329,10 @@ class Engine:
             )
             c5['atr'] = c5['tr'].rolling(window=14).mean()
             self.state.candles_5m = c5.reset_index()
+            
+            # Log ATR check
+            if not c5.empty:
+                logger.info(f"5m Candles: {len(c5)}, Latest ATR: {c5.iloc[-1]['atr']}")
 
             # 15m
             c15 = df.resample('15min').agg({
@@ -333,7 +354,9 @@ class Engine:
         total = bid_vol + ask_vol
         
         raw_obi = (bid_vol - ask_vol) / total if total > 0 else 0
-        self.state.indicators['obi'] = (0.3 * raw_obi) + (0.7 * self.state.indicators.get('obi', 0))
+        current_obi = self.state.indicators.get('obi')
+        if current_obi is None: current_obi = 0.0
+        self.state.indicators['obi'] = (0.3 * raw_obi) + (0.7 * current_obi)
 
         # Gate Checks
         best_bid = self.state.orderbook['bids'][0][0]
@@ -341,6 +364,10 @@ class Engine:
         # Spread in bps: (Ask - Bid) / Bid * 10000
         spread_bps = (best_ask - best_bid) / best_bid * 10000 
         self.state.indicators['spread'] = spread_bps
+        
+        # Log Spread Check
+        if int(time.time()) % 10 == 0:
+            logger.info(f"Spread Calc: Bid={best_bid}, Ask={best_ask}, Spread={spread_bps:.4f} bps")
         
         bid_val = sum(b[0] * b[1] for b in bids)
         ask_val = sum(a[0] * a[1] for a in asks)
@@ -363,13 +390,24 @@ class Engine:
         total_5m = buy_vol_5m + sell_vol_5m
         ratio_5m = (buy_vol_5m - sell_vol_5m) / total_5m if total_5m > 0 else 0
 
-        self.state.indicators['cvd_1m'] = (0.3 * ratio_1m) + (0.7 * self.state.indicators.get('cvd_1m', 0))
-        self.state.indicators['cvd_5m'] = (0.3 * ratio_5m) + (0.7 * self.state.indicators.get('cvd_5m', 0))
+        current_cvd_1m = self.state.indicators.get('cvd_1m')
+        if current_cvd_1m is None: current_cvd_1m = 0.0
+        
+        current_cvd_5m = self.state.indicators.get('cvd_5m')
+        if current_cvd_5m is None: current_cvd_5m = 0.0
+
+        self.state.indicators['cvd_1m'] = (0.3 * ratio_1m) + (0.7 * current_cvd_1m)
+        self.state.indicators['cvd_5m'] = (0.3 * ratio_5m) + (0.7 * current_cvd_5m)
+        
+        if int(now) % 10 == 0:
+            logger.info(f"CVD Calc: Trades={len(trades_list)}, Buy1m={buy_vol_1m}, Sell1m={sell_vol_1m}, Raw1m={ratio_1m:.3f}, Smoothed1m={self.state.indicators['cvd_1m']:.3f}")
+
 
     def update_oi_change(self):
         now = time.time()
         current_oi = self.state.indicators['open_interest']
-        
+        if current_oi is None: return
+
         # Add current point
         self.state.oi_history.append((now, current_oi))
         
@@ -428,6 +466,7 @@ class Engine:
 
         atr = c5['atr']
         if pd.isna(atr): atr = 0
+        self.state.indicators['atr'] = atr # Update state for dashboard
         
         # Rolling baseline 20 periods
         if len(self.state.candles_5m) >= 20:
@@ -436,16 +475,20 @@ class Engine:
         else:
              atr_baseline = atr
 
-        is_chaotic = (atr > 2 * atr_baseline) or (self.state.indicators['spread'] > 5)
+        spread = self.state.indicators.get('spread')
+        if spread is None: spread = 0.0
+        
+        is_chaotic = (atr > 2 * atr_baseline) or (spread > 5)
 
         # Funding Regime
-        funding = self.state.indicators['funding_rate']
-        if funding > 0.03:
-            self.state.funding_regime = "EXTREME_LONG_FUNDING"
-        elif funding < -0.02:
-            self.state.funding_regime = "EXTREME_SHORT_FUNDING"
-        else:
-            self.state.funding_regime = "NEUTRAL"
+        funding = self.state.indicators.get('funding_rate')
+        if funding:
+            if funding > 0.03:
+                self.state.funding_regime = "EXTREME_LONG_FUNDING"
+            elif funding < -0.02:
+                self.state.funding_regime = "EXTREME_SHORT_FUNDING"
+            else:
+                self.state.funding_regime = "NEUTRAL"
 
         if is_chaotic:
             self.state.regime = "CHAOTIC"
@@ -457,8 +500,11 @@ class Engine:
             self.state.regime = "RANGING"
 
     def check_gates(self):
-        spread_ok = self.state.indicators['spread'] < 1.5
-        depth_ok = self.state.indicators['depth'] > 250000
+        spread = self.state.indicators.get('spread')
+        depth = self.state.indicators.get('depth')
+        
+        spread_ok = spread is not None and spread < 1.5
+        depth_ok = depth is not None and depth > 250000
         self.state.gates_passed = spread_ok and depth_ok
 
     async def manage_signals(self):
@@ -480,7 +526,14 @@ class Engine:
 
         is_long = self.state.regime == "TRENDING_BULL"
         
-        cvd_ok = (self.state.indicators['cvd_5m'] > 0.15) if is_long else (self.state.indicators['cvd_5m'] < -0.15)
+        # Check indicators exist
+        cvd_5m = self.state.indicators.get('cvd_5m')
+        obi = self.state.indicators.get('obi')
+        
+        if cvd_5m is None or obi is None:
+            return
+
+        cvd_ok = (cvd_5m > 0.15) if is_long else (cvd_5m < -0.15)
         
         if len(self.state.candles_1m) < 1: return
         last_price = self.state.price
@@ -488,7 +541,7 @@ class Engine:
         dist_pct = abs(last_price - ema20_1m) / ema20_1m * 100
         pullback_ok = dist_pct < 0.3
         
-        obi_ok = (self.state.indicators['obi'] > 0.12) if is_long else (self.state.indicators['obi'] < -0.12)
+        obi_ok = (obi > 0.12) if is_long else (obi < -0.12)
         
         ema50_1m = self.state.candles_1m.iloc[-1]['ema50']
         structure_hold = (last_price > ema50_1m) if is_long else (last_price < ema50_1m)
@@ -501,23 +554,24 @@ class Engine:
             score += 5
 
             # Funding Bonus/Penalty
-            funding = self.state.indicators['funding_rate']
+            funding = self.state.indicators.get('funding_rate')
             reasons = ["Structure Aligned", "CVD Strength", "OBI Support"]
             
-            if is_long:
-                if funding < 0: # Shorts paying longs (supportive)
-                    score += 5
-                    reasons.append(f"Funding Supportive ({funding:.3f}%)")
-                if funding > 0.03: # Crowded longs (risk)
-                    score -= 5
-                    reasons.append(f"Caution: Extreme Long Funding ({funding:.3f}%)")
-            else: # Short
-                if funding > 0: # Longs paying shorts (supportive)
-                    score += 5
-                    reasons.append(f"Funding Supportive ({funding:.3f}%)")
-                if funding < -0.02: # Crowded shorts (risk)
-                    score -= 5
-                    reasons.append(f"Caution: Extreme Short Funding ({funding:.3f}%)")
+            if funding:
+                if is_long:
+                    if funding < 0: # Shorts paying longs (supportive)
+                        score += 5
+                        reasons.append(f"Funding Supportive ({funding:.3f}%)")
+                    if funding > 0.03: # Crowded longs (risk)
+                        score -= 5
+                        reasons.append(f"Caution: Extreme Long Funding ({funding:.3f}%)")
+                else: # Short
+                    if funding > 0: # Longs paying shorts (supportive)
+                        score += 5
+                        reasons.append(f"Funding Supportive ({funding:.3f}%)")
+                    if funding < -0.02: # Crowded shorts (risk)
+                        score -= 5
+                        reasons.append(f"Caution: Extreme Short Funding ({funding:.3f}%)")
             
             if score > 70:
                 if self.signal_state.status == "IDLE":
