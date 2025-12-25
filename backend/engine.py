@@ -449,13 +449,13 @@ class Engine:
             return
 
         # Hysteresis for Depth
-        # PASS if > 250k. FAIL if < 200k.
+        # PASS if > 50k. FAIL if < 40k.
         if self.state.gate_state_depth == "PASS":
-            if depth < 200000:
+            if depth < 40000:
                 if self.should_flip_gate(now):
                     self.state.gate_state_depth = "FAIL"
         else: # FAIL
-            if depth > 250000:
+            if depth > 50000:
                 if self.should_flip_gate(now):
                     self.state.gate_state_depth = "PASS"
 
