@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { SignalCard } from "./SignalCard";
-import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle } from "lucide-react";
+import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign } from "lucide-react";
 
 const WS_URL = process.env.REACT_APP_BACKEND_URL.replace('http', 'ws') + '/api/ws';
 
@@ -113,9 +113,23 @@ export default function Dashboard() {
                     <Card className="bg-slate-900 border-slate-800">
                         <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Activity className="h-4 w-4" /> Indicators</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
+                            <IndicatorRow label="Funding Rate" value={indicators?.funding_rate} format="0.000%" threshold={0.01} isPercentage={true} suffix="%" />
+                            <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                                <span className="text-slate-400">Open Interest</span>
+                                <div className="text-right">
+                                    <div className="font-mono text-slate-200">
+                                        ${(indicators?.open_interest / 1000000).toFixed(2)}M
+                                    </div>
+                                    <div className={`text-xs ${indicators?.oi_change_5m > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                        {indicators?.oi_change_5m > 0 ? '+' : ''}{indicators?.oi_change_5m?.toFixed(2)}% (5m)
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <IndicatorRow label="OBI (Order Book Imbalance)" value={indicators?.obi} format="0.00" threshold={0.12} />
                             <IndicatorRow label="CVD 1m" value={indicators?.cvd_1m} format="0.00" threshold={0.0} />
                             <IndicatorRow label="CVD 5m" value={indicators?.cvd_5m} format="0.00" threshold={0.15} />
+                            
                             <div className="flex justify-between items-center py-2 border-b border-slate-800">
                                 <span className="text-slate-400">ATR (Volatility)</span>
                                 <span className="font-mono text-slate-200">{indicators?.atr?.toFixed(2)}</span>
@@ -165,16 +179,24 @@ const TrendBox = ({ label, trend }) => {
     )
 }
 
-const IndicatorRow = ({ label, value, format, threshold }) => {
-    const isBull = value > threshold;
-    const isBear = value < -threshold;
-    const color = isBull ? 'text-emerald-400' : isBear ? 'text-rose-400' : 'text-slate-400';
+const IndicatorRow = ({ label, value, format, threshold, isPercentage, suffix = "" }) => {
+    let color = 'text-slate-400';
+    
+    if (label === "Funding Rate") {
+        if (value > 0.03 || value < -0.02) color = 'text-rose-400';
+        else if ((value > 0.01 && value <= 0.03) || (value >= -0.02 && value < -0.01)) color = 'text-amber-400';
+        else if (value >= -0.01 && value <= 0.01) color = 'text-emerald-400';
+    } else {
+        const isBull = value > threshold;
+        const isBear = value < -threshold;
+        color = isBull ? 'text-emerald-400' : isBear ? 'text-rose-400' : 'text-slate-400';
+    }
     
     return (
         <div className="flex justify-between items-center py-2 border-b border-slate-800 last:border-0">
             <span className="text-slate-400">{label}</span>
             <span className={`font-mono font-bold ${color}`} data-testid={`indicator-${label.split(' ')[0]}`}>
-                {value?.toFixed(2)}
+                {value?.toFixed(label === "Funding Rate" ? 4 : 2)}{suffix}
             </span>
         </div>
     );
