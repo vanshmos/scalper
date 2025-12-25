@@ -112,13 +112,13 @@ export default function Dashboard() {
                          {!is_warmed_up ? (
                              <div className="space-y-2">
                                  <div className="flex justify-between text-xs text-slate-400">
-                                     <span>Building History from Live Stream</span>
-                                     <span>{warmup_progress}% ({debug?.candle_count_1m}/60 candles)</span>
+                                     <span>Building History (Live Mode)</span>
+                                     <span>{warmup_progress}% ({debug?.candle_count_1m}/50 candles)</span>
                                  </div>
                                  <Progress value={warmup_progress} className="h-2 bg-slate-800" indicatorClassName="bg-blue-500" data-testid="warmup-progress" />
                                  <div className="flex items-start gap-2 text-xs text-blue-400 bg-blue-500/10 p-2 rounded">
                                      <Info className="h-4 w-4 shrink-0" />
-                                     <p>Building candles from live trades. Need 60m history for valid indicators. Engine active but signals may be delayed (~45-60 mins).</p>
+                                     <p>Building candles from live trades. Need 50m history for valid indicators. Engine active but signals may be delayed.</p>
                                  </div>
                              </div>
                          ) : (
@@ -147,6 +147,7 @@ export default function Dashboard() {
                     <Card className="bg-slate-900 border-slate-800">
                         <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Activity className="h-4 w-4" /> Indicators</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
+                            <IndicatorRow label="RSI (14)" value={indicators?.rsi} format="0.00" threshold={50} isRSI={true} />
                             <IndicatorRow label="Funding Rate" value={indicators?.funding_rate} format="0.000%" threshold={0.01} isPercentage={true} suffix="%" />
                             <div className="flex justify-between items-center py-2 border-b border-slate-800">
                                 <span className="text-slate-400">Open Interest</span>
@@ -176,7 +177,7 @@ export default function Dashboard() {
                             </div>
                             <div className="flex justify-between items-center py-2">
                                 <span className="text-slate-400">Depth ($)</span>
-                                <span className={`font-mono ${indicators?.smoothed_depth < 250000 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                <span className={`font-mono ${indicators?.smoothed_depth < 50000 ? 'text-rose-400' : 'text-emerald-400'}`}>
                                     {indicators?.smoothed_depth ? `$${(indicators?.smoothed_depth / 1000).toFixed(0)}k` : '-'}
                                 </span>
                             </div>
@@ -212,7 +213,7 @@ export default function Dashboard() {
                     <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-mono bg-slate-950/50">
                         <div className="space-y-2">
                             <h4 className="text-slate-500 font-bold uppercase">Candles</h4>
-                            <DebugRow label="1m Count" value={`${debug?.candle_count_1m} / 60`} status={debug?.candle_count_1m >= 60} />
+                            <DebugRow label="1m Count" value={`${debug?.candle_count_1m} / 50`} status={debug?.candle_count_1m >= 50} />
                             <DebugRow label="5m Count" value={`${debug?.candle_count_5m} / 20`} status={debug?.candle_count_5m >= 20} />
                             <DebugRow label="15m Count" value={`${debug?.candle_count_15m} / 8`} status={debug?.candle_count_15m >= 8} />
                             <div className="border-t border-slate-800 pt-1 mt-1">
@@ -271,7 +272,7 @@ const TrendBox = ({ label, trend }) => {
     )
 }
 
-const IndicatorRow = ({ label, value, format, threshold, isPercentage, suffix = "" }) => {
+const IndicatorRow = ({ label, value, format, threshold, isPercentage, isRSI, suffix = "" }) => {
     let color = 'text-slate-400';
     const displayValue = value === null || value === undefined ? '-' : value.toFixed(label === "Funding Rate" ? 4 : 2);
     
@@ -280,6 +281,10 @@ const IndicatorRow = ({ label, value, format, threshold, isPercentage, suffix = 
             if (value > 0.03 || value < -0.02) color = 'text-rose-400';
             else if ((value > 0.01 && value <= 0.03) || (value >= -0.02 && value < -0.01)) color = 'text-amber-400';
             else if (value >= -0.01 && value <= 0.01) color = 'text-emerald-400';
+        } else if (isRSI) {
+            if (value > 70) color = 'text-rose-400';
+            else if (value < 30) color = 'text-emerald-400';
+            else color = 'text-white';
         } else {
             const isBull = value > threshold;
             const isBear = value < -threshold;
