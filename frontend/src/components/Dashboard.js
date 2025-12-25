@@ -112,13 +112,13 @@ export default function Dashboard() {
                          {!is_warmed_up ? (
                              <div className="space-y-2">
                                  <div className="flex justify-between text-xs text-slate-400">
-                                     <span>Building History (Live Mode)</span>
-                                     <span>{warmup_progress}%</span>
+                                     <span>Building History from Live Stream</span>
+                                     <span>{warmup_progress}% ({debug?.candle_count_1m}/60 candles)</span>
                                  </div>
                                  <Progress value={warmup_progress} className="h-2 bg-slate-800" indicatorClassName="bg-blue-500" data-testid="warmup-progress" />
                                  <div className="flex items-start gap-2 text-xs text-blue-400 bg-blue-500/10 p-2 rounded">
                                      <Info className="h-4 w-4 shrink-0" />
-                                     <p>Collecting live candle data. Need 60m history for valid indicators. Engine active but signals may be delayed.</p>
+                                     <p>Building candles from live trades. Need 60m history for valid indicators. Engine active but signals may be delayed (~45-60 mins).</p>
                                  </div>
                              </div>
                          ) : (
@@ -234,8 +234,8 @@ export default function Dashboard() {
 
                         <div className="space-y-2">
                             <h4 className="text-slate-500 font-bold uppercase">Backfill Diagnostics</h4>
-                            <div className={`p-2 rounded ${backfill_failed_final ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900 text-slate-400'}`}>
-                                {debug?.backfill_error_msg || "Disabled (Live Mode)"}
+                            <div className={`p-2 rounded bg-slate-900 text-slate-400`}>
+                                {debug?.backfill_error_msg || "Live Building Mode"}
                             </div>
                             <div className="mt-2">
                                 <Button 
