@@ -65,6 +65,24 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+import math
+import numpy as np
+
+def clean_nans(obj):
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    elif isinstance(obj, dict):
+        return {k: clean_nans(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_nans(v) for v in obj]
+    elif isinstance(obj, (np.int64, np.int32)):
+        return int(obj)
+    elif isinstance(obj, (np.float64, np.float32)):
+        return clean_nans(float(obj))
+    return obj
+
 # Background Broadcaster
 async def broadcast_state():
     while True:
@@ -99,7 +117,10 @@ async def broadcast_state():
             "backfill_failed_final": engine.state.backfill_failed_final,
             "debug": debug # Include debug info
         }
-        await manager.broadcast(state)
+        
+        # Clean NaNs before broadcasting
+        cleaned_state = clean_nans(state)
+        await manager.broadcast(cleaned_state)
 
 @api_router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
