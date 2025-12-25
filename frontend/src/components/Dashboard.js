@@ -2,14 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { SignalCard } from "./SignalCard";
-import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle } from "lucide-react";
+import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle, ChevronDown, ChevronUp, Terminal } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const WS_URL = process.env.REACT_APP_BACKEND_URL.replace('http', 'ws') + '/api/ws';
 
 export default function Dashboard() {
     const [data, setData] = useState(null);
     const [connected, setConnected] = useState(false);
+    const [isDebugOpen, setIsDebugOpen] = useState(false);
+    const [testSignal, setTestSignal] = useState(null);
 
     useEffect(() => {
         let ws;
@@ -29,6 +33,29 @@ export default function Dashboard() {
         return () => ws?.close();
     }, []);
 
+    const toggleTestSignal = () => {
+        if (testSignal) {
+            setTestSignal(null);
+        } else {
+            setTestSignal({
+                id: "TEST-123",
+                direction: "LONG",
+                entry_min: 88500.50,
+                entry_max: 88550.00,
+                stop_loss: 88200.00,
+                tp1: 88900.00,
+                tp2: 89500.00,
+                sl_pct: 0.35,
+                tp1_pct: 0.45,
+                tp2_pct: 1.15,
+                rr_ratio: 1.5,
+                confidence: 85,
+                reasons: ["Test Signal Data", "Structure Aligned", "Funding Supportive"],
+                timestamp: Date.now() / 1000
+            });
+        }
+    };
+
     if (!data) return (
         <div className="flex h-screen items-center justify-center bg-slate-950 text-slate-200" data-testid="loading-screen">
             <div className="text-center">
@@ -38,10 +65,14 @@ export default function Dashboard() {
         </div>
     );
 
-    const { price, regime, trends, gates_passed, indicators, signal_status, current_signal, warmup_progress, is_warmed_up, backfill_error, backfill_failed_final } = data;
+    const { price, regime, trends, gates_passed, indicators, signal_status, current_signal, warmup_progress, is_warmed_up, backfill_error, backfill_failed_final, debug } = data;
+
+    // Use test signal if active, otherwise real signal
+    const displaySignal = testSignal || current_signal;
+    const displayStatus = testSignal ? "ACTIVE" : signal_status;
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-6 font-mono">
+        <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-6 font-mono pb-32">
             {/* Header / Status Bar */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <Card className="bg-slate-900 border-slate-800">
@@ -160,14 +191,72 @@ export default function Dashboard() {
                 </div>
 
                 {/* Center/Right: Signal Area */}
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 space-y-4">
                     <SignalCard 
-                        status={signal_status} 
-                        signal={current_signal} 
+                        status={displayStatus} 
+                        signal={displaySignal} 
                         formingSince={data.forming_since}
                     />
+                    {testSignal && (
+                        <div className="text-center bg-amber-500/10 border border-amber-500/20 text-amber-400 p-2 rounded text-sm font-bold">
+                            ⚠️ DISPLAYING TEST SIGNAL DATA
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {/* Debug Panel */}
+            <Collapsible open={isDebugOpen} onOpenChange={setIsDebugOpen} className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-50">
+                <div className="flex items-center justify-between p-2 px-4 cursor-pointer hover:bg-slate-800" onClick={() => setIsDebugOpen(!isDebugOpen)}>
+                    <div className="flex items-center gap-2 text-slate-400 text-xs font-mono uppercase">
+                        <Terminal className="h-3 w-3" /> Engine Debug
+                    </div>
+                    {isDebugOpen ? <ChevronDown className="h-4 w-4 text-slate-500" /> : <ChevronUp className="h-4 w-4 text-slate-500" />}
+                </div>
+                
+                <CollapsibleContent>
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-mono bg-slate-950/50">
+                        <div className="space-y-2">
+                            <h4 className="text-slate-500 font-bold uppercase">Candles</h4>
+                            <DebugRow label="1m Count" value={`${debug?.candle_count_1m} / 60`} status={debug?.candle_count_1m >= 60} />
+                            <DebugRow label="5m Count" value={`${debug?.candle_count_5m} / 20`} status={debug?.candle_count_5m >= 20} />
+                            <DebugRow label="15m Count" value={`${debug?.candle_count_15m} / 8`} status={debug?.candle_count_15m >= 8} />
+                            <div className="border-t border-slate-800 pt-1 mt-1">
+                                <div className="text-slate-600">Last 5m Candle:</div>
+                                <div className="text-slate-400 truncate">{debug?.last_candle_5m ? new Date(debug.last_candle_5m.startTime).toISOString().substr(11, 8) : '-'}</div>
+                                <div className="text-slate-400">ATR: {debug?.last_candle_5m?.atr?.toFixed(2) ?? 'N/A'}</div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <h4 className="text-slate-500 font-bold uppercase">Data Flow</h4>
+                            <DebugRow label="WS Rate" value={`${debug?.ws_rate?.toFixed(1)} msg/s`} status={debug?.ws_rate > 0} />
+                            <DebugRow label="Trades Buffer" value={debug?.trade_buffer_size} status={debug?.trade_buffer_size > 0} />
+                            <div className="text-slate-600">Buffer Range:</div>
+                            <div className="text-slate-400">{debug?.oldest_trade ? new Date(debug.oldest_trade * 1000).toISOString().substr(11, 8) : '-'}</div>
+                            <div className="text-slate-400">to</div>
+                            <div className="text-slate-400">{debug?.newest_trade ? new Date(debug.newest_trade * 1000).toISOString().substr(11, 8) : '-'}</div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <h4 className="text-slate-500 font-bold uppercase">Backfill Diagnostics</h4>
+                            <div className={`p-2 rounded ${backfill_failed_final ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900 text-slate-400'}`}>
+                                {debug?.backfill_error_msg || "No errors"}
+                            </div>
+                            <div className="mt-2">
+                                <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className={`w-full ${testSignal ? 'bg-amber-500/20 border-amber-500 text-amber-400' : ''}`}
+                                    onClick={(e) => { e.stopPropagation(); toggleTestSignal(); }}
+                                >
+                                    {testSignal ? "Hide Test Signal" : "Show Test Signal"}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </CollapsibleContent>
+            </Collapsible>
         </div>
     );
 }
@@ -213,3 +302,10 @@ const IndicatorRow = ({ label, value, format, threshold, isPercentage, suffix = 
         </div>
     );
 };
+
+const DebugRow = ({ label, value, status }) => (
+    <div className="flex justify-between items-center">
+        <span className="text-slate-500">{label}</span>
+        <span className={`font-bold ${status ? 'text-emerald-400' : 'text-rose-400'}`}>{value}</span>
+    </div>
+);
