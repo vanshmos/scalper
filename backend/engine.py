@@ -49,7 +49,7 @@ class MarketState:
         self.warmup_progress = 0
         self.last_update = 0
         self.backfill_error = False
-        self.backfill_error_msg = ""
+        self.backfill_error_msg = "Live Building Mode"
         self.backfill_retries = 0
         self.backfill_failed_final = False
         self.funding_regime = "NEUTRAL"
@@ -80,8 +80,8 @@ class Engine:
 
     async def start(self):
         self.running = True
-        # Start Backfill with retry
-        asyncio.create_task(self.backfill_loop())
+        # NO BACKFILL - Live Build Only
+        logger.info("Starting Engine in Live Build Mode (No Backfill)")
         
         # Start WS Loop
         asyncio.create_task(self.ws_loop())
@@ -89,99 +89,7 @@ class Engine:
         # Start Processing Loop (1s interval)
         asyncio.create_task(self.processing_loop())
 
-    async def backfill_loop(self):
-        retry_delay = 5
-        max_retries = 5
-        
-        while self.running and not self.state.is_warmed_up:
-            if self.state.backfill_retries >= max_retries:
-                logger.error("Backfill failed after max retries. Stopping backfill and enabling real-time only mode.")
-                self.state.backfill_failed_final = True
-                self.state.backfill_error = True
-                self.state.backfill_error_msg = f"Failed after {max_retries} retries (HTTP 403 Forbidden)"
-                # CRITICAL: Allow real-time processing to start even if backfill failed
-                self.state.is_warmed_up = True 
-                break
-                
-            try:
-                await self.backfill_candles()
-                if self.state.is_warmed_up:
-                    self.state.backfill_error = False
-                    self.state.backfill_failed_final = False
-                    self.state.backfill_error_msg = ""
-                    break
-            except Exception as e:
-                self.state.backfill_retries += 1
-                logger.error(f"Backfill loop error (Attempt {self.state.backfill_retries}/{max_retries}): {e}")
-                self.state.backfill_error = True
-                self.state.backfill_error_msg = str(e)
-            
-            logger.info(f"Retrying backfill in {retry_delay}s...")
-            await asyncio.sleep(retry_delay)
-            retry_delay = min(retry_delay * 2, 60) 
-
-    async def backfill_candles(self):
-        logger.info("Starting backfill...")
-        headers = {"User-Agent": "Mozilla/5.0"}
-        async with aiohttp.ClientSession(headers=headers) as session:
-            c1m = await self.fetch_kline(session, 1, 100)
-            if c1m.empty: raise Exception("Failed to fetch 1m candles")
-            self.state.candles_1m = c1m
-            self.state.warmup_progress = 33
-            
-            c5m = await self.fetch_kline(session, 5, 50)
-            if c5m.empty: raise Exception("Failed to fetch 5m candles")
-            self.state.candles_5m = c5m
-            self.state.warmup_progress = 66
-            
-            c15m = await self.fetch_kline(session, 15, 20)
-            if c15m.empty: raise Exception("Failed to fetch 15m candles")
-            self.state.candles_15m = c15m
-            self.state.warmup_progress = 100
-        
-        self.state.is_warmed_up = True
-        logger.info("Backfill complete.")
-
-    async def fetch_kline(self, session, interval, limit):
-        params = {
-            "category": "linear",
-            "symbol": SYMBOL,
-            "interval": str(interval),
-            "limit": limit
-        }
-        try:
-            async with session.get(BYBIT_REST_URL, params=params, timeout=5) as resp:
-                if resp.status != 200:
-                    logger.warning(f"Backfill HTTP {resp.status}")
-                    if resp.status == 403:
-                        raise Exception(f"HTTP 403 Forbidden (IP Blocked)")
-                    return pd.DataFrame()
-                    
-                data = await resp.json()
-                if data['retCode'] == 0:
-                    df = pd.DataFrame(data['result']['list'], columns=['startTime', 'open', 'high', 'low', 'close', 'volume', 'turnover'])
-                    df = df.astype(float)
-                    df['startTime'] = pd.to_datetime(df['startTime'], unit='ms')
-                    df = df.sort_values('startTime').reset_index(drop=True)
-                    # Calculate EMAs
-                    df['ema20'] = df['close'].ewm(span=20, adjust=False).mean()
-                    df['ema50'] = df['close'].ewm(span=50, adjust=False).mean()
-                    
-                    if interval == 5:
-                        df['tr'] = np.maximum(
-                            df['high'] - df['low'],
-                            np.maximum(
-                                abs(df['high'] - df['close'].shift(1)),
-                                abs(df['low'] - df['close'].shift(1))
-                            )
-                        )
-                        # ATR with min_periods=1 to start immediately
-                        df['atr'] = df['tr'].rolling(window=14, min_periods=1).mean()
-                    return df
-        except Exception as e:
-            logger.error(f"Fetch kline error: {e}")
-            raise e # Re-raise for loop
-        return pd.DataFrame()
+    # backfill_loop and backfill_candles removed/disabled
 
     async def ws_loop(self):
         while self.running:
@@ -382,20 +290,17 @@ class Engine:
         best_bid = self.state.orderbook['bids'][0][0]
         best_ask = self.state.orderbook['asks'][0][0]
         mid_price = (best_ask + best_bid) / 2
-        # Spread in bps: (Ask - Bid) / Mid * 10000
         spread_bps = (best_ask - best_bid) / mid_price * 10000 
         self.state.indicators['spread'] = spread_bps
         
         if int(time.time()) % 10 == 0:
             logger.info(f"Spread Calc: Bid={best_bid}, Ask={best_ask}, Spread={spread_bps:.4f} bps")
         
-        # Depth with smoothing
         bid_val = sum(b[0] * b[1] for b in bids)
         ask_val = sum(a[0] * a[1] for a in asks)
         min_depth = min(bid_val, ask_val)
         self.state.indicators['depth'] = min_depth
         
-        # Smooth Depth
         current_smoothed = self.state.indicators.get('smoothed_depth', 0.0)
         smoothed = (0.3 * min_depth) + (0.7 * current_smoothed)
         self.state.indicators['smoothed_depth'] = smoothed
@@ -445,9 +350,27 @@ class Engine:
         while self.running:
             await asyncio.sleep(1)
             
+            # CHECK WARMUP STATUS
             if not self.state.is_warmed_up:
-                continue
+                count_1m = len(self.state.candles_1m)
+                # Need 60 candles
+                progress = min(100, int((count_1m / 60) * 100))
+                self.state.warmup_progress = progress
                 
+                if count_1m >= 60:
+                    self.state.is_warmed_up = True
+                    logger.info("Warmup Complete via Live Build!")
+                
+                # Even if not warmed up, run indicators/regime?
+                # The prompt says "Building candles... 15 of 60 1m candles collected".
+                # If we don't run regime, we don't get "Structure" trends or "ATR".
+                # But signals should probably be blocked.
+                # Let's run regime/indicators to show progress on dashboard, 
+                # but manage_signals will check warmup?
+                # Actually, `manage_signals` checks `is_warmed_up` implicitly via `processing_loop`.
+                # Let's allow loop to continue but signals might be invalid.
+                # Actually, let's keep signals blocked until warmed up.
+            
             if time.time() - self.state.last_update > 10:
                 logger.warning("Data stale")
                 self.state.regime = "UNCLEAR"
@@ -457,7 +380,11 @@ class Engine:
             self.calculate_cvd()
             self.determine_regime()
             self.check_gates()
-            await self.manage_signals()
+            
+            # Only manage signals if fully warmed up (or maybe just show them?)
+            # Prompt implies we need valid EMAs.
+            if self.state.is_warmed_up:
+                await self.manage_signals()
 
     def determine_regime(self):
         if len(self.state.candles_5m) < 2 or len(self.state.candles_15m) < 2:
