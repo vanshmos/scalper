@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { SignalCard } from "./SignalCard";
-import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign } from "lucide-react";
+import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle } from "lucide-react";
 
 const WS_URL = process.env.REACT_APP_BACKEND_URL.replace('http', 'ws') + '/api/ws';
 
@@ -38,7 +38,7 @@ export default function Dashboard() {
         </div>
     );
 
-    const { price, regime, trends, gates_passed, indicators, signal_status, current_signal, warmup_progress, is_warmed_up, backfill_error } = data;
+    const { price, regime, trends, gates_passed, indicators, signal_status, current_signal, warmup_progress, is_warmed_up, backfill_error, backfill_failed_final } = data;
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 p-4 md:p-6 font-mono">
@@ -78,7 +78,7 @@ export default function Dashboard() {
                             <div className="text-sm text-slate-500 uppercase tracking-wider">System Status</div>
                             <div className="text-xs text-slate-600">{connected ? 'WS CONNECTED' : 'WS DISCONNECTED'}</div>
                          </div>
-                         {!is_warmed_up ? (
+                         {!is_warmed_up && !backfill_failed_final ? (
                              <div className="space-y-2">
                                  <div className="flex justify-between text-xs text-slate-400">
                                      <span>Warmup Progress {backfill_error && "(Retrying...)"}</span>
@@ -86,6 +86,15 @@ export default function Dashboard() {
                                  </div>
                                  <Progress value={warmup_progress} className="h-2 bg-slate-800" indicatorClassName={backfill_error ? "bg-amber-500" : "bg-blue-500"} data-testid="warmup-progress" />
                                  {backfill_error && <div className="flex items-center gap-1 text-xs text-amber-500"><AlertTriangle className="h-3 w-3" /> Backfill Failed - Retrying</div>}
+                             </div>
+                         ) : backfill_failed_final ? (
+                             <div className="flex flex-col gap-2">
+                                 <div className="flex items-center gap-2 text-rose-400 text-sm font-bold">
+                                     <XCircle className="h-4 w-4" /> Backfill Failed - Data Unavailable
+                                 </div>
+                                 <p className="text-xs text-slate-400">
+                                     Unable to fetch historical data (API Error). Engine is running in real-time only mode. Indicators like ATR will normalize as new candles form.
+                                 </p>
                              </div>
                          ) : (
                              <div className="flex items-center gap-4 text-emerald-400 text-sm" data-testid="system-ready">
