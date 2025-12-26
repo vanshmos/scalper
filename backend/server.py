@@ -99,6 +99,8 @@ async def broadcast_state():
             await asyncio.sleep(0.5) # 2Hz Update
             
             # Prepare Debug Info
+            engine.build_checklist() # Sync checklist with latest indicators before broadcast
+            
             debug = {
                 "candle_count_1m": len(engine.state.candles_1m),
                 "candle_count_5m": len(engine.state.candles_5m),
