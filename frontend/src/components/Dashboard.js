@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { SignalCard } from "./SignalCard";
-import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle, ChevronDown, ChevronUp, Terminal, Info, CheckCircle2, Circle } from "lucide-react";
+import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle, ChevronDown, ChevronUp, Terminal, Info, CheckCircle2, Circle, Volume2, VolumeX } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const WS_URL = process.env.REACT_APP_BACKEND_URL.replace('http', 'ws') + '/api/ws';
@@ -14,6 +14,14 @@ export default function Dashboard() {
     const [connected, setConnected] = useState(false);
     const [isDebugOpen, setIsDebugOpen] = useState(false);
     const [testSignal, setTestSignal] = useState(null);
+    const [soundEnabled, setSoundEnabled] = useState(true);
+    
+    // Track previous signal state to trigger sounds on change
+    const prevSignalStatus = useRef("IDLE");
+
+    // Preload sounds
+    const formingSound = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3')); // Soft beep
+    const activeSound = useRef(new Audio('https://assets.mixkit.co/active_storage/sfx/2865/2865-preview.mp3')); // Alert
 
     useEffect(() => {
         let ws;
@@ -32,6 +40,24 @@ export default function Dashboard() {
         connect();
         return () => ws?.close();
     }, []);
+
+    // Sound Logic
+    useEffect(() => {
+        if (!data || !soundEnabled) return;
+
+        const currentStatus = data.signal_status;
+        const prevStatus = prevSignalStatus.current;
+
+        if (currentStatus !== prevStatus) {
+            if (currentStatus === "FORMING") {
+                formingSound.current.play().catch(e => console.log("Audio play failed", e));
+            } else if (currentStatus === "ACTIVE") {
+                activeSound.current.play().catch(e => console.log("Audio play failed", e));
+            }
+        }
+        
+        prevSignalStatus.current = currentStatus;
+    }, [data, soundEnabled]);
 
     const toggleTestSignal = () => {
         if (testSignal) {
@@ -107,7 +133,18 @@ export default function Dashboard() {
                     <CardContent className="pt-6">
                          <div className="flex justify-between items-center mb-2">
                             <div className="text-sm text-slate-500 uppercase tracking-wider">System Status</div>
-                            <div className="text-xs text-slate-600">{connected ? 'WS CONNECTED' : 'WS DISCONNECTED'}</div>
+                            <div className="flex items-center gap-4">
+                                <div className="text-xs text-slate-600">{connected ? 'WS CONNECTED' : 'WS DISCONNECTED'}</div>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-slate-400 hover:text-white" 
+                                    onClick={() => setSoundEnabled(!soundEnabled)}
+                                    title={soundEnabled ? "Mute Sounds" : "Enable Sounds"}
+                                >
+                                    {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                                </Button>
+                            </div>
                          </div>
                          {!is_warmed_up ? (
                              <div className="space-y-2">
