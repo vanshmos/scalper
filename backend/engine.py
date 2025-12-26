@@ -39,13 +39,15 @@ class MarketState:
             "cvd_1m": None,
             "cvd_5m": None,
             "atr": None,
-            "rsi": None, # Added RSI
+            "rsi": None, 
             "spread": None,
             "depth": None,
             "smoothed_depth": 0.0,
             "funding_rate": None,
             "open_interest": None,
-            "oi_change_5m": None
+            "oi_change_5m": None,
+            "ema20_1m": None, # For distance check
+            "ema50_1m": None
         }
         self.oi_history = deque(maxlen=600) 
         self.is_warmed_up = False
@@ -56,6 +58,9 @@ class MarketState:
         self.backfill_retries = 0
         self.backfill_failed_final = False
         self.funding_regime = "NEUTRAL"
+        
+        # Checklist for frontend
+        self.checklist = {}
         
         # Debug Stats
         self.ws_msg_count = 0
@@ -141,13 +146,10 @@ class Engine:
 
     def save_cache(self):
         try:
-            # Keep last 180 candles (3 hours)
             if self.state.candles_1m.empty: return
             
             df = self.state.candles_1m.tail(180).copy()
-            # Convert timestamp to string for JSON
             df['startTime'] = df['startTime'].dt.strftime('%Y-%m-%d %H:%M:%S')
-            # Select only OHLCV
             cols = ['startTime', 'open', 'high', 'low', 'close', 'volume']
             data = df[cols].to_dict(orient='records')
             
@@ -160,8 +162,6 @@ class Engine:
         while self.running:
             try:
                 self.state.ws_status = "CONNECTING"
-                logger.info(f"Connecting to WS: {BYBIT_WS_URL}")
-                
                 async with connect(BYBIT_WS_URL) as websocket:
                     self.ws_connected = True
                     self.state.ws_status = "CONNECTED"
@@ -184,7 +184,6 @@ class Engine:
                         data = json.loads(msg)
                         self.handle_ws_message(data)
                         
-                        # WS Rate Calc
                         msg_count += 1
                         now = time.time()
                         if now - last_rate_update >= 1.0:
@@ -196,7 +195,6 @@ class Engine:
                 self.ws_connected = False
                 self.state.ws_status = "DISCONNECTED"
                 logger.error(f"WS Error: {e}")
-                logger.info("WS Disconnected. Retrying in 5s...")
                 await asyncio.sleep(5)
 
     def handle_ws_message(self, data):
@@ -244,9 +242,6 @@ class Engine:
                         self.state.orderbook['asks'].sort(key=lambda x: x[0])
                         self.state.orderbook['asks'] = self.state.orderbook['asks'][:50]
             
-            if int(ts) % 10 == 0:
-                 logger.info(f"Orderbook Levels: Bids={len(self.state.orderbook['bids'])}, Asks={len(self.state.orderbook['asks'])}")
-
             self.calculate_obi()
 
         elif 'publicTrade' in topic:
@@ -302,11 +297,16 @@ class Engine:
         row = pd.DataFrame([candle])
         row['startTime'] = pd.to_datetime(row['startTime'], unit='s')
         
-        self.state.candles_1m = pd.concat([self.state.candles_1m, row]).tail(180) # Keep 3 hours in memory too
+        self.state.candles_1m = pd.concat([self.state.candles_1m, row]).tail(180) 
         self.state.candles_1m['ema20'] = self.state.candles_1m['close'].ewm(span=20, adjust=False).mean()
         self.state.candles_1m['ema50'] = self.state.candles_1m['close'].ewm(span=50, adjust=False).mean()
+        
+        # Store last EMA for check
+        if not self.state.candles_1m.empty:
+            self.state.indicators['ema20_1m'] = self.state.candles_1m.iloc[-1]['ema20']
+            self.state.indicators['ema50_1m'] = self.state.candles_1m.iloc[-1]['ema50']
 
-        self.save_cache() # SAVE TO DISK
+        self.save_cache() 
         self.resample_candles()
 
     def resample_candles(self):
@@ -330,8 +330,9 @@ class Engine:
             
             # RSI Calculation
             delta = c5['close'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14, min_periods=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14, min_periods=14).mean()
+            
             rs = gain / loss
             c5['rsi'] = 100 - (100 / (1 + rs))
             
@@ -340,7 +341,8 @@ class Engine:
             if not c5.empty:
                 last = c5.iloc[-1]
                 self.state.indicators['rsi'] = last['rsi'] if not pd.isna(last['rsi']) else None
-                logger.info(f"5m Candle: C={last['close']}, ATR={last['atr']}, RSI={self.state.indicators['rsi']}")
+                # Log RSI
+                logger.info(f"RSI Calc: Close={last['close']}, RSI={self.state.indicators['rsi']}, Candles={len(c5)}")
 
             # 15m
             c15 = df.resample('15min').agg({
@@ -366,15 +368,11 @@ class Engine:
         if current_obi is None: current_obi = 0.0
         self.state.indicators['obi'] = (0.3 * raw_obi) + (0.7 * current_obi)
 
-        # Gate Checks
         best_bid = self.state.orderbook['bids'][0][0]
         best_ask = self.state.orderbook['asks'][0][0]
         mid_price = (best_ask + best_bid) / 2
         spread_bps = (best_ask - best_bid) / mid_price * 10000 
         self.state.indicators['spread'] = spread_bps
-        
-        if int(time.time()) % 10 == 0:
-            logger.info(f"Spread Calc: Bid={best_bid}, Ask={best_ask}, Spread={spread_bps:.4f} bps")
         
         bid_val = sum(b[0] * b[1] for b in bids)
         ask_val = sum(a[0] * a[1] for a in asks)
@@ -407,9 +405,6 @@ class Engine:
 
         self.state.indicators['cvd_1m'] = (0.3 * ratio_1m) + (0.7 * current_cvd_1m)
         self.state.indicators['cvd_5m'] = (0.3 * ratio_5m) + (0.7 * current_cvd_5m)
-        
-        if int(now) % 10 == 0:
-            logger.info(f"CVD Calc: Trades={len(trades_list)}, Smoothed1m={self.state.indicators['cvd_1m']:.3f}")
 
     def update_oi_change(self):
         now = time.time()
@@ -432,15 +427,14 @@ class Engine:
             
             if not self.state.is_warmed_up:
                 count_1m = len(self.state.candles_1m)
-                progress = min(100, int((count_1m / 50) * 100)) # 50 candles target
+                progress = min(100, int((count_1m / 50) * 100))
                 self.state.warmup_progress = progress
                 
                 if count_1m >= 50:
                     self.state.is_warmed_up = True
-                    logger.info("Warmup Complete!")
+                    logger.info("Warmup Complete via Live Build!")
             
             if time.time() - self.state.last_update > 10:
-                logger.warning("Data stale")
                 self.state.regime = "UNCLEAR"
                 continue
 
@@ -448,6 +442,7 @@ class Engine:
             self.calculate_cvd()
             self.determine_regime()
             self.check_gates()
+            self.build_checklist() # NEW
             
             if self.state.is_warmed_up:
                 await self.manage_signals()
@@ -514,24 +509,20 @@ class Engine:
         if spread is None or depth is None:
             return
 
-        # Hysteresis for Depth
-        # PASS if > 50k. FAIL if < 40k.
         if self.state.gate_state_depth == "PASS":
             if depth < 40000:
                 if self.should_flip_gate(now):
                     self.state.gate_state_depth = "FAIL"
-        else: # FAIL
+        else: 
             if depth > 50000:
                 if self.should_flip_gate(now):
                     self.state.gate_state_depth = "PASS"
 
-        # Hysteresis for Spread
-        # PASS if < 1.5. FAIL if > 2.0.
         if self.state.gate_state_spread == "PASS":
             if spread > 2.0:
                 if self.should_flip_gate(now):
                     self.state.gate_state_spread = "FAIL"
-        else: # FAIL
+        else: 
             if spread < 1.5:
                 if self.should_flip_gate(now):
                     self.state.gate_state_spread = "PASS"
@@ -539,11 +530,58 @@ class Engine:
         self.state.gates_passed = (self.state.gate_state_depth == "PASS") and (self.state.gate_state_spread == "PASS")
 
     def should_flip_gate(self, now):
-        # 3 second debounce
         if now - self.state.last_gate_change > 3:
             self.state.last_gate_change = now
             return True
         return False
+
+    def build_checklist(self):
+        # 1. Regime is TRENDING
+        is_trending = "TRENDING" in self.state.regime
+        
+        # 2. Structure aligned
+        struct_5m = self.state.trends['5m']
+        struct_15m = self.state.trends['15m']
+        aligned = (struct_5m == "BULL" and struct_15m == "BULL") or (struct_5m == "BEAR" and struct_15m == "BEAR")
+        
+        # 3. CVD Threshold
+        cvd = self.state.indicators.get('cvd_5m', 0.0)
+        if cvd is None: cvd = 0.0
+        
+        cvd_pass = False
+        if is_trending:
+            if self.state.regime == "TRENDING_BULL":
+                cvd_pass = cvd > 0.15
+            else:
+                cvd_pass = cvd < -0.15
+        
+        # 4. OBI Threshold
+        obi = self.state.indicators.get('obi', 0.0)
+        if obi is None: obi = 0.0
+        obi_pass = False
+        if is_trending:
+            if self.state.regime == "TRENDING_BULL":
+                obi_pass = obi > 0.12
+            else:
+                obi_pass = obi < -0.12
+                
+        # 5. Price near EMA20
+        ema20 = self.state.indicators.get('ema20_1m', 0.0)
+        dist_str = "-"
+        ema_pass = False
+        if ema20 and self.state.price > 0:
+            dist_pct = abs(self.state.price - ema20) / ema20 * 100
+            dist_str = f"{dist_pct:.3f}%"
+            ema_pass = dist_pct < 0.3
+            
+        self.state.checklist = {
+            "regime": {"pass": is_trending, "value": self.state.regime},
+            "structure": {"pass": aligned, "value": f"5M {struct_5m} 15M {struct_15m}"},
+            "cvd": {"pass": cvd_pass, "value": f"{cvd:.2f}"},
+            "obi": {"pass": obi_pass, "value": f"{obi:.2f}"},
+            "ema_dist": {"pass": ema_pass, "value": dist_str},
+            "gates": {"pass": self.state.gates_passed, "value": "PASS" if self.state.gates_passed else "FAIL"}
+        }
 
     async def manage_signals(self):
         now = time.time()
@@ -564,68 +602,55 @@ class Engine:
 
         is_long = self.state.regime == "TRENDING_BULL"
         
-        cvd_5m = self.state.indicators.get('cvd_5m')
-        obi = self.state.indicators.get('obi')
-        if cvd_5m is None or obi is None: return
+        # Checklist logic mirrors this
+        checklist = self.state.checklist
+        if not (checklist['cvd']['pass'] and checklist['obi']['pass'] and checklist['ema_dist']['pass']):
+            self.reset_forming()
+            return
 
-        cvd_ok = (cvd_5m > 0.15) if is_long else (cvd_5m < -0.15)
+        # Score Logic
+        score = 30 
+        score += 25 if checklist['cvd']['pass'] else 0
+        score += 20 if checklist['ema_dist']['pass'] else 0
+        score += 20 if checklist['obi']['pass'] else 0
+        score += 5
+
+        funding = self.state.indicators.get('funding_rate')
+        reasons = ["Structure Aligned", "CVD Strength", "OBI Support"]
         
-        if len(self.state.candles_1m) < 1: return
-        last_price = self.state.price
-        ema20_1m = self.state.candles_1m.iloc[-1]['ema20']
-        dist_pct = abs(last_price - ema20_1m) / ema20_1m * 100
-        pullback_ok = dist_pct < 0.3
+        if funding:
+            if is_long:
+                if funding < 0:
+                    score += 5
+                    reasons.append(f"Funding Supportive ({funding:.3f}%)")
+                if funding > 0.03:
+                    score -= 5
+                    reasons.append(f"Caution: Extreme Long Funding ({funding:.3f}%)")
+            else: 
+                if funding > 0:
+                    score += 5
+                    reasons.append(f"Funding Supportive ({funding:.3f}%)")
+                if funding < -0.02:
+                    score -= 5
+                    reasons.append(f"Caution: Extreme Short Funding ({funding:.3f}%)")
         
-        obi_ok = (obi > 0.12) if is_long else (obi < -0.12)
-        
-        ema50_1m = self.state.candles_1m.iloc[-1]['ema50']
-        structure_hold = (last_price > ema50_1m) if is_long else (last_price < ema50_1m)
+        rsi = self.state.indicators.get('rsi')
+        if rsi:
+            if is_long and rsi > 75:
+                score -= 15
+                reasons.append(f"RSI Overbought ({rsi:.1f})")
+            if not is_long and rsi < 25:
+                score -= 15
+                reasons.append(f"RSI Oversold ({rsi:.1f})")
 
-        if cvd_ok and pullback_ok and obi_ok and structure_hold:
-            score = 30 
-            score += 25 if cvd_ok else 0
-            score += 20 if pullback_ok else 0
-            score += 20 if obi_ok else 0
-            score += 5
-
-            funding = self.state.indicators.get('funding_rate')
-            reasons = ["Structure Aligned", "CVD Strength", "OBI Support"]
-            
-            if funding:
-                if is_long:
-                    if funding < 0:
-                        score += 5
-                        reasons.append(f"Funding Supportive ({funding:.3f}%)")
-                    if funding > 0.03:
-                        score -= 5
-                        reasons.append(f"Caution: Extreme Long Funding ({funding:.3f}%)")
-                else: 
-                    if funding > 0:
-                        score += 5
-                        reasons.append(f"Funding Supportive ({funding:.3f}%)")
-                    if funding < -0.02:
-                        score -= 5
-                        reasons.append(f"Caution: Extreme Short Funding ({funding:.3f}%)")
-            
-            rsi = self.state.indicators.get('rsi')
-            if rsi:
-                if is_long and rsi > 75:
-                    score -= 15
-                    reasons.append(f"RSI Overbought ({rsi:.1f})")
-                if not is_long and rsi < 25:
-                    score -= 15
-                    reasons.append(f"RSI Oversold ({rsi:.1f})")
-
-            if score > 70:
-                if self.signal_state.status == "IDLE":
-                    self.signal_state.status = "FORMING"
-                    self.signal_state.forming_since = now
-                    logger.info("Signal FORMING...")
-                elif self.signal_state.status == "FORMING":
-                    if now - self.signal_state.forming_since >= 30:
-                        await self.activate_signal(is_long, score, reasons)
-            else:
-                self.reset_forming()
+        if score > 70:
+            if self.signal_state.status == "IDLE":
+                self.signal_state.status = "FORMING"
+                self.signal_state.forming_since = now
+                logger.info("Signal FORMING...")
+            elif self.signal_state.status == "FORMING":
+                if now - self.signal_state.forming_since >= 30:
+                    await self.activate_signal(is_long, score, reasons)
         else:
             self.reset_forming()
 
