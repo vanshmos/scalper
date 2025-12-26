@@ -108,7 +108,7 @@ export default function Dashboard() {
         <div className="flex h-screen items-center justify-center bg-slate-950 text-slate-200" data-testid="loading-screen">
             <div className="text-center">
                 <RefreshCcw className="animate-spin h-8 w-8 mx-auto mb-4 text-slate-500" />
-                <p>Connecting to Engine...</p>
+                <p>Connecting to Engine (v2)...</p>
                 <p className="text-xs text-slate-600 mt-2">{WS_URL}</p>
             </div>
         </div>
