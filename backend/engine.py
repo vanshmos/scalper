@@ -2,8 +2,9 @@ import asyncio
 import json
 import logging
 import time
+import os
 from collections import deque
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import aiohttp
 import numpy as np
 import pandas as pd
@@ -16,12 +17,13 @@ logger = logging.getLogger(__name__)
 SYMBOL = "BTCUSDT"
 BYBIT_WS_URL = "wss://stream.bybit.com/v5/public/linear"
 BYBIT_REST_URL = "https://api.bybit.com/v5/market/kline"
+CACHE_FILE = "/app/data/candle_cache.json"
 
 class MarketState:
     def __init__(self):
         self.price = 0.0
         self.orderbook = {"bids": [], "asks": []}
-        self.trades = deque(maxlen=1000)  # Keep last 1000 trades for CVD
+        self.trades = deque(maxlen=1000)
         self.candles_1m = pd.DataFrame()
         self.candles_5m = pd.DataFrame()
         self.candles_15m = pd.DataFrame()
@@ -37,6 +39,7 @@ class MarketState:
             "cvd_1m": None,
             "cvd_5m": None,
             "atr": None,
+            "rsi": None, # Added RSI
             "spread": None,
             "depth": None,
             "smoothed_depth": 0.0,
@@ -49,7 +52,7 @@ class MarketState:
         self.warmup_progress = 0
         self.last_update = 0
         self.backfill_error = False
-        self.backfill_error_msg = "Live Building Mode"
+        self.backfill_error_msg = "Live Build Mode"
         self.backfill_retries = 0
         self.backfill_failed_final = False
         self.funding_regime = "NEUTRAL"
@@ -58,6 +61,7 @@ class MarketState:
         self.ws_msg_count = 0
         self.ws_last_time = time.time()
         self.ws_rate = 0.0
+        self.ws_status = "DISCONNECTED"
 
 class SignalState:
     def __init__(self):
@@ -80,8 +84,10 @@ class Engine:
 
     async def start(self):
         self.running = True
-        # NO BACKFILL - Live Build Only
-        logger.info("Starting Engine in Live Build Mode (No Backfill)")
+        logger.info("Starting Engine...")
+        
+        # Load Cache
+        self.load_cache()
         
         # Start WS Loop
         asyncio.create_task(self.ws_loop())
@@ -89,14 +95,77 @@ class Engine:
         # Start Processing Loop (1s interval)
         asyncio.create_task(self.processing_loop())
 
-    # backfill_loop and backfill_candles removed/disabled
+    def load_cache(self):
+        if not os.path.exists(CACHE_FILE):
+            logger.info("No candle cache found. Starting fresh.")
+            return
+
+        try:
+            with open(CACHE_FILE, 'r') as f:
+                data = json.load(f)
+            
+            if not data: return
+
+            df = pd.DataFrame(data)
+            df['startTime'] = pd.to_datetime(df['startTime'])
+            
+            # Filter last 3 hours
+            cutoff = datetime.now() - timedelta(hours=3)
+            df = df[df['startTime'] > cutoff]
+            
+            if df.empty:
+                logger.info("Cache found but data is too old.")
+                return
+
+            df = df.sort_values('startTime').reset_index(drop=True)
+            self.state.candles_1m = df
+            
+            # Recalculate indicators
+            self.state.candles_1m['ema20'] = self.state.candles_1m['close'].ewm(span=20, adjust=False).mean()
+            self.state.candles_1m['ema50'] = self.state.candles_1m['close'].ewm(span=50, adjust=False).mean()
+            
+            self.resample_candles()
+            
+            count = len(self.state.candles_1m)
+            logger.info(f"Loaded {count} candles from cache.")
+            
+            if count >= 50:
+                self.state.is_warmed_up = True
+                self.state.warmup_progress = 100
+                logger.info("Engine warmed up from cache!")
+            else:
+                self.state.warmup_progress = int((count / 50) * 100)
+                
+        except Exception as e:
+            logger.error(f"Failed to load cache: {e}")
+
+    def save_cache(self):
+        try:
+            # Keep last 180 candles (3 hours)
+            if self.state.candles_1m.empty: return
+            
+            df = self.state.candles_1m.tail(180).copy()
+            # Convert timestamp to string for JSON
+            df['startTime'] = df['startTime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+            # Select only OHLCV
+            cols = ['startTime', 'open', 'high', 'low', 'close', 'volume']
+            data = df[cols].to_dict(orient='records')
+            
+            with open(CACHE_FILE, 'w') as f:
+                json.dump(data, f)
+        except Exception as e:
+            logger.error(f"Failed to save cache: {e}")
 
     async def ws_loop(self):
         while self.running:
             try:
+                self.state.ws_status = "CONNECTING"
+                logger.info(f"Connecting to WS: {BYBIT_WS_URL}")
+                
                 async with connect(BYBIT_WS_URL) as websocket:
                     self.ws_connected = True
-                    logger.info("Connected to Bybit WS")
+                    self.state.ws_status = "CONNECTED"
+                    logger.info("WS Connected Successfully")
                     
                     await websocket.send(json.dumps({
                         "op": "subscribe",
@@ -125,7 +194,9 @@ class Engine:
 
             except Exception as e:
                 self.ws_connected = False
+                self.state.ws_status = "DISCONNECTED"
                 logger.error(f"WS Error: {e}")
+                logger.info("WS Disconnected. Retrying in 5s...")
                 await asyncio.sleep(5)
 
     def handle_ws_message(self, data):
@@ -231,10 +302,11 @@ class Engine:
         row = pd.DataFrame([candle])
         row['startTime'] = pd.to_datetime(row['startTime'], unit='s')
         
-        self.state.candles_1m = pd.concat([self.state.candles_1m, row]).tail(100)
+        self.state.candles_1m = pd.concat([self.state.candles_1m, row]).tail(180) # Keep 3 hours in memory too
         self.state.candles_1m['ema20'] = self.state.candles_1m['close'].ewm(span=20, adjust=False).mean()
         self.state.candles_1m['ema50'] = self.state.candles_1m['close'].ewm(span=50, adjust=False).mean()
 
+        self.save_cache() # SAVE TO DISK
         self.resample_candles()
 
     def resample_candles(self):
@@ -254,13 +326,21 @@ class Engine:
                     abs(c5['low'] - c5['close'].shift(1))
                 )
             )
-            # Use min_periods=1 to get ATR immediately
             c5['atr'] = c5['tr'].rolling(window=14, min_periods=1).mean()
+            
+            # RSI Calculation
+            delta = c5['close'].diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+            rs = gain / loss
+            c5['rsi'] = 100 - (100 / (1 + rs))
+            
             self.state.candles_5m = c5.reset_index()
             
             if not c5.empty:
                 last = c5.iloc[-1]
-                logger.info(f"5m Candle: H={last['high']}, L={last['low']}, C={last['close']}, ATR={last['atr']}")
+                self.state.indicators['rsi'] = last['rsi'] if not pd.isna(last['rsi']) else None
+                logger.info(f"5m Candle: C={last['close']}, ATR={last['atr']}, RSI={self.state.indicators['rsi']}")
 
             # 15m
             c15 = df.resample('15min').agg({
@@ -350,26 +430,14 @@ class Engine:
         while self.running:
             await asyncio.sleep(1)
             
-            # CHECK WARMUP STATUS
             if not self.state.is_warmed_up:
                 count_1m = len(self.state.candles_1m)
-                # Need 60 candles
-                progress = min(100, int((count_1m / 60) * 100))
+                progress = min(100, int((count_1m / 50) * 100)) # 50 candles target
                 self.state.warmup_progress = progress
                 
-                if count_1m >= 60:
+                if count_1m >= 50:
                     self.state.is_warmed_up = True
-                    logger.info("Warmup Complete via Live Build!")
-                
-                # Even if not warmed up, run indicators/regime?
-                # The prompt says "Building candles... 15 of 60 1m candles collected".
-                # If we don't run regime, we don't get "Structure" trends or "ATR".
-                # But signals should probably be blocked.
-                # Let's run regime/indicators to show progress on dashboard, 
-                # but manage_signals will check warmup?
-                # Actually, `manage_signals` checks `is_warmed_up` implicitly via `processing_loop`.
-                # Let's allow loop to continue but signals might be invalid.
-                # Actually, let's keep signals blocked until warmed up.
+                    logger.info("Warmup Complete!")
             
             if time.time() - self.state.last_update > 10:
                 logger.warning("Data stale")
@@ -381,8 +449,6 @@ class Engine:
             self.determine_regime()
             self.check_gates()
             
-            # Only manage signals if fully warmed up (or maybe just show them?)
-            # Prompt implies we need valid EMAs.
             if self.state.is_warmed_up:
                 await self.manage_signals()
 
@@ -541,6 +607,15 @@ class Engine:
                         score -= 5
                         reasons.append(f"Caution: Extreme Short Funding ({funding:.3f}%)")
             
+            rsi = self.state.indicators.get('rsi')
+            if rsi:
+                if is_long and rsi > 75:
+                    score -= 15
+                    reasons.append(f"RSI Overbought ({rsi:.1f})")
+                if not is_long and rsi < 25:
+                    score -= 15
+                    reasons.append(f"RSI Oversold ({rsi:.1f})")
+
             if score > 70:
                 if self.signal_state.status == "IDLE":
                     self.signal_state.status = "FORMING"
