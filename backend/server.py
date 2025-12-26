@@ -84,6 +84,8 @@ def clean_nans(obj):
         return [clean_nans(v) for v in obj]
     elif isinstance(obj, (np.int64, np.int32)):
         return int(obj)
+    elif isinstance(obj, (np.bool_, bool)):
+        return bool(obj)
     elif isinstance(obj, (np.float64, np.float32)):
         return clean_nans(float(obj))
     elif isinstance(obj, (datetime, pd.Timestamp)):
