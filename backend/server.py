@@ -8,6 +8,10 @@ from contextlib import asynccontextmanager
 
 from engine import Engine
 from telegram_bot import TelegramNotifier
+import math
+import numpy as np
+import pandas as pd
+from datetime import datetime
 
 # Logging
 logging.basicConfig(level=logging.INFO)
@@ -65,11 +69,6 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-import math
-import numpy as np
-import pandas as pd
-from datetime import datetime
-
 def clean_nans(obj):
     if obj is None:
         return None
@@ -112,9 +111,10 @@ async def broadcast_state():
             state = {
                 "price": engine.state.price,
                 "regime": engine.state.regime,
-                "trends": engine.state.trends, # Added trends to broadcast
+                "trends": engine.state.trends, 
                 "gates_passed": engine.state.gates_passed,
                 "indicators": engine.state.indicators,
+                "checklist": engine.state.checklist, # NEW Checklist
                 "signal_status": engine.signal_state.status,
                 "forming_since": engine.signal_state.forming_since,
                 "current_signal": engine.signal_state.current_signal,
@@ -122,7 +122,7 @@ async def broadcast_state():
                 "is_warmed_up": engine.state.is_warmed_up,
                 "backfill_error": engine.state.backfill_error,
                 "backfill_failed_final": engine.state.backfill_failed_final,
-                "debug": debug # Include debug info
+                "debug": debug 
             }
             
             # Clean NaNs and serialization issues before broadcasting
