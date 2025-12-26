@@ -7,12 +7,17 @@ import { SignalCard } from "./SignalCard";
 import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle, ChevronDown, ChevronUp, Terminal, Info, CheckCircle2, Circle, Volume2, VolumeX } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-// Dynamic WebSocket URL based on current window location
-// This works for both local development (localhost) and preview deployments (https://...)
+// Dynamic WebSocket URL logic
+let wsHost = window.location.host;
+// Fix for local development environment (Screenshot Tool)
+if (window.location.hostname === 'localhost' && window.location.port === '3000') {
+    wsHost = 'localhost:8001';
+}
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const WS_URL = `${protocol}//${window.location.host}/api/ws`;
+const WS_URL = `${protocol}//${wsHost}/api/ws`;
 
-console.log("WebSocket URL (Dynamic):", WS_URL);
+console.log('🔌 Connecting to WebSocket:', WS_URL);
+console.log('Protocol:', window.location.protocol, 'Host:', window.location.host);
 
 export default function Dashboard() {
     const [data, setData] = useState(null);
@@ -31,7 +36,7 @@ export default function Dashboard() {
     useEffect(() => {
         let ws;
         const connect = () => {
-            console.log("Connecting to WS:", WS_URL);
+            console.log("Initializing WebSocket:", WS_URL);
             ws = new WebSocket(WS_URL);
             ws.onopen = () => {
                 console.log("WS Connected");
