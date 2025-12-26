@@ -152,4 +152,38 @@ async def websocket_endpoint(websocket: WebSocket):
 async def health():
     return {"status": "ok", "warmup": engine.state.warmup_progress}
 
+@api_router.get("/state")
+async def get_state():
+    # Prepare Debug Info (Same as broadcast)
+    debug = {
+        "candle_count_1m": len(engine.state.candles_1m),
+        "candle_count_5m": len(engine.state.candles_5m),
+        "candle_count_15m": len(engine.state.candles_15m),
+        "trade_buffer_size": len(engine.state.trades),
+        "oldest_trade": engine.state.trades[0]['time'] if len(engine.state.trades) > 0 else 0,
+        "newest_trade": engine.state.trades[-1]['time'] if len(engine.state.trades) > 0 else 0,
+        "backfill_error_msg": engine.state.backfill_error_msg,
+        "ws_rate": engine.state.ws_rate,
+        "last_candle_1m": engine.state.candles_1m.iloc[-1].to_dict() if not engine.state.candles_1m.empty else None,
+        "last_candle_5m": engine.state.candles_5m.iloc[-1].to_dict() if not engine.state.candles_5m.empty else None,
+    }
+
+    state = {
+        "price": engine.state.price,
+        "regime": engine.state.regime,
+        "trends": engine.state.trends, 
+        "gates_passed": engine.state.gates_passed,
+        "indicators": engine.state.indicators,
+        "checklist": engine.state.checklist,
+        "signal_status": engine.signal_state.status,
+        "forming_since": engine.signal_state.forming_since,
+        "current_signal": engine.signal_state.current_signal,
+        "warmup_progress": engine.state.warmup_progress,
+        "is_warmed_up": engine.state.is_warmed_up,
+        "backfill_error": engine.state.backfill_error,
+        "backfill_failed_final": engine.state.backfill_failed_final,
+        "debug": debug 
+    }
+    return clean_nans(state)
+
 app.include_router(api_router)
