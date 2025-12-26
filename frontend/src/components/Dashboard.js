@@ -7,10 +7,12 @@ import { SignalCard } from "./SignalCard";
 import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle, ChevronDown, ChevronUp, Terminal, Info, CheckCircle2, Circle, Volume2, VolumeX } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-// HARDCODED URL to ensure connection
-const WS_URL = "wss://dae3b1a8-0a33-4180-b590-545f41a018d4.preview.emergentagent.com/api/ws";
+// Dynamic WebSocket URL based on current window location
+// This works for both local development (localhost) and preview deployments (https://...)
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const WS_URL = `${protocol}//${window.location.host}/api/ws`;
 
-console.log("WebSocket URL (Hardcoded):", WS_URL);
+console.log("WebSocket URL (Dynamic):", WS_URL);
 
 export default function Dashboard() {
     const [data, setData] = useState(null);
