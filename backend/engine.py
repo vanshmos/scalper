@@ -330,8 +330,9 @@ class Engine:
             
             # RSI Calculation
             delta = c5['close'].diff()
-            gain = (delta.where(delta > 0, 0)).rolling(window=14, min_periods=14).mean()
-            loss = (-delta.where(delta < 0, 0)).rolling(window=14, min_periods=14).mean()
+            # Use min_periods=1 to provide an approximate RSI immediately
+            gain = (delta.where(delta > 0, 0)).rolling(window=14, min_periods=1).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=14, min_periods=1).mean()
             
             rs = gain / loss
             c5['rsi'] = 100 - (100 / (1 + rs))
