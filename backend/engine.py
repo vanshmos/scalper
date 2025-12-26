@@ -424,29 +424,34 @@ class Engine:
 
     async def processing_loop(self):
         while self.running:
-            await asyncio.sleep(1)
-            
-            if not self.state.is_warmed_up:
-                count_1m = len(self.state.candles_1m)
-                progress = min(100, int((count_1m / 50) * 100))
-                self.state.warmup_progress = progress
+            try:
+                await asyncio.sleep(1)
                 
-                if count_1m >= 50:
-                    self.state.is_warmed_up = True
-                    logger.info("Warmup Complete via Live Build!")
-            
-            if time.time() - self.state.last_update > 10:
-                self.state.regime = "UNCLEAR"
-                continue
+                if not self.state.is_warmed_up:
+                    count_1m = len(self.state.candles_1m)
+                    progress = min(100, int((count_1m / 50) * 100))
+                    self.state.warmup_progress = progress
+                    
+                    if count_1m >= 50:
+                        self.state.is_warmed_up = True
+                        logger.info("Warmup Complete via Live Build!")
+                
+                if time.time() - self.state.last_update > 10:
+                    logger.warning("Data stale")
+                    self.state.regime = "UNCLEAR"
+                    continue
 
-            self.update_oi_change()
-            self.calculate_cvd()
-            self.determine_regime()
-            self.check_gates()
-            self.build_checklist() # NEW
-            
-            if self.state.is_warmed_up:
-                await self.manage_signals()
+                self.update_oi_change()
+                self.calculate_cvd()
+                self.determine_regime()
+                self.check_gates()
+                self.build_checklist() # NEW
+                
+                if self.state.is_warmed_up:
+                    await self.manage_signals()
+            except Exception as e:
+                logger.error(f"Processing Loop Error: {e}")
+                await asyncio.sleep(1)
 
     def determine_regime(self):
         if len(self.state.candles_5m) < 2 or len(self.state.candles_15m) < 2:
