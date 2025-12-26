@@ -126,7 +126,10 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <Card className="bg-slate-900 border-slate-800">
                     <CardContent className="pt-6">
-                        <div className="text-sm text-slate-500 uppercase tracking-wider mb-1">BTC/USDT Price</div>
+                        <div className="flex justify-between items-start">
+                            <div className="text-sm text-slate-500 uppercase tracking-wider mb-1">BTC/USDT Price</div>
+                            <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20">v2.1</Badge>
+                        </div>
                         <div className="text-3xl font-bold text-white tracking-tight" data-testid="price-display">
                             ${price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </div>
