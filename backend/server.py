@@ -136,11 +136,16 @@ async def broadcast_state():
 
 @api_router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
     try:
+        await manager.connect(websocket)
+        logger.info(f"Client connected: {websocket.client}")
         while True:
             await websocket.receive_text() # Keep alive
     except WebSocketDisconnect:
+        logger.info(f"Client disconnected: {websocket.client}")
+        manager.disconnect(websocket)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
         manager.disconnect(websocket)
 
 @api_router.get("/health")
