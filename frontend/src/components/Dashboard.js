@@ -7,11 +7,10 @@ import { SignalCard } from "./SignalCard";
 import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle, ChevronDown, ChevronUp, Terminal, Info, CheckCircle2, Circle, Volume2, VolumeX } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const WS_URL = BACKEND_URL.replace('https', 'wss').replace('http', 'ws') + '/api/ws';
+// HARDCODED URL to ensure connection
+const WS_URL = "wss://dae3b1a8-0a33-4180-b590-545f41a018d4.preview.emergentagent.com/api/ws";
 
-console.log("Environment Backend URL:", BACKEND_URL);
-console.log("WebSocket URL:", WS_URL);
+console.log("WebSocket URL (Hardcoded):", WS_URL);
 
 export default function Dashboard() {
     const [data, setData] = useState(null);
