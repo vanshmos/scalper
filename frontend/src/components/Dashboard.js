@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { SignalCard } from "./SignalCard";
-import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle, ChevronDown, ChevronUp, Terminal, Info } from "lucide-react";
+import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle, ChevronDown, ChevronUp, Terminal, Info, CheckCircle2, Circle } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const WS_URL = process.env.REACT_APP_BACKEND_URL.replace('http', 'ws') + '/api/ws';
@@ -65,7 +65,7 @@ export default function Dashboard() {
         </div>
     );
 
-    const { price, regime, trends, gates_passed, indicators, signal_status, current_signal, warmup_progress, is_warmed_up, backfill_error, backfill_failed_final, debug } = data;
+    const { price, regime, trends, gates_passed, indicators, checklist, signal_status, current_signal, warmup_progress, is_warmed_up, backfill_error, backfill_failed_final, debug } = data;
 
     // Use test signal if active, otherwise real signal
     const displaySignal = testSignal || current_signal;
@@ -134,13 +134,18 @@ export default function Dashboard() {
                 {/* Left Column: Indicators */}
                 <div className="lg:col-span-1 space-y-4">
                      <Card className="bg-slate-900 border-slate-800">
-                         <CardHeader><CardTitle className="text-lg flex items-center gap-2"><BarChart2 className="h-4 w-4" /> Structure</CardTitle></CardHeader>
-                         <CardContent className="space-y-4">
-                            <div className="grid grid-cols-3 gap-2 text-center">
-                                <TrendBox label="1m" trend={trends?.['1m']} />
-                                <TrendBox label="5m" trend={trends?.['5m']} />
-                                <TrendBox label="15m" trend={trends?.['15m']} />
-                            </div>
+                         <CardHeader><CardTitle className="text-lg flex items-center gap-2"><BarChart2 className="h-4 w-4" /> Signal Checklist</CardTitle></CardHeader>
+                         <CardContent className="space-y-2">
+                            {checklist ? (
+                                <>
+                                <CheckItem label="Regime" passed={checklist.regime?.pass} value={checklist.regime?.value} />
+                                <CheckItem label="Structure" passed={checklist.structure?.pass} value={checklist.structure?.value} />
+                                <CheckItem label="CVD 5m" passed={checklist.cvd?.pass} value={checklist.cvd?.value} />
+                                <CheckItem label="OBI" passed={checklist.obi?.pass} value={checklist.obi?.value} />
+                                <CheckItem label="Price EMA20" passed={checklist.ema_dist?.pass} value={checklist.ema_dist?.value} />
+                                <CheckItem label="Gates" passed={checklist.gates?.pass} value={checklist.gates?.value} />
+                                </>
+                            ) : <div className="text-sm text-slate-500">Waiting for data...</div>}
                          </CardContent>
                      </Card>
 
@@ -255,6 +260,16 @@ export default function Dashboard() {
         </div>
     );
 }
+
+const CheckItem = ({ label, passed, value }) => (
+    <div className="flex justify-between items-center text-xs py-1 border-b border-slate-800 last:border-0">
+        <span className="text-slate-400">{label}</span>
+        <div className="flex items-center gap-2">
+            <span className="text-slate-500">{value}</span>
+            {passed ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <Circle className="h-4 w-4 text-rose-400" />}
+        </div>
+    </div>
+);
 
 const TrendBox = ({ label, trend }) => {
     const isBull = trend === 'BULL';
