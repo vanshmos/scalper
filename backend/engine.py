@@ -129,6 +129,12 @@ class Engine:
             self.state.candles_1m['ema20'] = self.state.candles_1m['close'].ewm(span=20, adjust=False).mean()
             self.state.candles_1m['ema50'] = self.state.candles_1m['close'].ewm(span=50, adjust=False).mean()
             
+            # Populate indicators from cache
+            if not self.state.candles_1m.empty:
+                last_1m = self.state.candles_1m.iloc[-1]
+                self.state.indicators['ema20_1m'] = last_1m['ema20']
+                self.state.indicators['ema50_1m'] = last_1m['ema50']
+            
             self.resample_candles()
             
             count = len(self.state.candles_1m)
