@@ -7,7 +7,11 @@ import { SignalCard } from "./SignalCard";
 import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle, ChevronDown, ChevronUp, Terminal, Info, CheckCircle2, Circle, Volume2, VolumeX } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-const WS_URL = process.env.REACT_APP_BACKEND_URL.replace('http', 'ws') + '/api/ws';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const WS_URL = BACKEND_URL.replace('https', 'wss').replace('http', 'ws') + '/api/ws';
+
+console.log("Environment Backend URL:", BACKEND_URL);
+console.log("WebSocket URL:", WS_URL);
 
 export default function Dashboard() {
     const [data, setData] = useState(null);
@@ -26,15 +30,27 @@ export default function Dashboard() {
     useEffect(() => {
         let ws;
         const connect = () => {
+            console.log("Connecting to WS:", WS_URL);
             ws = new WebSocket(WS_URL);
-            ws.onopen = () => setConnected(true);
-            ws.onclose = () => {
+            ws.onopen = () => {
+                console.log("WS Connected");
+                setConnected(true);
+            };
+            ws.onclose = (e) => {
+                console.log("WS Closed", e.code, e.reason);
                 setConnected(false);
                 setTimeout(connect, 3000);
             };
             ws.onmessage = (event) => {
-                const msg = JSON.parse(event.data);
-                setData(msg);
+                try {
+                    const msg = JSON.parse(event.data);
+                    setData(msg);
+                } catch (e) {
+                    console.error("WS Parse Error", e);
+                }
+            };
+            ws.onerror = (e) => {
+                console.error("WS Error", e);
             };
         };
         connect();
@@ -87,6 +103,7 @@ export default function Dashboard() {
             <div className="text-center">
                 <RefreshCcw className="animate-spin h-8 w-8 mx-auto mb-4 text-slate-500" />
                 <p>Connecting to Engine...</p>
+                <p className="text-xs text-slate-600 mt-2">{WS_URL}</p>
             </div>
         </div>
     );
@@ -155,7 +172,7 @@ export default function Dashboard() {
                                  <Progress value={warmup_progress} className="h-2 bg-slate-800" indicatorClassName="bg-blue-500" data-testid="warmup-progress" />
                                  <div className="flex items-start gap-2 text-xs text-blue-400 bg-blue-500/10 p-2 rounded">
                                      <Info className="h-4 w-4 shrink-0" />
-                                     <p>Building candles from live trades. Need 50m history for valid indicators. Engine active but signals may be delayed.</p>
+                                     <p>Building candles from live trades. Need 50m history for valid indicators. Engine active but signals may be delayed (~45-60 mins).</p>
                                  </div>
                              </div>
                          ) : (
