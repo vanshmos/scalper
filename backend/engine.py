@@ -14,8 +14,10 @@ from websockets.exceptions import ConnectionClosed
 logger = logging.getLogger(__name__)
 
 # Constants
-SYMBOL = "BTC-USD"
+SYMBOL_COINBASE = "BTC-USD"
 COINBASE_WS_URL = "wss://ws-feed.exchange.coinbase.com"
+# Binance Futures for OI/Funding
+BINANCE_WS_URL = "wss://fstream.binance.com/stream?streams=btcusdt@markPrice/btcusdt@openInterest"
 CACHE_FILE = "/app/data/candle_cache.json"
 
 class MarketState:
@@ -42,7 +44,7 @@ class MarketState:
             "spread": None,
             "depth": None,
             "smoothed_depth": 0.0,
-            "funding_rate": 0.01, 
+            "funding_rate": None,
             "open_interest": None,
             "oi_change_5m": None,
             "ema20_1m": None,
@@ -53,20 +55,19 @@ class MarketState:
         self.warmup_progress = 0
         self.last_update = 0
         self.backfill_error = False
-        self.backfill_error_msg = "Live Build Mode (Coinbase)"
+        self.backfill_error_msg = "Live Build Mode (Coinbase+Binance)"
         self.backfill_retries = 0
         self.backfill_failed_final = False
         self.funding_regime = "NEUTRAL"
         self.checklist = {}
         
-        # Debug Stats
         self.ws_msg_count = 0
         self.ws_last_time = time.time()
         self.ws_rate = 0.0
 
 class SignalState:
     def __init__(self):
-        self.status = "IDLE" 
+        self.status = "IDLE"
         self.forming_since = 0
         self.active_until = 0
         self.cooldown_until = 0
@@ -79,7 +80,6 @@ class Engine:
         self.signal_state = SignalState()
         self.telegram = telegram_bot
         self.ws_connected = False
-        self.last_trade_time = 0
         self.running = False
         self.current_1m_candle = None
         self.telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -87,9 +87,13 @@ class Engine:
 
     async def start(self):
         self.running = True
-        logger.info("Starting Engine in Live Build Mode (Coinbase)")
+        logger.info("Starting Engine in Live Build Mode (Multi-Exchange)")
         self.load_cache()
-        asyncio.create_task(self.ws_loop())
+        
+        # Dual WS Connection
+        asyncio.create_task(self.ws_loop_coinbase())
+        asyncio.create_task(self.ws_loop_binance())
+        
         asyncio.create_task(self.processing_loop())
 
     def load_cache(self):
@@ -127,17 +131,16 @@ class Engine:
                 json.dump(data, f)
         except: pass
 
-    async def ws_loop(self):
+    async def ws_loop_coinbase(self):
         while self.running:
             try:
-                # Use level2_batch which is more efficient and standard
                 async with connect(COINBASE_WS_URL, max_size=None) as websocket:
-                    self.ws_connected = True
+                    self.ws_connected = True # Main connection status
                     logger.info("Connected to Coinbase WS")
                     
                     await websocket.send(json.dumps({
                         "type": "subscribe",
-                        "product_ids": [SYMBOL],
+                        "product_ids": [SYMBOL_COINBASE],
                         "channels": ["level2_batch", "matches", "ticker"]
                     }))
 
@@ -147,7 +150,7 @@ class Engine:
                     while True:
                         msg = await websocket.recv()
                         data = json.loads(msg)
-                        self.handle_ws_message(data)
+                        self.handle_coinbase_msg(data)
                         
                         msg_count += 1
                         now = time.time()
@@ -158,10 +161,23 @@ class Engine:
 
             except Exception as e:
                 self.ws_connected = False
-                logger.error(f"WS Error: {e}")
+                logger.error(f"Coinbase WS Error: {e}")
                 await asyncio.sleep(5)
 
-    def handle_ws_message(self, data):
+    async def ws_loop_binance(self):
+        while self.running:
+            try:
+                async with connect(BINANCE_WS_URL) as websocket:
+                    logger.info("Connected to Binance Futures WS (OI/Funding)")
+                    while True:
+                        msg = await websocket.recv()
+                        data = json.loads(msg)
+                        self.handle_binance_msg(data)
+            except Exception as e:
+                logger.error(f"Binance WS Error: {e}")
+                await asyncio.sleep(10)
+
+    def handle_coinbase_msg(self, data):
         type_ = data.get('type')
         ts = time.time()
         self.state.last_update = ts
@@ -171,12 +187,10 @@ class Engine:
                 self.state.price = float(data['price'])
 
         elif type_ == 'snapshot':
-            # Coinbase Snapshot
             self.state.orderbook = {
                 "bids": {float(p): float(s) for p, s in data['bids']},
                 "asks": {float(p): float(s) for p, s in data['asks']}
             }
-            logger.info(f"Orderbook Snapshot Received: {len(self.state.orderbook['bids'])} bids")
             self.calculate_obi()
 
         elif type_ == 'l2update':
@@ -191,7 +205,6 @@ class Engine:
                 else:
                     self.state.orderbook[book_side][price] = size
             
-            # Recalc periodically
             if int(ts * 10) % 5 == 0: 
                 self.calculate_obi()
 
@@ -199,10 +212,30 @@ class Engine:
             price = float(data['price'])
             size = float(data['size'])
             side = 'Buy' if data['side'] == 'buy' else 'Sell'
-            
-            self.state.price = price
             self.state.trades.append({'price': price, 'size': size, 'side': side, 'time': ts})
             self.update_candle(price, size, ts)
+
+    def handle_binance_msg(self, message):
+        if 'data' not in message: return
+        data = message['data']
+        stream = message.get('stream', '')
+        
+        if 'markPrice' in stream:
+            # {"r": "0.00010000", ...}
+            if 'r' in data:
+                self.state.indicators['funding_rate'] = float(data['r']) * 100
+        
+        elif 'openInterest' in stream:
+            # {"o": "12345.67", ...} (Open Interest in BTC amount usually, or value?)
+            # Binance Futures 'openInterest' usually returns Open Interest amount (in BTC)
+            # Or "openInterest" value?
+            # Key 'o': Open Interest in BTC
+            # Key 'h': Open Interest Value in USDT (if available, usually not in this stream)
+            # Actually standard payload: "openInterest": "..."
+            if 'openInterest' in data:
+                 oi_btc = float(data['openInterest'])
+                 # Convert to USD using current price
+                 self.state.indicators['open_interest'] = oi_btc * self.state.price
 
     def update_candle(self, price, size, ts):
         current_min = int(ts // 60) * 60
@@ -237,7 +270,6 @@ class Engine:
         if len(self.state.candles_1m) == 0: return
         df = self.state.candles_1m.set_index('startTime')
         
-        # 5m
         c5 = df.resample('5min').agg({'open':'first', 'high':'max', 'low':'min', 'close':'last', 'volume':'sum'}).dropna()
         c5['ema20'] = c5['close'].ewm(span=20, adjust=False).mean()
         c5['ema50'] = c5['close'].ewm(span=50, adjust=False).mean()
@@ -255,7 +287,6 @@ class Engine:
             last = c5.iloc[-1]
             self.state.indicators['rsi'] = last['rsi'] if not pd.isna(last['rsi']) else None
 
-        # 15m
         c15 = df.resample('15min').agg({'open':'first', 'high':'max', 'low':'min', 'close':'last', 'volume':'sum'}).dropna()
         c15['ema20'] = c15['close'].ewm(span=20, adjust=False).mean()
         c15['ema50'] = c15['close'].ewm(span=50, adjust=False).mean()
@@ -264,16 +295,17 @@ class Engine:
     def calculate_obi(self):
         if not self.state.orderbook['bids']: return
         
-        # Sort and take top 10
-        sorted_bids = sorted(self.state.orderbook['bids'].items(), key=lambda x: x[0], reverse=True)[:10]
-        sorted_asks = sorted(self.state.orderbook['asks'].items(), key=lambda x: x[0])[:10]
+        # Use TOP 50 levels for depth to handle spread out liquidity
+        sorted_bids = sorted(self.state.orderbook['bids'].items(), key=lambda x: x[0], reverse=True)[:50]
+        sorted_asks = sorted(self.state.orderbook['asks'].items(), key=lambda x: x[0])[:50]
         
         if not sorted_bids or not sorted_asks: return
 
-        bid_vol = sum(size for price, size in sorted_bids)
-        ask_vol = sum(size for price, size in sorted_asks)
-        total = bid_vol + ask_vol
-        raw_obi = (bid_vol - ask_vol) / total if total > 0 else 0
+        # OBI only needs top 10
+        bid_vol_10 = sum(size for price, size in sorted_bids[:10])
+        ask_vol_10 = sum(size for price, size in sorted_asks[:10])
+        total_10 = bid_vol_10 + ask_vol_10
+        raw_obi = (bid_vol_10 - ask_vol_10) / total_10 if total_10 > 0 else 0
         
         current = self.state.indicators.get('obi', 0.0) or 0.0
         self.state.indicators['obi'] = (0.3 * raw_obi) + (0.7 * current)
@@ -282,13 +314,20 @@ class Engine:
         bb = sorted_bids[0][0]
         ba = sorted_asks[0][0]
         mid = (ba + bb) / 2
-        self.state.indicators['spread'] = (ba - bb) / mid * 10000
+        spread_bps = (ba - bb) / mid * 10000
+        self.state.indicators['spread'] = spread_bps
         
-        # Depth
-        min_d = min(sum(p*s for p,s in sorted_bids), sum(p*s for p,s in sorted_asks))
+        # Depth - Sum of top 50 levels
+        bid_depth = sum(p*s for p,s in sorted_bids)
+        ask_depth = sum(p*s for p,s in sorted_asks)
+        min_d = min(bid_depth, ask_depth)
         self.state.indicators['depth'] = min_d
+        
         cur_d = self.state.indicators.get('smoothed_depth', 0.0)
-        self.state.indicators['smoothed_depth'] = (0.05 * min_d) + (0.95 * cur_d) # Slower smoothing
+        self.state.indicators['smoothed_depth'] = (0.05 * min_d) + (0.95 * cur_d)
+        
+        if int(time.time()) % 10 == 0:
+            logger.info(f"Gate Check: Spread={spread_bps:.2f}bps, Depth=${min_d:.0f}, Smoothed=${self.state.indicators['smoothed_depth']:.0f}")
 
     def calculate_cvd(self):
         now = time.time()
@@ -309,79 +348,20 @@ class Engine:
         self.state.indicators['cvd_1m'] = (0.3 * r1) + (0.7 * c1)
         self.state.indicators['cvd_5m'] = (0.3 * r5) + (0.7 * c5)
 
-    def update_oi_change(self): pass
-
-    def determine_regime(self):
-        if len(self.state.candles_5m) < 2: return
-        c5 = self.state.candles_5m.iloc[-1]
-        c15 = self.state.candles_15m.iloc[-1] if not self.state.candles_15m.empty else c5
-        
-        s5 = c5['ema20'] - self.state.candles_5m.iloc[-2]['ema20']
-        self.state.trends['5m'] = "BULL" if c5['ema20']>c5['ema50'] and s5>0 else "BEAR" if c5['ema20']<c5['ema50'] and s5<0 else "NEUTRAL"
-        
-        atr = c5['atr']
-        self.state.indicators['atr'] = atr
-        spread = self.state.indicators.get('spread', 0.0)
-        
-        is_chaotic = (spread > 5)
-        bull = self.state.trends['5m'] == "BULL"
-        bear = self.state.trends['5m'] == "BEAR"
-        
-        if is_chaotic: self.state.regime = "CHAOTIC"
-        elif bull: self.state.regime = "TRENDING_BULL"
-        elif bear: self.state.regime = "TRENDING_BEAR"
-        else: self.state.regime = "RANGING"
-
-    def check_gates(self):
+    def update_oi_change(self):
         now = time.time()
-        spread = self.state.indicators.get('spread')
-        depth = self.state.indicators.get('smoothed_depth')
-        if spread is None or depth is None: return
-        
-        # Pass > 80k, Fail < 30k
-        if self.state.gate_state_depth == "PASS":
-            if depth < 30000 and self.should_flip(now): self.state.gate_state_depth = "FAIL"
-        else:
-            if depth > 80000 and self.should_flip(now): self.state.gate_state_depth = "PASS"
-            
-        if self.state.gate_state_spread == "PASS":
-            if spread > 2.0 and self.should_flip(now): self.state.gate_state_spread = "FAIL"
-        else:
-            if spread < 1.5 and self.should_flip(now): self.state.gate_state_spread = "PASS"
-            
-        self.state.gates_passed = (self.state.gate_state_depth == "PASS") and (self.state.gate_state_spread == "PASS")
+        current_oi = self.state.indicators.get('open_interest')
+        if not current_oi: return
 
-    def should_flip(self, now):
-        if now - self.state.last_gate_change > 3:
-            self.state.last_gate_change = now
-            return True
-        return False
-
-    def build_checklist(self):
-        is_trending = "TRENDING" in self.state.regime
-        s5 = self.state.trends['5m']
-        cvd = self.state.indicators.get('cvd_5m', 0.0) or 0.0
-        obi = self.state.indicators.get('obi', 0.0) or 0.0
-        ema20 = self.state.indicators.get('ema20_1m', 0.0)
-        
-        cvd_pass = (cvd > 0.15) if "BULL" in self.state.regime else (cvd < -0.15)
-        obi_pass = (obi > 0.12) if "BULL" in self.state.regime else (obi < -0.12)
-        
-        ema_pass = False
-        dist_str = "-"
-        if ema20 and self.state.price > 0:
-            dist = abs(self.state.price - ema20) / ema20 * 100
-            dist_str = f"{dist:.3f}%"
-            ema_pass = dist < 0.3
+        self.state.oi_history.append((now, current_oi))
+        while self.state.oi_history and self.state.oi_history[0][0] < now - 300:
+            self.state.oi_history.popleft()
             
-        self.state.checklist = {
-            "regime": {"pass": is_trending, "value": self.state.regime},
-            "structure": {"pass": True, "value": f"5M {s5}"},
-            "cvd": {"pass": cvd_pass, "value": f"{cvd:.2f}"},
-            "obi": {"pass": obi_pass, "value": f"{obi:.2f}"},
-            "ema_dist": {"pass": ema_pass, "value": dist_str},
-            "gates": {"pass": self.state.gates_passed, "value": "PASS" if self.state.gates_passed else "FAIL"}
-        }
+        if len(self.state.oi_history) > 1:
+            old_oi = self.state.oi_history[0][1]
+            if old_oi > 0:
+                change = (current_oi - old_oi) / old_oi * 100
+                self.state.indicators['oi_change_5m'] = change
 
     async def processing_loop(self):
         while self.running:
@@ -440,7 +420,7 @@ class Engine:
                 self.signal_state.status = "IDLE"
                 return
             
-            # CHANGE: 30s -> 20s
+            # CONFIRM 20 seconds duration
             if now - self.signal_state.forming_since >= 20:
                 await self.activate_signal()
 
@@ -507,3 +487,72 @@ class Engine:
                         logger.error(f"Telegram failed: {await resp.text()}")
         except Exception as e:
             logger.error(f"Telegram exception: {e}")
+
+    def determine_regime(self):
+        if len(self.state.candles_5m) < 2: return
+        c5 = self.state.candles_5m.iloc[-1]
+        c15 = self.state.candles_15m.iloc[-1] if not self.state.candles_15m.empty else c5
+        
+        s5 = c5['ema20'] - self.state.candles_5m.iloc[-2]['ema20']
+        self.state.trends['5m'] = "BULL" if c5['ema20']>c5['ema50'] and s5>0 else "BEAR" if c5['ema20']<c5['ema50'] and s5<0 else "NEUTRAL"
+        self.state.trends['15m'] = "BULL" if c15['ema20']>c15['ema50'] else "BEAR" if c15['ema20']<c15['ema50'] else "NEUTRAL"
+        
+        atr = c5['atr']
+        self.state.indicators['atr'] = atr
+        spread = self.state.indicators.get('spread', 0.0)
+        
+        is_chaotic = (spread > 5)
+        if is_chaotic: self.state.regime = "CHAOTIC"
+        elif self.state.trends['5m'] == "BULL": self.state.regime = "TRENDING_BULL"
+        elif self.state.trends['5m'] == "BEAR": self.state.regime = "TRENDING_BEAR"
+        else: self.state.regime = "RANGING"
+
+    def check_gates(self):
+        now = time.time()
+        spread = self.state.indicators.get('spread')
+        depth = self.state.indicators.get('smoothed_depth')
+        if spread is None or depth is None: return
+        
+        if self.state.gate_state_depth == "PASS":
+            if depth < 40000 and self.should_flip(now): self.state.gate_state_depth = "FAIL"
+        else:
+            if depth > 50000 and self.should_flip(now): self.state.gate_state_depth = "PASS"
+            
+        if self.state.gate_state_spread == "PASS":
+            if spread > 2.0 and self.should_flip(now): self.state.gate_state_spread = "FAIL"
+        else:
+            if spread < 1.5 and self.should_flip(now): self.state.gate_state_spread = "PASS"
+            
+        self.state.gates_passed = (self.state.gate_state_depth == "PASS") and (self.state.gate_state_spread == "PASS")
+
+    def should_flip(self, now):
+        if now - self.state.last_gate_change > 3:
+            self.state.last_gate_change = now
+            return True
+        return False
+
+    def build_checklist(self):
+        is_trending = "TRENDING" in self.state.regime
+        s5 = self.state.trends['5m']
+        cvd = self.state.indicators.get('cvd_5m', 0.0) or 0.0
+        obi = self.state.indicators.get('obi', 0.0) or 0.0
+        ema20 = self.state.indicators.get('ema20_1m', 0.0)
+        
+        cvd_pass = (cvd > 0.15) if "BULL" in self.state.regime else (cvd < -0.15)
+        obi_pass = (obi > 0.12) if "BULL" in self.state.regime else (obi < -0.12)
+        
+        ema_pass = False
+        dist_str = "-"
+        if ema20 and self.state.price > 0:
+            dist = abs(self.state.price - ema20) / ema20 * 100
+            dist_str = f"{dist:.3f}%"
+            ema_pass = dist < 0.3
+            
+        self.state.checklist = {
+            "regime": {"pass": is_trending, "value": self.state.regime},
+            "structure": {"pass": True, "value": f"5M {s5}"},
+            "cvd": {"pass": cvd_pass, "value": f"{cvd:.2f}"},
+            "obi": {"pass": obi_pass, "value": f"{obi:.2f}"},
+            "ema_dist": {"pass": ema_pass, "value": dist_str},
+            "gates": {"pass": self.state.gates_passed, "value": "PASS" if self.state.gates_passed else "FAIL"}
+        }
