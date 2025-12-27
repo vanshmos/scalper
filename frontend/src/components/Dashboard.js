@@ -18,7 +18,7 @@ if (isLocalDev) {
     API_URL = `http://localhost:${backendPort}/api/state`;
 } else {
     const currentUrl = new URL(window.location.href);
-    const backendHost = currentUrl.hostname.replace(/--3000--/, `--${backendPort}--`);
+    const backendHost = currentUrl.hostname.replace(/--3000--/, '--' + backendPort + '--');
     const protocol = currentUrl.protocol === 'https:' ? 'wss:' : 'ws:';
     const httpProtocol = currentUrl.protocol;
     WS_URL = `${protocol}//${backendHost}/api/ws`;
