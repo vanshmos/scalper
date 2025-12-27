@@ -24,6 +24,21 @@ function setupHealthEndpoints(devServer, healthPlugin) {
   console.log('[Health Check] Setting up health endpoints...');
 
   // ====================================================================
+  // GET /__health - Bolt-specific health endpoint (required for preview)
+  // ====================================================================
+  devServer.app.get("/__health", (req, res) => {
+    const webpackStatus = healthPlugin.getSimpleStatus();
+
+    if (webpackStatus.state === 'success') {
+      res.status(200).send('OK');
+    } else if (webpackStatus.state === 'compiling') {
+      res.status(200).send('COMPILING');
+    } else {
+      res.status(503).send('ERROR');
+    }
+  });
+
+  // ====================================================================
   // GET /health - Detailed health status (JSON)
   // ====================================================================
   devServer.app.get("/health", (req, res) => {
@@ -166,6 +181,7 @@ function setupHealthEndpoints(devServer, healthPlugin) {
   });
 
   console.log('[Health Check] ✓ Health endpoints ready:');
+  console.log('  • GET /__health       - Bolt preview health check');
   console.log('  • GET /health         - Detailed status');
   console.log('  • GET /health/simple  - Simple OK/ERROR');
   console.log('  • GET /health/ready   - Readiness check');
