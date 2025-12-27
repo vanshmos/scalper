@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 # Constants
 SYMBOL_COINBASE = "BTC-USD"
 COINBASE_WS_URL = "wss://ws-feed.exchange.coinbase.com"
-# Binance Futures for OI/Funding
-BINANCE_WS_URL = "wss://fstream.binance.com/stream?streams=btcusdt@markPrice/btcusdt@openInterest"
+# Use Bybit for OI/Funding (Binance was blocked)
+BYBIT_WS_URL = "wss://stream.bybit.com/v5/public/linear"
 CACHE_FILE = "/app/data/candle_cache.json"
 
 class MarketState:
@@ -55,7 +55,7 @@ class MarketState:
         self.warmup_progress = 0
         self.last_update = 0
         self.backfill_error = False
-        self.backfill_error_msg = "Live Build Mode (Coinbase+Binance)"
+        self.backfill_error_msg = "Live Build Mode (Coinbase+Bybit)"
         self.backfill_retries = 0
         self.backfill_failed_final = False
         self.funding_regime = "NEUTRAL"
@@ -92,7 +92,7 @@ class Engine:
         
         # Dual WS Connection
         asyncio.create_task(self.ws_loop_coinbase())
-        asyncio.create_task(self.ws_loop_binance())
+        asyncio.create_task(self.ws_loop_bybit()) # Switched from Binance
         
         asyncio.create_task(self.processing_loop())
 
@@ -135,7 +135,7 @@ class Engine:
         while self.running:
             try:
                 async with connect(COINBASE_WS_URL, max_size=None) as websocket:
-                    self.ws_connected = True # Main connection status
+                    self.ws_connected = True 
                     logger.info("Connected to Coinbase WS")
                     
                     await websocket.send(json.dumps({
@@ -164,17 +164,24 @@ class Engine:
                 logger.error(f"Coinbase WS Error: {e}")
                 await asyncio.sleep(5)
 
-    async def ws_loop_binance(self):
+    async def ws_loop_bybit(self):
         while self.running:
             try:
-                async with connect(BINANCE_WS_URL) as websocket:
-                    logger.info("Connected to Binance Futures WS (OI/Funding)")
+                async with connect(BYBIT_WS_URL) as websocket:
+                    logger.info("Connected to Bybit WS (OI/Funding)")
+                    
+                    # Subscribe to tickers for Funding/OI
+                    await websocket.send(json.dumps({
+                        "op": "subscribe",
+                        "args": ["tickers.BTCUSDT"]
+                    }))
+
                     while True:
                         msg = await websocket.recv()
                         data = json.loads(msg)
-                        self.handle_binance_msg(data)
+                        self.handle_bybit_msg(data)
             except Exception as e:
-                logger.error(f"Binance WS Error: {e}")
+                logger.error(f"Bybit WS Error: {e}")
                 await asyncio.sleep(10)
 
     def handle_coinbase_msg(self, data):
@@ -215,27 +222,28 @@ class Engine:
             self.state.trades.append({'price': price, 'size': size, 'side': side, 'time': ts})
             self.update_candle(price, size, ts)
 
-    def handle_binance_msg(self, message):
+    def handle_bybit_msg(self, message):
+        # {"topic": "tickers.BTCUSDT", "data": {...}}
         if 'data' not in message: return
         data = message['data']
-        stream = message.get('stream', '')
         
-        if 'markPrice' in stream:
-            # {"r": "0.00010000", ...}
-            if 'r' in data:
-                self.state.indicators['funding_rate'] = float(data['r']) * 100
-        
-        elif 'openInterest' in stream:
-            # {"o": "12345.67", ...} (Open Interest in BTC amount usually, or value?)
-            # Binance Futures 'openInterest' usually returns Open Interest amount (in BTC)
-            # Or "openInterest" value?
-            # Key 'o': Open Interest in BTC
-            # Key 'h': Open Interest Value in USDT (if available, usually not in this stream)
-            # Actually standard payload: "openInterest": "..."
-            if 'openInterest' in data:
-                 oi_btc = float(data['openInterest'])
-                 # Convert to USD using current price
-                 self.state.indicators['open_interest'] = oi_btc * self.state.price
+        if 'fundingRate' in data:
+            try:
+                self.state.indicators['funding_rate'] = float(data['fundingRate']) * 100
+            except: pass
+            
+        if 'openInterestValue' in data:
+            try:
+                # Bybit returns value in quote currency (USDT)
+                self.state.indicators['open_interest'] = float(data['openInterestValue'])
+            except: pass
+        elif 'openInterest' in data:
+             try:
+                # Fallback to size * price if value missing
+                oi_size = float(data['openInterest'])
+                if self.state.price > 0:
+                    self.state.indicators['open_interest'] = oi_size * self.state.price
+             except: pass
 
     def update_candle(self, price, size, ts):
         current_min = int(ts // 60) * 60
@@ -295,13 +303,11 @@ class Engine:
     def calculate_obi(self):
         if not self.state.orderbook['bids']: return
         
-        # Use TOP 50 levels for depth to handle spread out liquidity
         sorted_bids = sorted(self.state.orderbook['bids'].items(), key=lambda x: x[0], reverse=True)[:50]
         sorted_asks = sorted(self.state.orderbook['asks'].items(), key=lambda x: x[0])[:50]
         
         if not sorted_bids or not sorted_asks: return
 
-        # OBI only needs top 10
         bid_vol_10 = sum(size for price, size in sorted_bids[:10])
         ask_vol_10 = sum(size for price, size in sorted_asks[:10])
         total_10 = bid_vol_10 + ask_vol_10
@@ -310,14 +316,12 @@ class Engine:
         current = self.state.indicators.get('obi', 0.0) or 0.0
         self.state.indicators['obi'] = (0.3 * raw_obi) + (0.7 * current)
         
-        # Spread
         bb = sorted_bids[0][0]
         ba = sorted_asks[0][0]
         mid = (ba + bb) / 2
         spread_bps = (ba - bb) / mid * 10000
         self.state.indicators['spread'] = spread_bps
         
-        # Depth - Sum of top 50 levels
         bid_depth = sum(p*s for p,s in sorted_bids)
         ask_depth = sum(p*s for p,s in sorted_asks)
         min_d = min(bid_depth, ask_depth)
@@ -327,7 +331,7 @@ class Engine:
         self.state.indicators['smoothed_depth'] = (0.05 * min_d) + (0.95 * cur_d)
         
         if int(time.time()) % 10 == 0:
-            logger.info(f"Gate Check: Spread={spread_bps:.2f}bps, Depth=${min_d:.0f}, Smoothed=${self.state.indicators['smoothed_depth']:.0f}")
+            logger.info(f"Gate Check: Spread={spread_bps:.4f}bps, Depth=${min_d:.0f}, Smoothed=${self.state.indicators['smoothed_depth']:.0f}")
 
     def calculate_cvd(self):
         now = time.time()
