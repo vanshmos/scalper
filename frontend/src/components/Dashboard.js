@@ -7,15 +7,23 @@ import { SignalCard } from "./SignalCard";
 import { Activity, Zap, Shield, BarChart2, TrendingUp, TrendingDown, RefreshCcw, AlertTriangle, DollarSign, XCircle, ChevronDown, ChevronUp, Terminal, Info, CheckCircle2, Circle, Volume2, VolumeX, Radio } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-// Dynamic URL logic
-let hostname = window.location.host;
-if (window.location.hostname === 'localhost' && window.location.port === '3000') {
-    hostname = 'localhost:8001';
+// Dynamic URL logic - detect backend location
+const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const backendPort = '8001';
+
+let WS_URL, API_URL;
+
+if (isLocalDev) {
+    WS_URL = `ws://localhost:${backendPort}/api/ws`;
+    API_URL = `http://localhost:${backendPort}/api/state`;
+} else {
+    const currentUrl = new URL(window.location.href);
+    const backendHost = currentUrl.hostname.replace(/--3000--/, `--${backendPort}--`);
+    const protocol = currentUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+    const httpProtocol = currentUrl.protocol;
+    WS_URL = `${protocol}//${backendHost}/api/ws`;
+    API_URL = `${httpProtocol}//${backendHost}/api/state`;
 }
-const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const httpProtocol = window.location.protocol;
-const WS_URL = `${protocol}//${hostname}/api/ws`;
-const API_URL = `${httpProtocol}//${hostname}/api/state`;
 
 console.log('🔌 WS URL:', WS_URL);
 console.log('📡 API URL:', API_URL);
