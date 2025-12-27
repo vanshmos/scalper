@@ -74,22 +74,28 @@ manager = ConnectionManager()
 def clean_nans(obj):
     if obj is None:
         return None
+    # Check numpy types BEFORE checking dict/list to convert them first
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    if isinstance(obj, bool):
+        return obj
+    if isinstance(obj, (np.int64, np.int32, np.int16, np.int8)):
+        return int(obj)
+    if isinstance(obj, (np.float64, np.float32)):
+        val = float(obj)
+        if math.isnan(val) or math.isinf(val):
+            return None
+        return val
     if isinstance(obj, float):
         if math.isnan(obj) or math.isinf(obj):
             return None
         return obj
-    elif isinstance(obj, dict):
-        return {k: clean_nans(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [clean_nans(v) for v in obj]
-    elif isinstance(obj, (np.int64, np.int32)):
-        return int(obj)
-    elif isinstance(obj, (np.bool_, bool)):
-        return bool(obj)
-    elif isinstance(obj, (np.float64, np.float32)):
-        return clean_nans(float(obj))
-    elif isinstance(obj, (datetime, pd.Timestamp)):
+    if isinstance(obj, (datetime, pd.Timestamp)):
         return obj.isoformat()
+    if isinstance(obj, dict):
+        return {k: clean_nans(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [clean_nans(v) for v in obj]
     return obj
 
 # Background Broadcaster
