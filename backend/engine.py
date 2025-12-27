@@ -14,15 +14,13 @@ from websockets.exceptions import ConnectionClosed
 logger = logging.getLogger(__name__)
 
 # Constants
-SYMBOL = "BTC-USD" # Coinbase uses Dash
+SYMBOL = "BTC-USD"
 COINBASE_WS_URL = "wss://ws-feed.exchange.coinbase.com"
 CACHE_FILE = "/app/data/candle_cache.json"
 
 class MarketState:
     def __init__(self):
         self.price = 0.0
-        # Coinbase Orderbook: { "bids": {price: size}, "asks": {price: size} }
-        # Using dict for O(1) updates
         self.orderbook = {"bids": {}, "asks": {}}
         self.trades = deque(maxlen=1000)
         self.candles_1m = pd.DataFrame()
@@ -44,9 +42,9 @@ class MarketState:
             "spread": None,
             "depth": None,
             "smoothed_depth": 0.0,
-            "funding_rate": 0.01, # Coinbase has no perp funding in public spot feed
-            "open_interest": 0,
-            "oi_change_5m": 0,
+            "funding_rate": 0.01, 
+            "open_interest": None,
+            "oi_change_5m": None,
             "ema20_1m": None,
             "ema50_1m": None
         }
@@ -59,7 +57,6 @@ class MarketState:
         self.backfill_retries = 0
         self.backfill_failed_final = False
         self.funding_regime = "NEUTRAL"
-        
         self.checklist = {}
         
         # Debug Stats
@@ -69,7 +66,7 @@ class MarketState:
 
 class SignalState:
     def __init__(self):
-        self.status = "IDLE"
+        self.status = "IDLE" 
         self.forming_since = 0
         self.active_until = 0
         self.cooldown_until = 0
@@ -85,6 +82,8 @@ class Engine:
         self.last_trade_time = 0
         self.running = False
         self.current_1m_candle = None
+        self.telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+        self.telegram_chat_id = os.environ.get("TELEGRAM_CHAT_ID")
 
     async def start(self):
         self.running = True
@@ -131,7 +130,7 @@ class Engine:
     async def ws_loop(self):
         while self.running:
             try:
-                # Set max_size to None (unlimited) for huge snapshots
+                # Use level2_batch which is more efficient and standard
                 async with connect(COINBASE_WS_URL, max_size=None) as websocket:
                     self.ws_connected = True
                     logger.info("Connected to Coinbase WS")
@@ -139,7 +138,7 @@ class Engine:
                     await websocket.send(json.dumps({
                         "type": "subscribe",
                         "product_ids": [SYMBOL],
-                        "channels": ["level2", "matches", "ticker"]
+                        "channels": ["level2_batch", "matches", "ticker"]
                     }))
 
                     last_rate_update = time.time()
@@ -172,15 +171,15 @@ class Engine:
                 self.state.price = float(data['price'])
 
         elif type_ == 'snapshot':
-            # {"bids": [["price", "size"]...], "asks": ...}
+            # Coinbase Snapshot
             self.state.orderbook = {
                 "bids": {float(p): float(s) for p, s in data['bids']},
                 "asks": {float(p): float(s) for p, s in data['asks']}
             }
+            logger.info(f"Orderbook Snapshot Received: {len(self.state.orderbook['bids'])} bids")
             self.calculate_obi()
 
         elif type_ == 'l2update':
-            # {"changes": [["side", "price", "size"]...]}
             for side, price_str, size_str in data['changes']:
                 price = float(price_str)
                 size = float(size_str)
@@ -192,19 +191,14 @@ class Engine:
                 else:
                     self.state.orderbook[book_side][price] = size
             
-            # Recalc periodically to save CPU
-            if int(ts * 10) % 5 == 0: # 2Hz
+            # Recalc periodically
+            if int(ts * 10) % 5 == 0: 
                 self.calculate_obi()
 
         elif type_ == 'match':
-            # {"size": "...", "price": "...", "side": "buy"/"sell"}
             price = float(data['price'])
             size = float(data['size'])
-            side = 'Buy' if data['side'] == 'buy' else 'Sell' # Coinbase 'side' is the MAKER side?
-            # Coinbase docs: "side": "buy" means the maker was a buy order? No.
-            # "side": "buy" indicates a buy order matched a sell order. The AGGRESSOR is buy.
-            # So side='buy' -> Price went UP (usually).
-            # Let's map directly: side='buy' -> Buy, side='sell' -> Sell.
+            side = 'Buy' if data['side'] == 'buy' else 'Sell'
             
             self.state.price = price
             self.state.trades.append({'price': price, 'size': size, 'side': side, 'time': ts})
@@ -243,6 +237,7 @@ class Engine:
         if len(self.state.candles_1m) == 0: return
         df = self.state.candles_1m.set_index('startTime')
         
+        # 5m
         c5 = df.resample('5min').agg({'open':'first', 'high':'max', 'low':'min', 'close':'last', 'volume':'sum'}).dropna()
         c5['ema20'] = c5['close'].ewm(span=20, adjust=False).mean()
         c5['ema50'] = c5['close'].ewm(span=50, adjust=False).mean()
@@ -259,8 +254,8 @@ class Engine:
         if not c5.empty:
             last = c5.iloc[-1]
             self.state.indicators['rsi'] = last['rsi'] if not pd.isna(last['rsi']) else None
-            logger.info(f"5m Candle: C={last['close']}, ATR={last['atr']}, RSI={self.state.indicators['rsi']}")
 
+        # 15m
         c15 = df.resample('15min').agg({'open':'first', 'high':'max', 'low':'min', 'close':'last', 'volume':'sum'}).dropna()
         c15['ema20'] = c15['close'].ewm(span=20, adjust=False).mean()
         c15['ema50'] = c15['close'].ewm(span=50, adjust=False).mean()
@@ -293,7 +288,7 @@ class Engine:
         min_d = min(sum(p*s for p,s in sorted_bids), sum(p*s for p,s in sorted_asks))
         self.state.indicators['depth'] = min_d
         cur_d = self.state.indicators.get('smoothed_depth', 0.0)
-        self.state.indicators['smoothed_depth'] = (0.1 * min_d) + (0.9 * cur_d)
+        self.state.indicators['smoothed_depth'] = (0.05 * min_d) + (0.95 * cur_d) # Slower smoothing
 
     def calculate_cvd(self):
         now = time.time()
@@ -329,9 +324,12 @@ class Engine:
         spread = self.state.indicators.get('spread', 0.0)
         
         is_chaotic = (spread > 5)
+        bull = self.state.trends['5m'] == "BULL"
+        bear = self.state.trends['5m'] == "BEAR"
+        
         if is_chaotic: self.state.regime = "CHAOTIC"
-        elif self.state.trends['5m'] == "BULL": self.state.regime = "TRENDING_BULL"
-        elif self.state.trends['5m'] == "BEAR": self.state.regime = "TRENDING_BEAR"
+        elif bull: self.state.regime = "TRENDING_BULL"
+        elif bear: self.state.regime = "TRENDING_BEAR"
         else: self.state.regime = "RANGING"
 
     def check_gates(self):
@@ -340,10 +338,11 @@ class Engine:
         depth = self.state.indicators.get('smoothed_depth')
         if spread is None or depth is None: return
         
+        # Pass > 80k, Fail < 30k
         if self.state.gate_state_depth == "PASS":
-            if depth < 40000 and self.should_flip(now): self.state.gate_state_depth = "FAIL"
+            if depth < 30000 and self.should_flip(now): self.state.gate_state_depth = "FAIL"
         else:
-            if depth > 50000 and self.should_flip(now): self.state.gate_state_depth = "PASS"
+            if depth > 80000 and self.should_flip(now): self.state.gate_state_depth = "PASS"
             
         if self.state.gate_state_spread == "PASS":
             if spread > 2.0 and self.should_flip(now): self.state.gate_state_spread = "FAIL"
@@ -441,7 +440,8 @@ class Engine:
                 self.signal_state.status = "IDLE"
                 return
             
-            if now - self.signal_state.forming_since >= 30:
+            # CHANGE: 30s -> 20s
+            if now - self.signal_state.forming_since >= 20:
                 await self.activate_signal()
 
     async def activate_signal(self):
@@ -449,17 +449,61 @@ class Engine:
         now = time.time()
         self.signal_state.active_until = now + 300
         
+        is_long = "BULL" in self.state.regime
+        entry = self.state.price
+        atr = self.state.indicators.get('atr', 100) or 100
+        
+        sl = entry - (1.5 * atr) if is_long else entry + (1.5 * atr)
+        tp1 = entry + (2.0 * atr) if is_long else entry - (2.0 * atr)
+        tp2 = entry + (3.5 * atr) if is_long else entry - (3.5 * atr)
+        
         signal = {
             "id": str(int(now)),
-            "direction": "LONG" if "BULL" in self.state.regime else "SHORT",
-            "entry_min": self.state.price,
-            "entry_max": self.state.price,
-            "stop_loss": 0, "tp1": 0, "tp2": 0,
-            "sl_pct": 0, "tp1_pct": 0, "tp2_pct": 0, "rr_ratio": 0,
-            "confidence": 80,
+            "direction": "LONG" if is_long else "SHORT",
+            "entry_min": entry, "entry_max": entry,
+            "stop_loss": sl, "tp1": tp1, "tp2": tp2,
+            "sl_pct": abs(entry-sl)/entry*100,
+            "tp1_pct": abs(entry-tp1)/entry*100, 
+            "tp2_pct": abs(entry-tp2)/entry*100,
+            "rr_ratio": 1.33,
+            "confidence": 78,
             "reasons": ["Core Pass", "Gates Pass"],
             "timestamp": now
         }
         self.signal_state.current_signal = signal
         logger.info(f"Signal ACTIVATED: {signal}")
-        if self.telegram: await self.telegram.send_signal(signal)
+        
+        # Telegram Alert
+        await self.send_telegram_alert(signal)
+
+    async def send_telegram_alert(self, signal):
+        if not self.telegram_token or not self.telegram_chat_id:
+            return
+            
+        icon = "🟢" if signal['direction'] == "LONG" else "🔴"
+        text = (
+            f"{icon} {signal['direction']} BTC\n\n"
+            f"Confidence: {signal['confidence']}/100\n\n"
+            f"Entry: ${signal['entry_min']:.2f}\n"
+            f"Stop Loss: ${signal['stop_loss']:.2f}\n"
+            f"TP1: ${signal['tp1']:.2f}\n"
+            f"TP2: ${signal['tp2']:.2f}\n"
+            f"R:R: {signal['rr_ratio']:.2f}\n\n"
+            f"Valid for 5 minutes"
+        )
+        
+        url = f"https://api.telegram.org/bot{self.telegram_token}/sendMessage"
+        payload = {
+            "chat_id": self.telegram_chat_id,
+            "text": text
+        }
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, json=payload) as resp:
+                    if resp.status == 200:
+                        logger.info("Telegram alert sent")
+                    else:
+                        logger.error(f"Telegram failed: {await resp.text()}")
+        except Exception as e:
+            logger.error(f"Telegram exception: {e}")
