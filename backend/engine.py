@@ -17,9 +17,13 @@ logger = logging.getLogger(__name__)
 # Constants
 SYMBOL_COINBASE = "BTC-USD"
 COINBASE_WS_URL = "wss://ws-feed.exchange.coinbase.com"
-# Binance Futures for OI/Funding - with headers/ssl to bypass blocks
-BINANCE_WS_URL = "wss://fstream.binance.com/stream?streams=btcusdt@markPrice/btcusdt@openInterest"
+BYBIT_WS_URL = "wss://stream.bybit.com/v5/public/linear"
 CACHE_FILE = "/app/data/candle_cache.json"
+
+# REST API Fallbacks
+BYBIT_REST_TICKER = "https://api.bybit.com/v5/market/tickers"
+BINANCE_F_REST_OI = "https://fapi.binance.com/fapi/v1/openInterest"
+BINANCE_F_REST_PREMIUM = "https://fapi.binance.com/fapi/v1/premiumIndex"
 
 class MarketState:
     def __init__(self):
@@ -56,7 +60,7 @@ class MarketState:
         self.warmup_progress = 0
         self.last_update = 0
         self.backfill_error = False
-        self.backfill_error_msg = "Live Build Mode (Coinbase+Binance)"
+        self.backfill_error_msg = "Live Build Mode (Coinbase+REST)"
         self.backfill_retries = 0
         self.backfill_failed_final = False
         self.funding_regime = "NEUTRAL"
@@ -88,12 +92,17 @@ class Engine:
 
     async def start(self):
         self.running = True
-        logger.info("Starting Engine in Live Build Mode (Multi-Exchange)")
+        logger.info("Starting Engine in Live Build Mode (Multi-Exchange + Polling)")
         self.load_cache()
         
-        # Dual WS Connection
+        # Primary WS (Coinbase for Price/Book)
         asyncio.create_task(self.ws_loop_coinbase())
-        asyncio.create_task(self.ws_loop_binance())
+        
+        # Secondary WS (Bybit for OI/Funding - often blocked but trying)
+        asyncio.create_task(self.ws_loop_bybit())
+        
+        # Polling Fallback (for OI/Funding)
+        asyncio.create_task(self.poll_oi_funding_loop())
         
         asyncio.create_task(self.processing_loop())
 
@@ -132,6 +141,55 @@ class Engine:
                 json.dump(data, f)
         except: pass
 
+    async def poll_oi_funding_loop(self):
+        """Fallback polling for OI and Funding Rate every 10s"""
+        headers = {"User-Agent": "Mozilla/5.0"}
+        while self.running:
+            try:
+                async with aiohttp.ClientSession(headers=headers) as session:
+                    # Try Bybit REST First
+                    try:
+                        params = {"category": "linear", "symbol": "BTCUSDT"}
+                        async with session.get(BYBIT_REST_TICKER, params=params, timeout=5) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                if data['retCode'] == 0:
+                                    res = data['result']['list'][0]
+                                    self.state.indicators['funding_rate'] = float(res['fundingRate']) * 100
+                                    self.state.indicators['open_interest'] = float(res['openInterestValue'])
+                                    logger.info(f"REST Update (Bybit): Funding={self.state.indicators['funding_rate']:.4f}%, OI=${self.state.indicators['open_interest']:,.0f}")
+                                    await asyncio.sleep(10)
+                                    continue
+                    except Exception as e:
+                        logger.warning(f"Bybit Polling Failed: {e}")
+
+                    # Fallback to Binance Futures REST
+                    try:
+                        # OI
+                        params = {"symbol": "BTCUSDT"}
+                        async with session.get(BINANCE_F_REST_OI, params=params, timeout=5) as resp_oi:
+                            if resp_oi.status == 200:
+                                oi_data = await resp_oi.json()
+                                oi_btc = float(oi_data['openInterest'])
+                                if self.state.price > 0:
+                                    self.state.indicators['open_interest'] = oi_btc * self.state.price
+                        
+                        # Funding
+                        async with session.get(BINANCE_F_REST_PREMIUM, params=params, timeout=5) as resp_fr:
+                            if resp_fr.status == 200:
+                                fr_data = await resp_fr.json()
+                                self.state.indicators['funding_rate'] = float(fr_data['lastFundingRate']) * 100
+                                
+                        logger.info(f"REST Update (Binance): Funding={self.state.indicators['funding_rate']:.4f}%, OI=${self.state.indicators['open_interest']:,.0f}")
+                        
+                    except Exception as e:
+                        logger.warning(f"Binance Polling Failed: {e}")
+
+            except Exception as e:
+                logger.error(f"Polling Loop Error: {e}")
+            
+            await asyncio.sleep(10)
+
     async def ws_loop_coinbase(self):
         while self.running:
             try:
@@ -165,27 +223,21 @@ class Engine:
                 logger.error(f"Coinbase WS Error: {e}")
                 await asyncio.sleep(5)
 
-    async def ws_loop_binance(self):
-        # Retry loop for Binance Futures
+    async def ws_loop_bybit(self):
         while self.running:
             try:
-                # Custom SSL Context to mimic browser
-                ssl_context = ssl.create_default_context()
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-                
-                headers = {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-                }
-
-                async with connect(BINANCE_WS_URL, ssl=ssl_context, extra_headers=headers) as websocket:
-                    logger.info("Connected to Binance Futures WS (OI/Funding)")
+                async with connect(BYBIT_WS_URL) as websocket:
+                    logger.info("Connected to Bybit WS (OI/Funding)")
+                    await websocket.send(json.dumps({
+                        "op": "subscribe",
+                        "args": ["tickers.BTCUSDT"]
+                    }))
                     while True:
                         msg = await websocket.recv()
                         data = json.loads(msg)
-                        self.handle_binance_msg(data)
+                        self.handle_bybit_msg(data)
             except Exception as e:
-                logger.error(f"Binance WS Error: {e}")
+                # Silent fail for Bybit WS as we have polling now
                 await asyncio.sleep(10)
 
     def handle_coinbase_msg(self, data):
@@ -226,31 +278,15 @@ class Engine:
             self.state.trades.append({'price': price, 'size': size, 'side': side, 'time': ts})
             self.update_candle(price, size, ts)
 
-    def handle_binance_msg(self, message):
+    def handle_bybit_msg(self, message):
         if 'data' not in message: return
         data = message['data']
-        stream = message.get('stream', '')
-        
-        if 'markPrice' in stream:
-            # {"r": "0.00010000", ...}
-            if 'r' in data:
-                try:
-                    self.state.indicators['funding_rate'] = float(data['r']) * 100
-                except: pass
-        
-        elif 'openInterest' in stream:
-            # {"o": "12345.67", ...}
-            # Binance Futures 'openInterest' payload usually has 'o' (OI in BTC)
-            # or sometimes 'openInterest'
-            # Let's check documentation: btcusdt@openInterest payload:
-            # { "e": "openInterest", "s": "BTCUSDT", "o": "123.45", "c": "..." }
-            if 'o' in data:
-                 try:
-                    oi_btc = float(data['o'])
-                    # Convert to USD
-                    if self.state.price > 0:
-                        self.state.indicators['open_interest'] = oi_btc * self.state.price
-                 except: pass
+        if 'fundingRate' in data:
+            try: self.state.indicators['funding_rate'] = float(data['fundingRate']) * 100
+            except: pass
+        if 'openInterestValue' in data:
+            try: self.state.indicators['open_interest'] = float(data['openInterestValue'])
+            except: pass
 
     def update_candle(self, price, size, ts):
         current_min = int(ts // 60) * 60
@@ -431,7 +467,6 @@ class Engine:
                 self.signal_state.status = "IDLE"
                 return
             
-            # CONFIRM 20 seconds duration
             if now - self.signal_state.forming_since >= 20:
                 await self.activate_signal()
 
