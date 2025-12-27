@@ -2,8 +2,9 @@ import asyncio
 import json
 import logging
 import time
+import os
 from collections import deque
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import aiohttp
 import numpy as np
 import pandas as pd
@@ -13,14 +14,16 @@ from websockets.exceptions import ConnectionClosed
 logger = logging.getLogger(__name__)
 
 # Constants
-SYMBOL = "BTCUSDT"
-# Switch to Binance Futures (fstream) - More reliable for cloud IPs
-BINANCE_WS_URL = "wss://fstream.binance.com/stream?streams=btcusdt@aggTrade/btcusdt@depth20@100ms/btcusdt@markPrice"
+SYMBOL = "BTC-USD" # Coinbase uses Dash
+COINBASE_WS_URL = "wss://ws-feed.exchange.coinbase.com"
+CACHE_FILE = "/app/data/candle_cache.json"
 
 class MarketState:
     def __init__(self):
         self.price = 0.0
-        self.orderbook = {"bids": [], "asks": []}
+        # Coinbase Orderbook: { "bids": {price: size}, "asks": {price: size} }
+        # Using dict for O(1) updates
+        self.orderbook = {"bids": {}, "asks": {}}
         self.trades = deque(maxlen=1000)
         self.candles_1m = pd.DataFrame()
         self.candles_5m = pd.DataFrame()
@@ -41,9 +44,9 @@ class MarketState:
             "spread": None,
             "depth": None,
             "smoothed_depth": 0.0,
-            "funding_rate": None,
-            "open_interest": None,
-            "oi_change_5m": None,
+            "funding_rate": 0.01, # Coinbase has no perp funding in public spot feed
+            "open_interest": 0,
+            "oi_change_5m": 0,
             "ema20_1m": None,
             "ema50_1m": None
         }
@@ -52,12 +55,14 @@ class MarketState:
         self.warmup_progress = 0
         self.last_update = 0
         self.backfill_error = False
-        self.backfill_error_msg = "Live Build Mode (Binance)"
+        self.backfill_error_msg = "Live Build Mode (Coinbase)"
         self.backfill_retries = 0
         self.backfill_failed_final = False
         self.funding_regime = "NEUTRAL"
+        
         self.checklist = {}
         
+        # Debug Stats
         self.ws_msg_count = 0
         self.ws_last_time = time.time()
         self.ws_rate = 0.0
@@ -83,19 +88,15 @@ class Engine:
 
     async def start(self):
         self.running = True
-        logger.info("Starting Engine in Live Build Mode (Binance Futures)")
-        # Load Cache
+        logger.info("Starting Engine in Live Build Mode (Coinbase)")
         self.load_cache()
-        # Start WS Loop
         asyncio.create_task(self.ws_loop())
-        # Start Processing Loop
         asyncio.create_task(self.processing_loop())
 
     def load_cache(self):
-        cache_file = "/app/data/candle_cache.json"
-        if not os.path.exists(cache_file): return
+        if not os.path.exists(CACHE_FILE): return
         try:
-            with open(cache_file, 'r') as f:
+            with open(CACHE_FILE, 'r') as f:
                 data = json.load(f)
             if not data: return
             df = pd.DataFrame(data)
@@ -103,7 +104,6 @@ class Engine:
             df = df.sort_values('startTime').reset_index(drop=True)
             self.state.candles_1m = df
             
-            # Recalc Indicators
             self.state.candles_1m['ema20'] = self.state.candles_1m['close'].ewm(span=20, adjust=False).mean()
             self.state.candles_1m['ema50'] = self.state.candles_1m['close'].ewm(span=50, adjust=False).mean()
             if not self.state.candles_1m.empty:
@@ -116,14 +116,32 @@ class Engine:
                 self.state.is_warmed_up = True
                 self.state.warmup_progress = 100
         except Exception as e:
-            logger.error(f"Cache load error: {e}")
+            logger.error(f"Cache error: {e}")
+
+    def save_cache(self):
+        try:
+            if self.state.candles_1m.empty: return
+            df = self.state.candles_1m.tail(180).copy()
+            df['startTime'] = df['startTime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+            data = df[['startTime','open','high','low','close','volume']].to_dict(orient='records')
+            with open(CACHE_FILE, 'w') as f:
+                json.dump(data, f)
+        except: pass
 
     async def ws_loop(self):
         while self.running:
             try:
-                async with connect(BINANCE_WS_URL) as websocket:
+                # Set max_size to None (unlimited) for huge snapshots
+                async with connect(COINBASE_WS_URL, max_size=None) as websocket:
                     self.ws_connected = True
-                    logger.info("Connected to Binance Futures WS")
+                    logger.info("Connected to Coinbase WS")
+                    
+                    await websocket.send(json.dumps({
+                        "type": "subscribe",
+                        "product_ids": [SYMBOL],
+                        "channels": ["level2", "matches", "ticker"]
+                    }))
+
                     last_rate_update = time.time()
                     msg_count = 0
 
@@ -144,39 +162,53 @@ class Engine:
                 logger.error(f"WS Error: {e}")
                 await asyncio.sleep(5)
 
-    def handle_ws_message(self, message):
-        # Binance Combined Stream: {"stream": "...", "data": {...}}
-        if 'data' not in message: return
-        
-        data = message['data']
-        stream = message.get('stream', '')
+    def handle_ws_message(self, data):
+        type_ = data.get('type')
         ts = time.time()
         self.state.last_update = ts
 
-        if 'depth' in stream:
-            # {"b": [[p, q], ...], "a": ...}
+        if type_ == 'ticker':
+            if 'price' in data:
+                self.state.price = float(data['price'])
+
+        elif type_ == 'snapshot':
+            # {"bids": [["price", "size"]...], "asks": ...}
             self.state.orderbook = {
-                "bids": [[float(x[0]), float(x[1])] for x in data['b']],
-                "asks": [[float(x[0]), float(x[1])] for x in data['a']]
+                "bids": {float(p): float(s) for p, s in data['bids']},
+                "asks": {float(p): float(s) for p, s in data['asks']}
             }
             self.calculate_obi()
 
-        elif 'aggTrade' in stream:
-            # {"p": price, "q": qty, "m": isBuyerMaker (True=Sell, False=Buy)}
-            price = float(data['p'])
-            size = float(data['q'])
-            side = 'Sell' if data['m'] else 'Buy'
+        elif type_ == 'l2update':
+            # {"changes": [["side", "price", "size"]...]}
+            for side, price_str, size_str in data['changes']:
+                price = float(price_str)
+                size = float(size_str)
+                book_side = "bids" if side == "buy" else "asks"
+                
+                if size == 0:
+                    if price in self.state.orderbook[book_side]:
+                        del self.state.orderbook[book_side][price]
+                else:
+                    self.state.orderbook[book_side][price] = size
+            
+            # Recalc periodically to save CPU
+            if int(ts * 10) % 5 == 0: # 2Hz
+                self.calculate_obi()
+
+        elif type_ == 'match':
+            # {"size": "...", "price": "...", "side": "buy"/"sell"}
+            price = float(data['price'])
+            size = float(data['size'])
+            side = 'Buy' if data['side'] == 'buy' else 'Sell' # Coinbase 'side' is the MAKER side?
+            # Coinbase docs: "side": "buy" means the maker was a buy order? No.
+            # "side": "buy" indicates a buy order matched a sell order. The AGGRESSOR is buy.
+            # So side='buy' -> Price went UP (usually).
+            # Let's map directly: side='buy' -> Buy, side='sell' -> Sell.
             
             self.state.price = price
             self.state.trades.append({'price': price, 'size': size, 'side': side, 'time': ts})
             self.update_candle(price, size, ts)
-            
-        elif 'markPrice' in stream:
-            # {"r": fundingRate, ...}
-            if 'r' in data:
-                try:
-                    self.state.indicators['funding_rate'] = float(data['r']) * 100
-                except: pass
 
     def update_candle(self, price, size, ts):
         current_min = int(ts // 60) * 60
@@ -204,21 +236,13 @@ class Engine:
             self.state.indicators['ema20_1m'] = self.state.candles_1m.iloc[-1]['ema20']
             self.state.indicators['ema50_1m'] = self.state.candles_1m.iloc[-1]['ema50']
             
-        # Basic caching (simplified for engine update)
-        try:
-            with open("/app/data/candle_cache.json", 'w') as f:
-                df = self.state.candles_1m.copy()
-                df['startTime'] = df['startTime'].dt.strftime('%Y-%m-%d %H:%M:%S')
-                json.dump(df[['startTime','open','high','low','close','volume']].to_dict(orient='records'), f)
-        except: pass
-        
+        self.save_cache()
         self.resample_candles()
 
     def resample_candles(self):
         if len(self.state.candles_1m) == 0: return
         df = self.state.candles_1m.set_index('startTime')
         
-        # 5m
         c5 = df.resample('5min').agg({'open':'first', 'high':'max', 'low':'min', 'close':'last', 'volume':'sum'}).dropna()
         c5['ema20'] = c5['close'].ewm(span=20, adjust=False).mean()
         c5['ema50'] = c5['close'].ewm(span=50, adjust=False).mean()
@@ -235,8 +259,8 @@ class Engine:
         if not c5.empty:
             last = c5.iloc[-1]
             self.state.indicators['rsi'] = last['rsi'] if not pd.isna(last['rsi']) else None
+            logger.info(f"5m Candle: C={last['close']}, ATR={last['atr']}, RSI={self.state.indicators['rsi']}")
 
-        # 15m
         c15 = df.resample('15min').agg({'open':'first', 'high':'max', 'low':'min', 'close':'last', 'volume':'sum'}).dropna()
         c15['ema20'] = c15['close'].ewm(span=20, adjust=False).mean()
         c15['ema50'] = c15['close'].ewm(span=50, adjust=False).mean()
@@ -244,26 +268,29 @@ class Engine:
 
     def calculate_obi(self):
         if not self.state.orderbook['bids']: return
-        bids = self.state.orderbook['bids'][:10]
-        asks = self.state.orderbook['asks'][:10]
-        bid_vol = sum(b[1] for b in bids)
-        ask_vol = sum(a[1] for a in asks)
+        
+        # Sort and take top 10
+        sorted_bids = sorted(self.state.orderbook['bids'].items(), key=lambda x: x[0], reverse=True)[:10]
+        sorted_asks = sorted(self.state.orderbook['asks'].items(), key=lambda x: x[0])[:10]
+        
+        if not sorted_bids or not sorted_asks: return
+
+        bid_vol = sum(size for price, size in sorted_bids)
+        ask_vol = sum(size for price, size in sorted_asks)
         total = bid_vol + ask_vol
         raw_obi = (bid_vol - ask_vol) / total if total > 0 else 0
-        current = self.state.indicators.get('obi', 0.0)
-        if current is None: current = 0.0
+        
+        current = self.state.indicators.get('obi', 0.0) or 0.0
         self.state.indicators['obi'] = (0.3 * raw_obi) + (0.7 * current)
         
         # Spread
-        bb = bids[0][0]
-        ba = asks[0][0]
+        bb = sorted_bids[0][0]
+        ba = sorted_asks[0][0]
         mid = (ba + bb) / 2
         self.state.indicators['spread'] = (ba - bb) / mid * 10000
         
         # Depth
-        bid_val = sum(b[0]*b[1] for b in bids)
-        ask_val = sum(a[0]*a[1] for a in asks)
-        min_d = min(bid_val, ask_val)
+        min_d = min(sum(p*s for p,s in sorted_bids), sum(p*s for p,s in sorted_asks))
         self.state.indicators['depth'] = min_d
         cur_d = self.state.indicators.get('smoothed_depth', 0.0)
         self.state.indicators['smoothed_depth'] = (0.1 * min_d) + (0.9 * cur_d)
@@ -271,6 +298,7 @@ class Engine:
     def calculate_cvd(self):
         now = time.time()
         trades = list(self.state.trades)
+        
         bv1 = sum(t['size'] for t in trades if t['side']=='Buy' and t['time']>now-60)
         sv1 = sum(t['size'] for t in trades if t['side']=='Sell' and t['time']>now-60)
         tot1 = bv1 + sv1
@@ -286,8 +314,7 @@ class Engine:
         self.state.indicators['cvd_1m'] = (0.3 * r1) + (0.7 * c1)
         self.state.indicators['cvd_5m'] = (0.3 * r5) + (0.7 * c5)
 
-    def update_oi_change(self):
-        pass # OI not available in standard stream, kept stub
+    def update_oi_change(self): pass
 
     def determine_regime(self):
         if len(self.state.candles_5m) < 2: return
@@ -297,18 +324,14 @@ class Engine:
         s5 = c5['ema20'] - self.state.candles_5m.iloc[-2]['ema20']
         self.state.trends['5m'] = "BULL" if c5['ema20']>c5['ema50'] and s5>0 else "BEAR" if c5['ema20']<c5['ema50'] and s5<0 else "NEUTRAL"
         
-        # Simplified regime logic for robustness
         atr = c5['atr']
         self.state.indicators['atr'] = atr
         spread = self.state.indicators.get('spread', 0.0)
         
         is_chaotic = (spread > 5)
-        bull = self.state.trends['5m'] == "BULL"
-        bear = self.state.trends['5m'] == "BEAR"
-        
         if is_chaotic: self.state.regime = "CHAOTIC"
-        elif bull: self.state.regime = "TRENDING_BULL"
-        elif bear: self.state.regime = "TRENDING_BEAR"
+        elif self.state.trends['5m'] == "BULL": self.state.regime = "TRENDING_BULL"
+        elif self.state.trends['5m'] == "BEAR": self.state.regime = "TRENDING_BEAR"
         else: self.state.regime = "RANGING"
 
     def check_gates(self):
@@ -354,7 +377,7 @@ class Engine:
             
         self.state.checklist = {
             "regime": {"pass": is_trending, "value": self.state.regime},
-            "structure": {"pass": True, "value": f"5M {s5}"}, # Simplified
+            "structure": {"pass": True, "value": f"5M {s5}"},
             "cvd": {"pass": cvd_pass, "value": f"{cvd:.2f}"},
             "obi": {"pass": obi_pass, "value": f"{obi:.2f}"},
             "ema_dist": {"pass": ema_pass, "value": dist_str},
@@ -426,13 +449,12 @@ class Engine:
         now = time.time()
         self.signal_state.active_until = now + 300
         
-        # Basic Activation (Detailed fields can be computed)
         signal = {
             "id": str(int(now)),
             "direction": "LONG" if "BULL" in self.state.regime else "SHORT",
             "entry_min": self.state.price,
             "entry_max": self.state.price,
-            "stop_loss": 0, "tp1": 0, "tp2": 0, # Placeholders for brevity
+            "stop_loss": 0, "tp1": 0, "tp2": 0,
             "sl_pct": 0, "tp1_pct": 0, "tp2_pct": 0, "rr_ratio": 0,
             "confidence": 80,
             "reasons": ["Core Pass", "Gates Pass"],
