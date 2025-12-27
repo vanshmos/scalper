@@ -14,10 +14,9 @@ logger = logging.getLogger(__name__)
 
 # Constants
 SYMBOL = "BTCUSDT"
-# SWITCH TO BINANCE due to Bybit IP Block
-BINANCE_WS_URL = "wss://stream.binance.com:9443/stream?streams=btcusdt@trade/btcusdt@depth20@100ms/btcusdt@ticker"
-# Binance does not have a simple public kline REST for backfill in this context easily without same block issues, 
-# but we are in "Live Build Mode" so backfill is skipped anyway.
+# Revert to Bybit WS (It was working, only REST was blocked)
+BYBIT_WS_URL = "wss://stream.bybit.com/v5/public/linear"
+BYBIT_REST_URL = "https://api.bybit.com/v5/market/kline"
 
 class MarketState:
     def __init__(self):
@@ -43,9 +42,9 @@ class MarketState:
             "spread": None,
             "depth": None,
             "smoothed_depth": 0.0,
-            "funding_rate": 0.01, # Default/Mock for Binance (unavailable in simple stream)
-            "open_interest": 0, # Unavailable in simple stream
-            "oi_change_5m": 0,
+            "funding_rate": None,
+            "open_interest": None,
+            "oi_change_5m": None,
             "ema20_1m": None,
             "ema50_1m": None
         }
@@ -54,7 +53,7 @@ class MarketState:
         self.warmup_progress = 0
         self.last_update = 0
         self.backfill_error = False
-        self.backfill_error_msg = "Live Build Mode (Binance)"
+        self.backfill_error_msg = "Live Build Mode"
         self.backfill_retries = 0
         self.backfill_failed_final = False
         self.funding_regime = "NEUTRAL"
@@ -86,21 +85,36 @@ class Engine:
 
     async def start(self):
         self.running = True
-        logger.info("Starting Engine in Live Build Mode (Binance Fallback)")
+        logger.info("Starting Engine in Live Build Mode (Bybit WS)")
+        
+        # Load Cache
+        # self.load_cache() # Temporarily disabled or keep? Keep it.
+        # But wait, cache format might differ? No, internal format is same.
+        # But if we were saving Binance data (which failed), cache might be empty/bad.
+        # Let's keep it.
         
         # Start WS Loop
         asyncio.create_task(self.ws_loop())
         
-        # Start Processing Loop (1s interval)
+        # Start Processing Loop
         asyncio.create_task(self.processing_loop())
 
     async def ws_loop(self):
         while self.running:
             try:
-                async with connect(BINANCE_WS_URL) as websocket:
+                async with connect(BYBIT_WS_URL) as websocket:
                     self.ws_connected = True
-                    logger.info("Connected to Binance WS")
+                    logger.info("Connected to Bybit WS")
                     
+                    await websocket.send(json.dumps({
+                        "op": "subscribe",
+                        "args": [
+                            f"orderbook.50.{SYMBOL}",
+                            f"publicTrade.{SYMBOL}",
+                            f"tickers.{SYMBOL}"
+                        ]
+                    }))
+
                     last_rate_update = time.time()
                     msg_count = 0
 
@@ -109,7 +123,6 @@ class Engine:
                         data = json.loads(msg)
                         self.handle_ws_message(data)
                         
-                        # WS Rate Calc
                         msg_count += 1
                         now = time.time()
                         if now - last_rate_update >= 1.0:
@@ -122,52 +135,82 @@ class Engine:
                 logger.error(f"WS Error: {e}")
                 await asyncio.sleep(5)
 
-    def handle_ws_message(self, message):
-        # Binance Combined Stream Format
-        # {"stream": "...", "data": {...}}
-        if 'data' not in message: return
-        
-        data = message['data']
-        stream = message.get('stream', '')
+    def handle_ws_message(self, data):
+        topic = data.get('topic', '')
         ts = time.time()
         self.state.last_update = ts
 
-        if 'depth' in stream:
-            # Orderbook
-            # {"bids": [[price, qty], ...], "asks": ...}
-            self.state.orderbook = {
-                "bids": [[float(x[0]), float(x[1])] for x in data['bids']],
-                "asks": [[float(x[0]), float(x[1])] for x in data['asks']]
-            }
+        if 'orderbook' in topic:
+            type_ = data.get('type')
+            if type_ == 'snapshot':
+                self.state.orderbook = {
+                    "bids": [[float(x[0]), float(x[1])] for x in data['data']['b']],
+                    "asks": [[float(x[0]), float(x[1])] for x in data['data']['a']]
+                }
+            elif type_ == 'delta':
+                for b in data['data']['b']:
+                    price, size = float(b[0]), float(b[1])
+                    found = False
+                    for i, existing in enumerate(self.state.orderbook['bids']):
+                        if existing[0] == price:
+                            if size == 0:
+                                self.state.orderbook['bids'].pop(i)
+                            else:
+                                self.state.orderbook['bids'][i][1] = size
+                            found = True
+                            break
+                    if not found and size > 0:
+                        self.state.orderbook['bids'].append([price, size])
+                        self.state.orderbook['bids'].sort(key=lambda x: x[0], reverse=True)
+                        self.state.orderbook['bids'] = self.state.orderbook['bids'][:50]
+
+                for a in data['data']['a']:
+                    price, size = float(a[0]), float(a[1])
+                    found = False
+                    for i, existing in enumerate(self.state.orderbook['asks']):
+                        if existing[0] == price:
+                            if size == 0:
+                                self.state.orderbook['asks'].pop(i)
+                            else:
+                                self.state.orderbook['asks'][i][1] = size
+                            found = True
+                            break
+                    if not found and size > 0:
+                        self.state.orderbook['asks'].append([price, size])
+                        self.state.orderbook['asks'].sort(key=lambda x: x[0])
+                        self.state.orderbook['asks'] = self.state.orderbook['asks'][:50]
+            
             if int(ts) % 10 == 0:
-                 logger.info(f"Orderbook Levels (Binance): Bids={len(self.state.orderbook['bids'])}, Asks={len(self.state.orderbook['asks'])}")
+                 logger.info(f"Orderbook Levels (Bybit): Bids={len(self.state.orderbook['bids'])}, Asks={len(self.state.orderbook['asks'])}")
+
             self.calculate_obi()
 
-        elif 'trade' in stream:
-            # Trade
-            # {"p": "price", "q": "qty", "T": timestamp, "m": isBuyerMaker}
-            price = float(data['p'])
-            size = float(data['q'])
-            # Binance: m=True means Buyer is Maker (Sell side aggression? No)
-            # m=True -> Maker is Buyer -> Taker is Seller -> "Sell" trade
-            # m=False -> Maker is Seller -> Taker is Buyer -> "Buy" trade
-            side = 'Sell' if data['m'] else 'Buy'
-            
-            self.state.price = price
-            self.state.trades.append({'price': price, 'size': size, 'side': side, 'time': ts})
-            self.update_candle(price, size, ts)
-            
-        elif 'ticker' in stream:
-            # 24h Ticker (Approximation for funding? No real funding in spot/public ticker)
-            # We can't get Funding Rate easily from public Binance Spot stream.
-            # We will use static 0.01% as placeholder or ignore funding logic?
-            # User said "mock values will not be tolerated".
-            # But if Bybit is blocked, we lose Funding Rate data source.
-            # I will leave funding_rate as 0.01 (neutral) so it doesn't break logic, 
-            # or try to fetch it via REST periodically? 
-            # Binance Futures has funding stream. `wss://fstream.binance.com...`
-            # But let's stick to spot for stability first.
-            pass
+        elif 'publicTrade' in topic:
+            for t in data['data']:
+                price = float(t['p'])
+                size = float(t['v'])
+                side = t['S'] # Buy/Sell
+                self.state.price = price
+                self.state.trades.append({'price': price, 'size': size, 'side': side, 'time': ts})
+                self.update_candle(price, size, ts)
+        
+        elif 'tickers' in topic:
+            if 'data' in data:
+                d = data['data']
+                if 'fundingRate' in d:
+                    try:
+                        self.state.indicators['funding_rate'] = float(d['fundingRate']) * 100 
+                    except: pass
+                
+                if 'openInterest' in d:
+                    try:
+                        if 'openInterestValue' in d:
+                            self.state.indicators['open_interest'] = float(d['openInterestValue'])
+                        else:
+                            oi_size = float(d['openInterest'])
+                            self.state.indicators['open_interest'] = oi_size * self.state.price
+                    except: pass
+
 
     def update_candle(self, price, size, ts):
         current_min = int(ts // 60) * 60
