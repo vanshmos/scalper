@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 # Constants
 SYMBOL = "BTCUSDT"
-BYBIT_WS_URL = "wss://stream.bybit.com/v5/public/linear"
-BYBIT_REST_URL = "https://api.bybit.com/v5/market/kline"
+BYBIT_WS_URL = "wss://stream.bytick.com/v5/public/linear"
+BYBIT_REST_URL = "https://api.bytick.com/v5/market/kline"
 CACHE_FILE = "/app/data/candle_cache.json"
 
 class MarketState:
