@@ -3,6 +3,7 @@ import json
 import logging
 import time
 import os
+import ssl
 from collections import deque
 from datetime import datetime, timezone, timedelta
 import aiohttp
@@ -16,8 +17,8 @@ logger = logging.getLogger(__name__)
 # Constants
 SYMBOL_COINBASE = "BTC-USD"
 COINBASE_WS_URL = "wss://ws-feed.exchange.coinbase.com"
-# Use Bybit for OI/Funding (Binance was blocked)
-BYBIT_WS_URL = "wss://stream.bybit.com/v5/public/linear"
+# Binance Futures for OI/Funding - with headers/ssl to bypass blocks
+BINANCE_WS_URL = "wss://fstream.binance.com/stream?streams=btcusdt@markPrice/btcusdt@openInterest"
 CACHE_FILE = "/app/data/candle_cache.json"
 
 class MarketState:
@@ -55,7 +56,7 @@ class MarketState:
         self.warmup_progress = 0
         self.last_update = 0
         self.backfill_error = False
-        self.backfill_error_msg = "Live Build Mode (Coinbase+Bybit)"
+        self.backfill_error_msg = "Live Build Mode (Coinbase+Binance)"
         self.backfill_retries = 0
         self.backfill_failed_final = False
         self.funding_regime = "NEUTRAL"
@@ -92,7 +93,7 @@ class Engine:
         
         # Dual WS Connection
         asyncio.create_task(self.ws_loop_coinbase())
-        asyncio.create_task(self.ws_loop_bybit()) # Switched from Binance
+        asyncio.create_task(self.ws_loop_binance())
         
         asyncio.create_task(self.processing_loop())
 
@@ -164,24 +165,27 @@ class Engine:
                 logger.error(f"Coinbase WS Error: {e}")
                 await asyncio.sleep(5)
 
-    async def ws_loop_bybit(self):
+    async def ws_loop_binance(self):
+        # Retry loop for Binance Futures
         while self.running:
             try:
-                async with connect(BYBIT_WS_URL) as websocket:
-                    logger.info("Connected to Bybit WS (OI/Funding)")
-                    
-                    # Subscribe to tickers for Funding/OI
-                    await websocket.send(json.dumps({
-                        "op": "subscribe",
-                        "args": ["tickers.BTCUSDT"]
-                    }))
+                # Custom SSL Context to mimic browser
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                }
 
+                async with connect(BINANCE_WS_URL, ssl=ssl_context, extra_headers=headers) as websocket:
+                    logger.info("Connected to Binance Futures WS (OI/Funding)")
                     while True:
                         msg = await websocket.recv()
                         data = json.loads(msg)
-                        self.handle_bybit_msg(data)
+                        self.handle_binance_msg(data)
             except Exception as e:
-                logger.error(f"Bybit WS Error: {e}")
+                logger.error(f"Binance WS Error: {e}")
                 await asyncio.sleep(10)
 
     def handle_coinbase_msg(self, data):
@@ -222,28 +226,31 @@ class Engine:
             self.state.trades.append({'price': price, 'size': size, 'side': side, 'time': ts})
             self.update_candle(price, size, ts)
 
-    def handle_bybit_msg(self, message):
-        # {"topic": "tickers.BTCUSDT", "data": {...}}
+    def handle_binance_msg(self, message):
         if 'data' not in message: return
         data = message['data']
+        stream = message.get('stream', '')
         
-        if 'fundingRate' in data:
-            try:
-                self.state.indicators['funding_rate'] = float(data['fundingRate']) * 100
-            except: pass
-            
-        if 'openInterestValue' in data:
-            try:
-                # Bybit returns value in quote currency (USDT)
-                self.state.indicators['open_interest'] = float(data['openInterestValue'])
-            except: pass
-        elif 'openInterest' in data:
-             try:
-                # Fallback to size * price if value missing
-                oi_size = float(data['openInterest'])
-                if self.state.price > 0:
-                    self.state.indicators['open_interest'] = oi_size * self.state.price
-             except: pass
+        if 'markPrice' in stream:
+            # {"r": "0.00010000", ...}
+            if 'r' in data:
+                try:
+                    self.state.indicators['funding_rate'] = float(data['r']) * 100
+                except: pass
+        
+        elif 'openInterest' in stream:
+            # {"o": "12345.67", ...}
+            # Binance Futures 'openInterest' payload usually has 'o' (OI in BTC)
+            # or sometimes 'openInterest'
+            # Let's check documentation: btcusdt@openInterest payload:
+            # { "e": "openInterest", "s": "BTCUSDT", "o": "123.45", "c": "..." }
+            if 'o' in data:
+                 try:
+                    oi_btc = float(data['o'])
+                    # Convert to USD
+                    if self.state.price > 0:
+                        self.state.indicators['open_interest'] = oi_btc * self.state.price
+                 except: pass
 
     def update_candle(self, price, size, ts):
         current_min = int(ts // 60) * 60
