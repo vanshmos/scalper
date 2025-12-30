@@ -167,6 +167,7 @@ class SignalEngine:
             signals = {'short': {'checklist': {}, 'confidence': 0, 'signal_ready': False},
                       'long': {'checklist': {}, 'confidence': 0, 'signal_ready': False}}
             approximating = {'1m': True, '5m': True, '15m': True}
+            signal_status = {'state': 'IDLE', 'direction': None, 'signal_triggered': False}
         
         return {
             'connected': self.is_connected,
@@ -192,5 +193,6 @@ class SignalEngine:
             'regime': regime,
             'gates': gates,
             'signals': signals,
-            'approximating': approximating
+            'approximating': approximating,
+            'signal_status': signal_status
         }
