@@ -21,7 +21,12 @@ class BybitWebSocketClient:
         while self.is_running:
             try:
                 logger.info(f"Connecting to {self.url}...")
-                async with websockets.connect(self.url, ping_interval=20, ping_timeout=10) as ws:
+                # Add headers to avoid being blocked
+                extra_headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Origin": "https://www.bybit.com"
+                }
+                async with websockets.connect(self.url, ping_interval=20, ping_timeout=10, extra_headers=extra_headers) as ws:
                     self.ws = ws
                     logger.info("Connected to Bybit WebSocket")
                     
