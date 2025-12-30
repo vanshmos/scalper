@@ -150,13 +150,90 @@ function App() {
 
         {/* Phase Status */}
         <div className="info-card">
-          <div className="card-header">PHASE 1: DATA CONNECTION</div>
+          <div className="card-header">PHASE 2: INDICATORS</div>
           <div className="card-content">
-            <div className="phase-status" data-testid="phase-status">
-              ✓ WebSocket connection active<br/>
-              ✓ Building candles from live trades<br/>
-              ✓ Resampling 1m → 5m → 15m<br/>
-              ✓ File persistence enabled
+            <div className="indicator-section">
+              <div className="indicator-title">EMA (1m)</div>
+              <div className="indicator-row">
+                <span>EMA20:</span>
+                <span data-testid="ema20-1m">{formatPrice(indicators.ema?.['1m']?.ema20)}</span>
+              </div>
+              <div className="indicator-row">
+                <span>EMA50:</span>
+                <span data-testid="ema50-1m">{formatPrice(indicators.ema?.['1m']?.ema50)}</span>
+              </div>
+            </div>
+            
+            <div className="indicator-section">
+              <div className="indicator-title">EMA (5m)</div>
+              <div className="indicator-row">
+                <span>EMA20:</span>
+                <span data-testid="ema20-5m">{formatPrice(indicators.ema?.['5m']?.ema20)}</span>
+              </div>
+              <div className="indicator-row">
+                <span>EMA50:</span>
+                <span data-testid="ema50-5m">{formatPrice(indicators.ema?.['5m']?.ema50)}</span>
+              </div>
+            </div>
+            
+            <div className="indicator-section">
+              <div className="indicator-title">EMA (15m)</div>
+              <div className="indicator-row">
+                <span>EMA20:</span>
+                <span data-testid="ema20-15m">{formatPrice(indicators.ema?.['15m']?.ema20)}</span>
+              </div>
+              <div className="indicator-row">
+                <span>EMA50:</span>
+                <span data-testid="ema50-15m">{formatPrice(indicators.ema?.['15m']?.ema50)}</span>
+              </div>
+            </div>
+            
+            <div className="indicator-section">
+              <div className="indicator-title">5m Indicators</div>
+              <div className="indicator-row">
+                <span>ATR 14:</span>
+                <span data-testid="atr-5m">{formatNumber(indicators.atr_5m)}</span>
+              </div>
+              <div className="indicator-row">
+                <span>RSI 14:</span>
+                <span data-testid="rsi-5m" className={getIndicatorColor(indicators.rsi_5m, 75, 25)}>
+                  {formatNumber(indicators.rsi_5m)}
+                </span>
+              </div>
+            </div>
+            
+            <div className="indicator-section">
+              <div className="indicator-title">Orderbook</div>
+              <div className="indicator-row">
+                <span>OBI:</span>
+                <span data-testid="obi" className={getIndicatorColor(indicators.obi, 0.12, -0.12)}>
+                  {formatNumber(indicators.obi, 3)}
+                </span>
+              </div>
+              <div className="indicator-row">
+                <span>Spread (bps):</span>
+                <span data-testid="spread">{formatNumber(indicators.spread, 2)}</span>
+              </div>
+              <div className="indicator-row">
+                <span>Depth:</span>
+                <span data-testid="depth">${formatNumber(indicators.depth, 0)}</span>
+              </div>
+            </div>
+            
+            <div className="indicator-section">
+              <div className="indicator-title">CVD</div>
+              <div className="indicator-row">
+                <span>CVD 1m:</span>
+                <span data-testid="cvd-1m" className={getIndicatorColor(indicators.cvd?.['1m'], 0.15, -0.15)}>
+                  {formatNumber(indicators.cvd?.['1m'], 3)}
+                </span>
+              </div>
+              <div className="indicator-row">
+                <span>CVD 5m:</span>
+                <span data-testid="cvd-5m" className={getIndicatorColor(indicators.cvd?.['5m'], 0.15, -0.15)}>
+                  {formatNumber(indicators.cvd?.['5m'], 3)}
+                </span>
+              </div>
             </div>
           </div>
         </div>
