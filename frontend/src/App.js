@@ -95,12 +95,14 @@ function App() {
     return '';
   };
 
-  const indicators = status?.indicators || {};
-  const regime = status?.regime || 'RANGING';
-  const gates = status?.gates || {};
-  const signals = status?.signals || {};
-  const approximating = status?.approximating || {};
-  const signalStatus = status?.signal_status || {};
+  // Get data for active symbol
+  const symbolData = status[activeSymbol] || {};
+  const indicators = symbolData.indicators || {};
+  const regime = symbolData.regime || 'RANGING';
+  const gates = symbolData.gates || {};
+  const signals = symbolData.signals || {};
+  const approximating = symbolData.approximating || {};
+  const signalStatus = symbolData.signal_status || {};
 
   const getRegimeColor = (regime) => {
     switch(regime) {
