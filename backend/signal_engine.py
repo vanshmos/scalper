@@ -140,6 +140,24 @@ class SignalEngine:
                 '15m': len(self.candle_builder.candles_15m) < 50
             }
             
+            # Update state machine
+            signal_status = self.state_machine.update(
+                signals,
+                candle_status['current_price'],
+                atr_5m
+            )
+            
+            # Send alerts if signal triggered
+            if signal_status.get('signal_triggered'):
+                self.alert_manager.send_signal_alert(
+                    direction=signal_status['direction'],
+                    confidence=signal_status['confidence'],
+                    entry=signal_status['entry'],
+                    stop_loss=signal_status['stop_loss'],
+                    tp1=signal_status['tp1'],
+                    tp2=signal_status['tp2']
+                )
+            
         except Exception as e:
             logger.error(f"Error calculating indicators: {e}")
             ema20_1m = ema50_1m = ema20_5m = ema50_5m = ema20_15m = ema50_15m = None
