@@ -284,19 +284,19 @@ function App() {
             <div className="info-row">
               <span className="info-label">1m Candles:</span>
               <span className="info-value text-green" data-testid="candles-1m">
-                {status?.candle_counts?.['1m'] ?? '—'}
+                {symbolData.candle_counts?.['1m'] ?? '—'}
               </span>
             </div>
             <div className="info-row">
               <span className="info-label">5m Candles:</span>
               <span className="info-value text-green" data-testid="candles-5m">
-                {status?.candle_counts?.['5m'] ?? '—'}
+                {symbolData.candle_counts?.['5m'] ?? '—'}
               </span>
             </div>
             <div className="info-row">
               <span className="info-label">15m Candles:</span>
               <span className="info-value text-green" data-testid="candles-15m">
-                {status?.candle_counts?.['15m'] ?? '—'}
+                {symbolData.candle_counts?.['15m'] ?? '—'}
               </span>
             </div>
           </div>
