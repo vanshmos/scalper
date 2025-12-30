@@ -103,7 +103,57 @@ body {
   border: 1px solid #1a1a1b;
   border-radius: 8px;
   padding: 30px;
-  text-align: center;
+}
+
+.section-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 40px;
+}
+
+.price-container {
+  flex: 1;
+}
+
+.regime-container {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.regime-badge {
+  display: inline-block;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  border: 2px solid;
+  margin-top: 10px;
+}
+
+.regime-bull {
+  background: rgba(0, 255, 136, 0.1);
+  border-color: #00ff88;
+  color: #00ff88;
+}
+
+.regime-bear {
+  background: rgba(255, 68, 68, 0.1);
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
+.regime-ranging {
+  background: rgba(136, 136, 136, 0.1);
+  border-color: #888;
+  color: #888;
+}
+
+.regime-chaotic {
+  background: rgba(255, 165, 0, 0.1);
+  border-color: #ffa500;
+  color: #ffa500;
 }
 
 .section-label {
