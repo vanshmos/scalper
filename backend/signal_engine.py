@@ -38,6 +38,12 @@ class SignalEngine:
         """Handle trade updates"""
         try:
             await self.candle_builder.on_trade(trade)
+            
+            # Store trade for CVD calculation
+            self.recent_trades.append(trade)
+            if len(self.recent_trades) > self.max_trade_history:
+                self.recent_trades.pop(0)
+            
             self.last_update_time = datetime.now(timezone.utc)
         except Exception as e:
             logger.error(f"Error handling trade: {e}")
