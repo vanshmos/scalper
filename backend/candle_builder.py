@@ -215,11 +215,16 @@ class CandleBuilder:
     def _resample_candles(self):
         """Resample 1m candles into 5m and 15m candles"""
         try:
+            # Include current candle in resampling
+            all_1m_candles = self.candles_1m.copy()
+            if self.current_candle_1m is not None:
+                all_1m_candles.append(self.current_candle_1m)
+            
             # Resample to 5m
-            self.candles_5m = self._resample_to_timeframe(self.candles_1m, 5)
+            self.candles_5m = self._resample_to_timeframe(all_1m_candles, 5)
             
             # Resample to 15m
-            self.candles_15m = self._resample_to_timeframe(self.candles_1m, 15)
+            self.candles_15m = self._resample_to_timeframe(all_1m_candles, 15)
             
         except Exception as e:
             logger.error(f"Error resampling candles: {e}")
