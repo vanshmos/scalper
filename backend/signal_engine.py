@@ -243,6 +243,10 @@ class SignalEngine:
                     tp2=signal_status['tp2']
                 )
             
+            # Debug heartbeat log
+            if self.debug:
+                self._heartbeat_log(candle_status, ema20_5m, ema50_5m, atr_5m, rsi_5m)
+            
         except Exception as e:
             logger.error(f"Error calculating indicators: {e}")
             ema20_1m = ema50_1m = ema20_5m = ema50_5m = ema20_15m = ema50_15m = None
