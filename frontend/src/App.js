@@ -97,6 +97,7 @@ function App() {
   const gates = status?.gates || {};
   const signals = status?.signals || {};
   const approximating = status?.approximating || {};
+  const signalStatus = status?.signal_status || {};
 
   const getRegimeColor = (regime) => {
     switch(regime) {
