@@ -234,7 +234,8 @@ class SignalEngine:
                     entry=signal_status['entry'],
                     stop_loss=signal_status['stop_loss'],
                     tp1=signal_status['tp1'],
-                    tp2=signal_status['tp2']
+                    tp2=signal_status['tp2'],
+                    symbol=self.symbol
                 )
             
             # Debug heartbeat log
