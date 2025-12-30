@@ -2,7 +2,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Optional
-from bybit_client import BybitWebSocketClient
+from bybit_client import OKXWebSocketClient
 from candle_builder import CandleBuilder
 
 logger = logging.getLogger(__name__)
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class SignalEngine:
     def __init__(self):
         self.candle_builder = CandleBuilder()
-        self.ws_client = BybitWebSocketClient(
+        self.ws_client = OKXWebSocketClient(
             on_orderbook=self.on_orderbook,
             on_trade=self.on_trade,
             on_ticker=self.on_ticker
