@@ -83,6 +83,85 @@ class SignalEngine:
         await self.ws_client.stop()
         self.candle_builder.save_to_file()
     
+    def _heartbeat_log(self, candle_status: dict, ema20_5m: Optional[float], ema50_5m: Optional[float], 
+                       atr_5m: Optional[float], rsi_5m: Optional[float]):
+        """Debug heartbeat logger - logs every 60 seconds"""
+        current_time = time.time()
+        
+        if current_time - self.last_heartbeat_time < self.heartbeat_interval:
+            return
+        
+        self.last_heartbeat_time = current_time
+        
+        logger.info("=" * 80)
+        logger.info("HEARTBEAT DIAGNOSTIC LOG")
+        logger.info("=" * 80)
+        
+        # 1. Candle timestamps - last 3 candles
+        logger.info("CANDLE TIMESTAMPS (last 3):")
+        
+        if len(self.candle_builder.candles_1m) > 0:
+            last_3_1m = self.candle_builder.candles_1m[-3:] if len(self.candle_builder.candles_1m) >= 3 else self.candle_builder.candles_1m
+            logger.info(f"  1m candles: {[datetime.fromtimestamp(c.timestamp).strftime('%H:%M:%S') for c in last_3_1m]}")
+        else:
+            logger.info(f"  1m candles: []")
+        
+        if self.candle_builder.current_candle_1m:
+            logger.info(f"  Current 1m (building): {datetime.fromtimestamp(self.candle_builder.current_candle_1m.timestamp).strftime('%H:%M:%S')}")
+        
+        if len(self.candle_builder.candles_5m) > 0:
+            last_3_5m = self.candle_builder.candles_5m[-3:] if len(self.candle_builder.candles_5m) >= 3 else self.candle_builder.candles_5m
+            logger.info(f"  5m candles: {[datetime.fromtimestamp(c.timestamp).strftime('%H:%M:%S') for c in last_3_5m]}")
+        else:
+            logger.info(f"  5m candles: []")
+        
+        if len(self.candle_builder.candles_15m) > 0:
+            last_3_15m = self.candle_builder.candles_15m[-3:] if len(self.candle_builder.candles_15m) >= 3 else self.candle_builder.candles_15m
+            logger.info(f"  15m candles: {[datetime.fromtimestamp(c.timestamp).strftime('%H:%M:%S') for c in last_3_15m]}")
+        else:
+            logger.info(f"  15m candles: []")
+        
+        # 2. Raw indicator inputs
+        logger.info("\nRAW INDICATOR INPUTS:")
+        
+        # RSI input (last 15 close prices from 5m)
+        if len(self.candle_builder.candles_5m) > 0:
+            last_15_closes_5m = [c.close for c in self.candle_builder.candles_5m[-15:] if c.close is not None]
+            logger.info(f"  RSI 5m input (last 15 closes): {last_15_closes_5m}")
+        
+        # ATR input (last 15 candles from 5m)
+        if len(self.candle_builder.candles_5m) > 0:
+            last_15_5m = self.candle_builder.candles_5m[-15:]
+            high_low_close = [(c.high, c.low, c.close) for c in last_15_5m if c.high and c.low and c.close]
+            logger.info(f"  ATR 5m input (last 15 H/L/C): {high_low_close}")
+        
+        # 3. Live vs Engine price
+        logger.info("\nPRICE COMPARISON:")
+        ws_price = candle_status.get('current_price')
+        
+        if self.candle_builder.current_candle_1m and self.candle_builder.current_candle_1m.close:
+            engine_price = self.candle_builder.current_candle_1m.close
+            logger.info(f"  WebSocket Price: ${ws_price:.2f}" if ws_price else "  WebSocket Price: None")
+            logger.info(f"  Latest 1m Candle Close: ${engine_price:.2f}")
+            if ws_price:
+                latency = abs(ws_price - engine_price)
+                logger.info(f"  Difference: ${latency:.2f}")
+        
+        # 4. Candle counts
+        logger.info("\nCANDLE COUNTS:")
+        logger.info(f"  1m: {len(self.candle_builder.candles_1m)} completed + {1 if self.candle_builder.current_candle_1m else 0} building")
+        logger.info(f"  5m: {len(self.candle_builder.candles_5m)}")
+        logger.info(f"  15m: {len(self.candle_builder.candles_15m)}")
+        
+        # 5. Indicator values
+        logger.info("\nINDICATOR VALUES:")
+        logger.info(f"  EMA20 5m: {ema20_5m:.2f if ema20_5m else 'None'}")
+        logger.info(f"  EMA50 5m: {ema50_5m:.2f if ema50_5m else 'None'}")
+        logger.info(f"  ATR 5m: {atr_5m:.2f if atr_5m else 'None'}")
+        logger.info(f"  RSI 5m: {rsi_5m:.2f if rsi_5m else 'None'}")
+        
+        logger.info("=" * 80)
+    
     def get_status(self) -> dict:
         """Get current engine status"""
         candle_status = self.candle_builder.get_status()
