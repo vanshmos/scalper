@@ -14,18 +14,14 @@ import time
 logger = logging.getLogger(__name__)
 
 class SignalEngine:
-    def __init__(self):
-        self.candle_builder = CandleBuilder()
+    def __init__(self, symbol: str):
+        self.symbol = symbol
+        self.candle_builder = CandleBuilder(symbol)
         self.indicators = Indicators()
         self.regime_detector = RegimeDetector()
         self.signal_detector = SignalDetector()
         self.state_machine = SignalStateMachine()
         self.alert_manager = AlertManager()
-        self.ws_client = OKXWebSocketClient(
-            on_orderbook=self.on_orderbook,
-            on_trade=self.on_trade,
-            on_ticker=self.on_ticker
-        )
         self.is_connected = False
         self.last_orderbook: Optional[dict] = None
         self.last_ticker: Optional[dict] = None
@@ -46,7 +42,7 @@ class SignalEngine:
             self.last_orderbook = data
             self.last_update_time = datetime.now(timezone.utc)
         except Exception as e:
-            logger.error(f"Error handling orderbook: {e}")
+            logger.error(f"Error handling orderbook for {self.symbol}: {e}")
     
     async def on_trade(self, trade: dict):
         """Handle trade updates"""
@@ -60,7 +56,7 @@ class SignalEngine:
             
             self.last_update_time = datetime.now(timezone.utc)
         except Exception as e:
-            logger.error(f"Error handling trade: {e}")
+            logger.error(f"Error handling trade for {self.symbol}: {e}")
     
     async def on_ticker(self, data: dict):
         """Handle ticker updates"""
@@ -68,7 +64,7 @@ class SignalEngine:
             self.last_ticker = data
             self.last_update_time = datetime.now(timezone.utc)
         except Exception as e:
-            logger.error(f"Error handling ticker: {e}")
+            logger.error(f"Error handling ticker for {self.symbol}: {e}")
     
     async def start(self):
         """Start the signal engine"""
