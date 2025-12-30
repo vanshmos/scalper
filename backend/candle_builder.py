@@ -50,7 +50,10 @@ class Candle:
 
 
 class CandleBuilder:
-    def __init__(self, data_file: str = "/app/backend/candles.json"):
+    def __init__(self, symbol: str, data_file: str = None):
+        self.symbol = symbol
+        if data_file is None:
+            data_file = f"/app/backend/candles_{symbol.lower()}.json"
         self.data_file = Path(data_file)
         self.candles_1m: List[Candle] = []
         self.candles_5m: List[Candle] = []
