@@ -82,6 +82,63 @@ class CandleBuilder:
         except Exception as e:
             logger.error(f"Error loading candles from file: {e}")
     
+    def fetch_historical_backfill(self):
+        """Fetch historical 1m candles from OKX REST API (runs once on startup)"""
+        try:
+            logger.info("Attempting historical backfill from OKX REST API...")
+            
+            # OKX REST API endpoint for historical candles
+            url = "https://www.okx.com/api/v5/market/history-candles"
+            params = {
+                "instId": "BTC-USDT-SWAP",
+                "bar": "1m",
+                "limit": "100"
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if data.get('code') == '0':
+                    candles_data = data.get('data', [])
+                    
+                    # OKX returns: [timestamp, open, high, low, close, volume, ...]
+                    # Process in reverse (oldest first)
+                    for candle_data in reversed(candles_data):
+                        timestamp = int(candle_data[0]) // 1000  # Convert to seconds
+                        
+                        candle = Candle(timestamp, '1m')
+                        candle.open = float(candle_data[1])
+                        candle.high = float(candle_data[2])
+                        candle.low = float(candle_data[3])
+                        candle.close = float(candle_data[4])
+                        candle.volume = float(candle_data[5])
+                        
+                        self.candles_1m.append(candle)
+                    
+                    # Trim to max history
+                    self._trim_history()
+                    
+                    # Resample to 5m and 15m
+                    self._resample_candles()
+                    
+                    # Save to file
+                    self.save_to_file()
+                    
+                    logger.info(f"Successfully backfilled {len(candles_data)} 1m candles from REST API")
+                else:
+                    logger.warning(f"OKX REST API returned error code: {data.get('code')}")
+            elif response.status_code == 403:
+                logger.warning("OKX REST API blocked (403) - cloud IP restriction. Falling back to live stream warmup.")
+            else:
+                logger.warning(f"OKX REST API returned status {response.status_code}")
+                
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Failed to fetch historical data from REST API: {e}. Falling back to live stream warmup.")
+        except Exception as e:
+            logger.error(f"Error during historical backfill: {e}")
+    
     def save_to_file(self):
         """Save candles to JSON file"""
         try:
