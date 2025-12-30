@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 from bybit_client import OKXWebSocketClient
 from candle_builder import CandleBuilder
 from indicators import Indicators
+from regime import RegimeDetector
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ class SignalEngine:
     def __init__(self):
         self.candle_builder = CandleBuilder()
         self.indicators = Indicators()
+        self.regime_detector = RegimeDetector()
         self.ws_client = OKXWebSocketClient(
             on_orderbook=self.on_orderbook,
             on_trade=self.on_trade,
