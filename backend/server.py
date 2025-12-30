@@ -111,9 +111,10 @@ async def websocket_endpoint(websocket: WebSocket):
     
     try:
         while True:
-            if signal_engine:
-                status = signal_engine.get_status()
-                await websocket.send_text(json.dumps(status))
+            status = {}
+            for symbol, engine in signal_engines.items():
+                status[symbol.lower()] = engine.get_status()
+            await websocket.send_text(json.dumps(status))
             await asyncio.sleep(0.5)  # Send updates every 500ms
     except WebSocketDisconnect:
         logger.info("WebSocket client disconnected")
