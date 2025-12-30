@@ -73,9 +73,59 @@ class SignalEngine:
         """Get current engine status"""
         candle_status = self.candle_builder.get_status()
         
+        # Calculate indicators
+        try:
+            # EMA calculations
+            ema20_1m = self.indicators.calculate_ema(self.candle_builder.candles_1m, 20)
+            ema50_1m = self.indicators.calculate_ema(self.candle_builder.candles_1m, 50)
+            
+            ema20_5m = self.indicators.calculate_ema(self.candle_builder.candles_5m, 20)
+            ema50_5m = self.indicators.calculate_ema(self.candle_builder.candles_5m, 50)
+            
+            ema20_15m = self.indicators.calculate_ema(self.candle_builder.candles_15m, 20)
+            ema50_15m = self.indicators.calculate_ema(self.candle_builder.candles_15m, 50)
+            
+            # ATR and RSI on 5m
+            atr_5m = self.indicators.calculate_atr(self.candle_builder.candles_5m, 14)
+            rsi_5m = self.indicators.calculate_rsi(self.candle_builder.candles_5m, 14)
+            
+            # Orderbook indicators
+            obi = None
+            spread = None
+            depth = None
+            if self.last_orderbook:
+                obi = self.indicators.calculate_obi(self.last_orderbook)
+                spread = self.indicators.calculate_spread(self.last_orderbook)
+                depth = self.indicators.calculate_depth(self.last_orderbook)
+            
+            # CVD calculations
+            cvd_1m = self.indicators.calculate_cvd(self.recent_trades, 60)
+            cvd_5m = self.indicators.calculate_cvd(self.recent_trades, 300)
+            
+        except Exception as e:
+            logger.error(f"Error calculating indicators: {e}")
+            ema20_1m = ema50_1m = ema20_5m = ema50_5m = ema20_15m = ema50_15m = None
+            atr_5m = rsi_5m = obi = spread = depth = cvd_1m = cvd_5m = None
+        
         return {
             'connected': self.is_connected,
             'last_update': self.last_update_time.isoformat() if self.last_update_time else None,
             'current_price': candle_status['current_price'],
-            'candle_counts': candle_status['candle_counts']
+            'candle_counts': candle_status['candle_counts'],
+            'indicators': {
+                'ema': {
+                    '1m': {'ema20': ema20_1m, 'ema50': ema50_1m},
+                    '5m': {'ema20': ema20_5m, 'ema50': ema50_5m},
+                    '15m': {'ema20': ema20_15m, 'ema50': ema50_15m}
+                },
+                'atr_5m': atr_5m,
+                'rsi_5m': rsi_5m,
+                'obi': obi,
+                'spread': spread,
+                'depth': depth,
+                'cvd': {
+                    '1m': cvd_1m,
+                    '5m': cvd_5m
+                }
+            }
         }
