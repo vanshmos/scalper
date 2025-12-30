@@ -1,5 +1,6 @@
 import json
 import logging
+import requests
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from pathlib import Path
