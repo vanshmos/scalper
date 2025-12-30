@@ -8,6 +8,9 @@ function App() {
   const [status, setStatus] = useState(null);
   const [wsConnected, setWsConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [audioMuted, setAudioMuted] = useState(false);
+  const audioRef = useRef(null);
+  const lastSignalState = useRef('IDLE');
 
   useEffect(() => {
     let ws = null;
