@@ -238,9 +238,9 @@ function App() {
         <div className="price-section">
           <div className="section-row">
             <div className="price-container">
-              <div className="section-label">CURRENT PRICE</div>
+              <div className="section-label">{activeSymbol.toUpperCase()} PRICE</div>
               <div className="price-display" data-testid="current-price">
-                {status?.current_price ? formatPrice(status.current_price) : '—'}
+                {symbolData.current_price ? formatPrice(symbolData.current_price) : '—'}
               </div>
             </div>
             <div className="regime-container">
@@ -254,18 +254,24 @@ function App() {
 
         {/* Connection Status */}
         <div className="info-card">
-          <div className="card-header">OKX CONNECTION</div>
+          <div className="card-header">CONNECTION</div>
           <div className="card-content">
             <div className="info-row">
-              <span className="info-label">WebSocket Status:</span>
-              <span className={`info-value ${status?.connected ? 'text-green' : 'text-red'}`} data-testid="okx-status">
-                {status?.connected ? 'CONNECTED' : 'DISCONNECTED'}
+              <span className="info-label">Symbol:</span>
+              <span className="info-value text-green" data-testid="symbol-name">
+                {activeSymbol.toUpperCase()}-USDT-SWAP
+              </span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">Status:</span>
+              <span className={`info-value ${symbolData.connected ? 'text-green' : 'text-red'}`} data-testid="symbol-status">
+                {symbolData.connected ? 'CONNECTED' : 'DISCONNECTED'}
               </span>
             </div>
             <div className="info-row">
               <span className="info-label">Last Update:</span>
-              <span className="info-value" data-testid="last-okx-update">
-                {status?.last_update ? new Date(status.last_update).toLocaleTimeString() : '—'}
+              <span className="info-value" data-testid="last-symbol-update">
+                {symbolData.last_update ? new Date(symbolData.last_update).toLocaleTimeString() : '—'}
               </span>
             </div>
           </div>
