@@ -36,7 +36,7 @@ class SignalEngine:
         self.max_trade_history = 500  # Keep last 500 trades (~5 minutes at high volume)
         
         # Debug mode
-        self.debug = True
+        self.debug = False  # Disabled after audit
         self.last_heartbeat_time = 0
         self.heartbeat_interval = 60  # seconds
     
