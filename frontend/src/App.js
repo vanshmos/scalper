@@ -173,6 +173,39 @@ function App() {
           </div>
         </div>
 
+        {/* Gates Status */}
+        <div className="info-card">
+          <div className="card-header">PHASE 3: GATES</div>
+          <div className="card-content">
+            <div className="info-row">
+              <span className="info-label">Spread Gate:</span>
+              <span className={`info-value ${gates.spread?.pass ? 'text-green' : 'text-red'}`} data-testid="gate-spread">
+                {gates.spread?.pass ? 'PASS' : 'FAIL'}
+              </span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">Spread Value:</span>
+              <span className="info-value">{formatNumber(gates.spread?.value, 2)} bps</span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">Depth Gate:</span>
+              <span className={`info-value ${gates.depth?.pass ? 'text-green' : 'text-red'}`} data-testid="gate-depth">
+                {gates.depth?.pass ? 'PASS' : 'FAIL'}
+              </span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">Depth Value:</span>
+              <span className="info-value">${formatNumber(gates.depth?.value, 0)}</span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">All Gates:</span>
+              <span className={`info-value ${gates.all_pass ? 'text-green' : 'text-red'}`} data-testid="gate-all">
+                {gates.all_pass ? 'PASS' : 'FAIL'}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Phase Status */}
         <div className="info-card">
           <div className="card-header">PHASE 2: INDICATORS</div>
