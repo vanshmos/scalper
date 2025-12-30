@@ -123,11 +123,11 @@ function App() {
       <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBCuC0PLNfC0GI3vJ8dybRgsXZLnp6aVMEgxMouHyvWklBCl/zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dyb" />
       
       <div className="header">
-        <h1 className="title" data-testid="dashboard-title">BTC SCALPING ENGINE</h1>
+        <h1 className="title" data-testid="dashboard-title">SCALPING ENGINE</h1>
         <div className="header-status">
           <div className={`status-indicator ${wsConnected ? 'connected' : 'disconnected'}`} data-testid="connection-indicator">
             <div className="status-dot"></div>
-            <span>{wsConnected ? 'CONNECTED' : 'DISCONNECTED'}</span>
+            <span>{wsConnected ? 'OKX CONNECTED (3 symbols)' : 'DISCONNECTED'}</span>
           </div>
           <button 
             className={`mute-button ${audioMuted ? 'muted' : ''}`}
@@ -141,6 +141,31 @@ function App() {
             <div className="last-update" data-testid="last-update">Updated: {lastUpdate}</div>
           )}
         </div>
+      </div>
+
+      {/* Symbol Tabs */}
+      <div className="symbol-tabs">
+        <button 
+          className={`symbol-tab ${activeSymbol === 'btc' ? 'active' : ''}`}
+          onClick={() => setActiveSymbol('btc')}
+          data-testid="tab-btc"
+        >
+          BTC
+        </button>
+        <button 
+          className={`symbol-tab ${activeSymbol === 'eth' ? 'active' : ''}`}
+          onClick={() => setActiveSymbol('eth')}
+          data-testid="tab-eth"
+        >
+          ETH
+        </button>
+        <button 
+          className={`symbol-tab ${activeSymbol === 'sol' ? 'active' : ''}`}
+          onClick={() => setActiveSymbol('sol')}
+          data-testid="tab-sol"
+        >
+          SOL
+        </button>
       </div>
 
       {/* Active Signal Card - Only show when FORMING or ACTIVE */}
