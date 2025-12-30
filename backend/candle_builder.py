@@ -220,8 +220,13 @@ class CandleBuilder:
             if self.current_candle_1m is not None:
                 all_1m_candles.append(self.current_candle_1m)
             
+            logger.debug(f"Resampling with {len(all_1m_candles)} 1m candles (completed: {len(self.candles_1m)}, current: {1 if self.current_candle_1m else 0})")
+            
             # Resample to 5m
             self.candles_5m = self._resample_to_timeframe(all_1m_candles, 5)
+            logger.debug(f"Resampled to {len(self.candles_5m)} 5m candles")
+            if len(self.candles_5m) > 0:
+                logger.debug(f"Last 5m candle: timestamp={self.candles_5m[-1].timestamp}, close={self.candles_5m[-1].close}")
             
             # Resample to 15m
             self.candles_15m = self._resample_to_timeframe(all_1m_candles, 15)
