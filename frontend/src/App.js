@@ -81,6 +81,7 @@ function App() {
   const indicators = status?.indicators || {};
   const regime = status?.regime || 'RANGING';
   const gates = status?.gates || {};
+  const signals = status?.signals || {};
 
   const getRegimeColor = (regime) => {
     switch(regime) {
