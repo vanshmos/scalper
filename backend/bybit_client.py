@@ -70,22 +70,29 @@ class OKXWebSocketClient:
             # OKX message format: {arg: {channel, instId}, data: [...]}
             arg = data.get('arg', {})
             channel = arg.get('channel', '')
+            inst_id = arg.get('instId', '')
+            
+            # Extract symbol from instId (BTC-USDT-SWAP -> BTC)
+            symbol = inst_id.split('-')[0] if inst_id else None
+            
+            if not symbol:
+                return
             
             if channel == 'books':
                 # Orderbook updates
                 books_data = data.get('data', [])
                 if books_data:
-                    await self.on_orderbook(books_data[0])
+                    await self.on_orderbook(symbol, books_data[0])
             elif channel == 'trades':
                 # Trade updates
                 trades = data.get('data', [])
                 for trade in trades:
-                    await self.on_trade(trade)
+                    await self.on_trade(symbol, trade)
             elif channel == 'tickers':
                 # Ticker updates
                 ticker_data = data.get('data', [])
                 if ticker_data:
-                    await self.on_ticker(ticker_data[0])
+                    await self.on_ticker(symbol, ticker_data[0])
         except Exception as e:
             logger.error(f"Error routing message: {e}")
     
