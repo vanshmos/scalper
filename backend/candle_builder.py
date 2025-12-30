@@ -62,6 +62,10 @@ class CandleBuilder:
         
         # Load existing data
         self.load_from_file()
+        
+        # Fetch historical backfill if needed
+        if len(self.candles_1m) < 50:
+            self.fetch_historical_backfill()
     
     def load_from_file(self):
         """Load candles from JSON file on startup"""
