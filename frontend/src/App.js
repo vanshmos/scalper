@@ -66,6 +66,20 @@ function App() {
     return `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const formatNumber = (num, decimals = 2) => {
+    if (num === null || num === undefined) return '—';
+    return num.toFixed(decimals);
+  };
+
+  const getIndicatorColor = (value, bullishThreshold, bearishThreshold) => {
+    if (value === null || value === undefined) return '';
+    if (value > bullishThreshold) return 'text-green';
+    if (value < bearishThreshold) return 'text-red';
+    return '';
+  };
+
+  const indicators = status?.indicators || {};
+
   return (
     <div className="app-container" data-testid="crypto-dashboard">
       <div className="header">
