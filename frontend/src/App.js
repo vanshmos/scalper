@@ -113,9 +113,19 @@ function App() {
       <div className="content">
         {/* Price Display */}
         <div className="price-section">
-          <div className="section-label">CURRENT PRICE</div>
-          <div className="price-display" data-testid="current-price">
-            {status?.current_price ? formatPrice(status.current_price) : '—'}
+          <div className="section-row">
+            <div className="price-container">
+              <div className="section-label">CURRENT PRICE</div>
+              <div className="price-display" data-testid="current-price">
+                {status?.current_price ? formatPrice(status.current_price) : '—'}
+              </div>
+            </div>
+            <div className="regime-container">
+              <div className="section-label">MARKET REGIME</div>
+              <div className={`regime-badge ${getRegimeColor(regime)}`} data-testid="regime-badge">
+                {getRegimeLabel(regime)}
+              </div>
+            </div>
           </div>
         </div>
 
