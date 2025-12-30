@@ -173,7 +173,7 @@ function App() {
         <div className="active-signal-card" data-testid="active-signal-card">
           <div className="signal-card-header">
             <div className={`signal-direction ${signalStatus.direction?.toLowerCase()}`}>
-              {signalStatus.direction === 'SHORT' ? '🔴' : '🟢'} {signalStatus.direction} SIGNAL
+              {signalStatus.direction === 'SHORT' ? '🔴' : '🟢'} {signalStatus.direction} {activeSymbol.toUpperCase()}
             </div>
             <div className={`signal-state ${signalStatus.state.toLowerCase()}`}>
               {signalStatus.state}
