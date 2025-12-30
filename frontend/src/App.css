@@ -107,6 +107,39 @@ body {
   opacity: 0.5;
 }
 
+.symbol-tabs {
+  max-width: 1200px;
+  margin: 0 auto 20px;
+  display: flex;
+  gap: 10px;
+  padding: 0 20px;
+}
+
+.symbol-tab {
+  flex: 1;
+  padding: 15px;
+  background: #141415;
+  border: 2px solid #1a1a1b;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.symbol-tab:hover {
+  background: #1a1a1b;
+  border-color: #00ff88;
+}
+
+.symbol-tab.active {
+  background: rgba(0, 255, 136, 0.1);
+  border-color: #00ff88;
+  color: #00ff88;
+}
+
 .active-signal-card {
   max-width: 1200px;
   margin: 0 auto 20px;
