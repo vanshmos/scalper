@@ -5,12 +5,13 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const WS_URL = BACKEND_URL.replace('https://', 'wss://').replace('http://', 'ws://');
 
 function App() {
-  const [status, setStatus] = useState(null);
+  const [status, setStatus] = useState({btc: null, eth: null, sol: null});
   const [wsConnected, setWsConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [audioMuted, setAudioMuted] = useState(false);
+  const [activeSymbol, setActiveSymbol] = useState('btc');
   const audioRef = useRef(null);
-  const lastSignalState = useRef('IDLE');
+  const lastSignalStates = useRef({btc: 'IDLE', eth: 'IDLE', sol: 'IDLE'});
 
   useEffect(() => {
     let ws = null;
