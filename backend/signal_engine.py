@@ -9,6 +9,7 @@ from regime import RegimeDetector
 from signal_detector import SignalDetector
 from state_machine import SignalStateMachine
 from alerts import AlertManager
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,11 @@ class SignalEngine:
         # Track recent trades for CVD calculation
         self.recent_trades: List[dict] = []
         self.max_trade_history = 500  # Keep last 500 trades (~5 minutes at high volume)
+        
+        # Debug mode
+        self.debug = True
+        self.last_heartbeat_time = 0
+        self.heartbeat_interval = 60  # seconds
     
     async def on_orderbook(self, data: dict):
         """Handle orderbook updates"""
