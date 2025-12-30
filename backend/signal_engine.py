@@ -155,10 +155,10 @@ class SignalEngine:
         
         # 5. Indicator values
         logger.info("\nINDICATOR VALUES:")
-        logger.info(f"  EMA20 5m: {ema20_5m:.2f if ema20_5m else 'None'}")
-        logger.info(f"  EMA50 5m: {ema50_5m:.2f if ema50_5m else 'None'}")
-        logger.info(f"  ATR 5m: {atr_5m:.2f if atr_5m else 'None'}")
-        logger.info(f"  RSI 5m: {rsi_5m:.2f if rsi_5m else 'None'}")
+        logger.info(f"  EMA20 5m: {f'{ema20_5m:.2f}' if ema20_5m else 'None'}")
+        logger.info(f"  EMA50 5m: {f'{ema50_5m:.2f}' if ema50_5m else 'None'}")
+        logger.info(f"  ATR 5m: {f'{atr_5m:.2f}' if atr_5m else 'None'}")
+        logger.info(f"  RSI 5m: {f'{rsi_5m:.2f}' if rsi_5m else 'None'}")
         
         logger.info("=" * 80)
     
