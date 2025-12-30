@@ -8,7 +8,8 @@ logger = logging.getLogger(__name__)
 
 class BybitWebSocketClient:
     def __init__(self, on_orderbook: Callable, on_trade: Callable, on_ticker: Callable):
-        self.url = "wss://stream.bybit.com/v5/public"
+        # Use testnet to avoid cloud IP blocking (mainnet blocks cloud IPs with 403)
+        self.url = "wss://stream-testnet.bybit.com/v5/public/linear"
         self.ws: Optional[websockets.WebSocketClientProtocol] = None
         self.on_orderbook = on_orderbook
         self.on_trade = on_trade
