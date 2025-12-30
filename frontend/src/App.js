@@ -79,6 +79,21 @@ function App() {
   };
 
   const indicators = status?.indicators || {};
+  const regime = status?.regime || 'RANGING';
+  const gates = status?.gates || {};
+
+  const getRegimeColor = (regime) => {
+    switch(regime) {
+      case 'TRENDING_BULL': return 'regime-bull';
+      case 'TRENDING_BEAR': return 'regime-bear';
+      case 'CHAOTIC': return 'regime-chaotic';
+      default: return 'regime-ranging';
+    }
+  };
+
+  const getRegimeLabel = (regime) => {
+    return regime.replace('_', ' ');
+  };
 
   return (
     <div className="app-container" data-testid="crypto-dashboard">
