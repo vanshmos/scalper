@@ -248,6 +248,15 @@ body {
   letter-spacing: 1.5px;
   color: #666;
   margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.approx-warning {
+  color: #ffa500;
+  font-size: 14px;
+  cursor: help;
 }
 
 .indicator-row {
