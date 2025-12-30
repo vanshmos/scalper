@@ -2,7 +2,7 @@ import websockets
 import json
 import asyncio
 import logging
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,9 @@ class OKXWebSocketClient:
         self.is_running = False
         self.reconnect_delay = 5
         
+        # Multi-symbol support
+        self.instruments = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP']
+        
     async def connect(self):
         """Connect to OKX WebSocket and subscribe to channels"""
         while self.is_running:
@@ -25,19 +28,20 @@ class OKXWebSocketClient:
                     self.ws = ws
                     logger.info("Connected to OKX WebSocket")
                     
-                    # Subscribe to channels with 300ms delay between requests (3 req/sec limit)
-                    subscribe_messages = [
-                        {"op": "subscribe", "args": [{"channel": "trades", "instId": "BTC-USDT-SWAP"}]},
-                        {"op": "subscribe", "args": [{"channel": "books", "instId": "BTC-USDT-SWAP"}]},
-                        {"op": "subscribe", "args": [{"channel": "tickers", "instId": "BTC-USDT-SWAP"}]},
-                        {"op": "subscribe", "args": [{"channel": "mark-price", "instId": "BTC-USDT-SWAP"}]}
-                    ]
+                    # Subscribe to channels for all instruments with 300ms delay
+                    for instrument in self.instruments:
+                        subscribe_messages = [
+                            {"op": "subscribe", "args": [{"channel": "trades", "instId": instrument}]},
+                            {"op": "subscribe", "args": [{"channel": "books", "instId": instrument}]},
+                            {"op": "subscribe", "args": [{"channel": "tickers", "instId": instrument}]},
+                            {"op": "subscribe", "args": [{"channel": "mark-price", "instId": instrument}]}
+                        ]
+                        
+                        for msg in subscribe_messages:
+                            await ws.send(json.dumps(msg))
+                            await asyncio.sleep(0.3)  # 300ms delay
                     
-                    for msg in subscribe_messages:
-                        await ws.send(json.dumps(msg))
-                        await asyncio.sleep(0.3)  # 300ms delay
-                    
-                    logger.info("Subscribed to all channels")
+                    logger.info(f"Subscribed to all channels for {len(self.instruments)} instruments")
                     
                     # Listen for messages
                     async for message in ws:
