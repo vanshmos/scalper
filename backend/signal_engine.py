@@ -7,6 +7,8 @@ from candle_builder import CandleBuilder
 from indicators import Indicators
 from regime import RegimeDetector
 from signal_detector import SignalDetector
+from state_machine import SignalStateMachine
+from alerts import AlertManager
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,8 @@ class SignalEngine:
         self.indicators = Indicators()
         self.regime_detector = RegimeDetector()
         self.signal_detector = SignalDetector()
+        self.state_machine = SignalStateMachine()
+        self.alert_manager = AlertManager()
         self.ws_client = OKXWebSocketClient(
             on_orderbook=self.on_orderbook,
             on_trade=self.on_trade,
