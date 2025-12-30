@@ -30,6 +30,17 @@ function App() {
             const data = JSON.parse(event.data);
             setStatus(data);
             setLastUpdate(new Date().toLocaleTimeString());
+            
+            // Check for signal state transition to ACTIVE
+            const currentState = data.signal_status?.state;
+            if (currentState === 'ACTIVE' && lastSignalState.current !== 'ACTIVE') {
+              // Signal just became ACTIVE - play alert sound
+              if (!audioMuted && audioRef.current) {
+                audioRef.current.play().catch(err => console.log('Audio play failed:', err));
+              }
+            }
+            lastSignalState.current = currentState;
+            
           } catch (e) {
             console.error('Error parsing WebSocket message:', e);
           }
