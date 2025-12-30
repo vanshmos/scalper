@@ -267,6 +267,65 @@ body {
   font-weight: 600;
 }
 
+.signal-card {
+  grid-column: span 1;
+}
+
+.confidence-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 0;
+  border-bottom: 1px solid #1a1a1b;
+  margin-bottom: 15px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.confidence-value {
+  font-size: 18px;
+  font-family: 'SF Mono', monospace;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.checklist-item.pass {
+  background: rgba(0, 255, 136, 0.05);
+  border-left: 3px solid #00ff88;
+}
+
+.checklist-item.fail {
+  background: rgba(255, 68, 68, 0.05);
+  border-left: 3px solid #ff4444;
+}
+
+.check-icon {
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.checklist-item.pass .check-icon {
+  color: #00ff88;
+}
+
+.checklist-item.fail .check-icon {
+  color: #ff4444;
+}
+
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
