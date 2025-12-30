@@ -81,19 +81,19 @@ class CandleBuilder:
                 self.candles_5m = [Candle.from_dict(c) for c in data.get('candles_5m', [])]
                 self.candles_15m = [Candle.from_dict(c) for c in data.get('candles_15m', [])]
                 
-                logger.info(f"Loaded {len(self.candles_1m)} 1m candles, {len(self.candles_5m)} 5m candles, {len(self.candles_15m)} 15m candles")
+                logger.info(f"Loaded {len(self.candles_1m)} 1m candles, {len(self.candles_5m)} 5m candles, {len(self.candles_15m)} 15m candles for {self.symbol}")
         except Exception as e:
-            logger.error(f"Error loading candles from file: {e}")
+            logger.error(f"Error loading candles from file for {self.symbol}: {e}")
     
     def fetch_historical_backfill(self):
         """Fetch historical 1m candles from OKX REST API (runs once on startup)"""
         try:
-            logger.info("Attempting historical backfill from OKX REST API...")
+            logger.info(f"Attempting historical backfill from OKX REST API for {self.symbol}...")
             
             # OKX REST API endpoint for historical candles
             url = "https://www.okx.com/api/v5/market/history-candles"
             params = {
-                "instId": "BTC-USDT-SWAP",
+                "instId": f"{self.symbol}-USDT-SWAP",
                 "bar": "1m",
                 "limit": "100"
             }
