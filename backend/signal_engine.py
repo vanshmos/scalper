@@ -144,6 +144,7 @@ class SignalEngine:
             gates = {'spread': {'pass': False}, 'depth': {'pass': False}, 'all_pass': False}
             signals = {'short': {'checklist': {}, 'confidence': 0, 'signal_ready': False},
                       'long': {'checklist': {}, 'confidence': 0, 'signal_ready': False}}
+            approximating = {'1m': True, '5m': True, '15m': True}
         
         return {
             'connected': self.is_connected,
@@ -168,5 +169,6 @@ class SignalEngine:
             },
             'regime': regime,
             'gates': gates,
-            'signals': signals
+            'signals': signals,
+            'approximating': approximating
         }
