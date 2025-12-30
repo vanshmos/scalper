@@ -63,16 +63,25 @@ class OKXWebSocketClient:
     async def _handle_message(self, data: dict):
         """Route messages to appropriate handlers"""
         try:
-            topic = data.get('topic', '')
+            # OKX message format: {arg: {channel, instId}, data: [...]}
+            arg = data.get('arg', {})
+            channel = arg.get('channel', '')
             
-            if topic.startswith('orderbook'):
-                await self.on_orderbook(data.get('data', {}))
-            elif topic.startswith('publicTrade'):
+            if channel == 'books':
+                # Orderbook updates
+                books_data = data.get('data', [])
+                if books_data:
+                    await self.on_orderbook(books_data[0])
+            elif channel == 'trades':
+                # Trade updates
                 trades = data.get('data', [])
                 for trade in trades:
                     await self.on_trade(trade)
-            elif topic.startswith('tickers'):
-                await self.on_ticker(data.get('data', {}))
+            elif channel == 'tickers':
+                # Ticker updates
+                ticker_data = data.get('data', [])
+                if ticker_data:
+                    await self.on_ticker(ticker_data[0])
         except Exception as e:
             logger.error(f"Error routing message: {e}")
     
