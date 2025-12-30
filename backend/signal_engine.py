@@ -129,6 +129,13 @@ class SignalEngine:
                 rsi_5m
             )
             
+            # Check if we're approximating EMAs (insufficient data)
+            approximating = {
+                '1m': len(self.candle_builder.candles_1m) < 50,
+                '5m': len(self.candle_builder.candles_5m) < 50,
+                '15m': len(self.candle_builder.candles_15m) < 50
+            }
+            
         except Exception as e:
             logger.error(f"Error calculating indicators: {e}")
             ema20_1m = ema50_1m = ema20_5m = ema50_5m = ema20_15m = ema50_15m = None
