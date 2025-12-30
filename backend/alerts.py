@@ -24,7 +24,8 @@ class AlertManager:
         entry: float,
         stop_loss: float,
         tp1: float,
-        tp2: float
+        tp2: float,
+        symbol: str = "BTC"
     ):
         """Send alert when signal goes ACTIVE"""
         
@@ -35,7 +36,7 @@ class AlertManager:
         
         # Prepare message
         emoji = "🔴" if direction == "SHORT" else "🟢"
-        message = f"""{emoji} {direction} BTC
+        message = f"""{emoji} {direction} {symbol}
 Confidence: {confidence}/100
 Entry: ${entry:,.2f}
 SL: ${stop_loss:,.2f}
@@ -43,7 +44,7 @@ TP1: ${tp1:,.2f}
 TP2: ${tp2:,.2f}
 R:R: {rr_ratio:.1f}"""
         
-        logger.info(f"Signal alert: {direction} at ${entry:,.2f}")
+        logger.info(f"Signal alert: {direction} {symbol} at ${entry:,.2f}")
         
         # Send Telegram alert if enabled
         if self.telegram_enabled:
