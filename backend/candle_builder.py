@@ -100,10 +100,10 @@ class CandleBuilder:
     async def on_trade(self, trade: dict):
         """Process incoming trade and update candles"""
         try:
-            # Extract trade data
-            price = float(trade.get('p', 0))
-            volume = float(trade.get('v', 0))
-            timestamp_ms = int(trade.get('T', 0))
+            # OKX field mapping: px=price, sz=size, side=side, ts=timestamp
+            price = float(trade.get('px', 0))
+            volume = float(trade.get('sz', 0))
+            timestamp_ms = int(trade.get('ts', 0))
             timestamp = timestamp_ms // 1000
             
             if price == 0 or timestamp == 0:
