@@ -82,6 +82,7 @@ function App() {
   const regime = status?.regime || 'RANGING';
   const gates = status?.gates || {};
   const signals = status?.signals || {};
+  const approximating = status?.approximating || {};
 
   const getRegimeColor = (regime) => {
     switch(regime) {
