@@ -129,18 +129,18 @@ class CandleBuilder:
                     # Save to file
                     self.save_to_file()
                     
-                    logger.info(f"Successfully backfilled {len(candles_data)} 1m candles from REST API")
+                    logger.info(f"Successfully backfilled {len(candles_data)} 1m candles from REST API for {self.symbol}")
                 else:
-                    logger.warning(f"OKX REST API returned error code: {data.get('code')}")
+                    logger.warning(f"OKX REST API returned error code: {data.get('code')} for {self.symbol}")
             elif response.status_code == 403:
-                logger.warning("OKX REST API blocked (403) - cloud IP restriction. Falling back to live stream warmup.")
+                logger.warning(f"OKX REST API blocked (403) for {self.symbol} - cloud IP restriction. Falling back to live stream warmup.")
             else:
-                logger.warning(f"OKX REST API returned status {response.status_code}")
+                logger.warning(f"OKX REST API returned status {response.status_code} for {self.symbol}")
                 
         except requests.exceptions.RequestException as e:
-            logger.warning(f"Failed to fetch historical data from REST API: {e}. Falling back to live stream warmup.")
+            logger.warning(f"Failed to fetch historical data from REST API for {self.symbol}: {e}. Falling back to live stream warmup.")
         except Exception as e:
-            logger.error(f"Error during historical backfill: {e}")
+            logger.error(f"Error during historical backfill for {self.symbol}: {e}")
     
     def save_to_file(self):
         """Save candles to JSON file"""
