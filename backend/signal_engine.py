@@ -104,6 +104,18 @@ class SignalEngine:
             cvd_1m = self.indicators.calculate_cvd(self.recent_trades, 60)
             cvd_5m = self.indicators.calculate_cvd(self.recent_trades, 300)
             
+            # Regime detection
+            regime = self.regime_detector.detect_regime(
+                self.candle_builder.candles_5m,
+                self.candle_builder.candles_15m,
+                ema20_5m, ema50_5m,
+                ema20_15m, ema50_15m,
+                atr_5m
+            )
+            
+            # Gates check
+            gates = self.regime_detector.get_gates_status(spread, depth)
+            
         except Exception as e:
             logger.error(f"Error calculating indicators: {e}")
             ema20_1m = ema50_1m = ema20_5m = ema50_5m = ema20_15m = ema50_15m = None
