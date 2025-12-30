@@ -1,15 +1,17 @@
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from bybit_client import OKXWebSocketClient
 from candle_builder import CandleBuilder
+from indicators import Indicators
 
 logger = logging.getLogger(__name__)
 
 class SignalEngine:
     def __init__(self):
         self.candle_builder = CandleBuilder()
+        self.indicators = Indicators()
         self.ws_client = OKXWebSocketClient(
             on_orderbook=self.on_orderbook,
             on_trade=self.on_trade,
@@ -19,6 +21,10 @@ class SignalEngine:
         self.last_orderbook: Optional[dict] = None
         self.last_ticker: Optional[dict] = None
         self.last_update_time = None
+        
+        # Track recent trades for CVD calculation
+        self.recent_trades: List[dict] = []
+        self.max_trade_history = 500  # Keep last 500 trades (~5 minutes at high volume)
     
     async def on_orderbook(self, data: dict):
         """Handle orderbook updates"""
