@@ -1,34 +1,197 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+body {
+  background: #0a0a0b;
+  color: #e0e0e0;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
+.app-container {
+  min-height: 100vh;
+  background: #0a0a0b;
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #1a1a1b;
+  margin-bottom: 30px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #e0e0e0;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #141415;
+  border-radius: 4px;
+  border: 1px solid #1a1a1b;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.status-indicator.connected {
+  color: #00ff88;
+  border-color: #00ff8844;
+}
+
+.status-indicator.disconnected {
+  color: #ff4444;
+  border-color: #ff444444;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-indicator.connected .status-dot {
+  background: #00ff88;
+}
+
+.status-indicator.disconnected .status-dot {
+  background: #ff4444;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.last-update {
+  font-size: 11px;
+  color: #666;
+  font-family: 'SF Mono', monospace;
+}
+
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.price-section {
+  grid-column: 1 / -1;
+  background: #0f0f10;
+  border: 1px solid #1a1a1b;
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.price-display {
+  font-size: 48px;
+  font-weight: 700;
+  color: #e0e0e0;
+  font-family: 'SF Mono', monospace;
+  letter-spacing: -1px;
+}
+
+.info-card {
+  background: #0f0f10;
+  border: 1px solid #1a1a1b;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 16px 20px;
+  background: #141415;
+  border-bottom: 1px solid #1a1a1b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #888;
+}
+
+.card-content {
+  padding: 20px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #1a1a1b;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 13px;
+  color: #888;
+}
+
+.info-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e0e0e0;
+  font-family: 'SF Mono', monospace;
+}
+
+.text-green {
+  color: #00ff88 !important;
+}
+
+.text-red {
+  color: #ff4444 !important;
+}
+
+.phase-status {
+  font-size: 13px;
+  line-height: 2;
+  color: #888;
+}
+
+@media (max-width: 768px) {
+  .header {
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
-}
+    gap: 15px;
+    align-items: flex-start;
+  }
 
-.App-link {
-    color: #61dafb;
-}
+  .content {
+    grid-template-columns: 1fr;
+  }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+  .price-display {
+    font-size: 36px;
+  }
 }
