@@ -120,6 +120,8 @@ class SignalEngine:
             logger.error(f"Error calculating indicators: {e}")
             ema20_1m = ema50_1m = ema20_5m = ema50_5m = ema20_15m = ema50_15m = None
             atr_5m = rsi_5m = obi = spread = depth = cvd_1m = cvd_5m = None
+            regime = "RANGING"
+            gates = {'spread': {'pass': False}, 'depth': {'pass': False}, 'all_pass': False}
         
         return {
             'connected': self.is_connected,
@@ -141,5 +143,7 @@ class SignalEngine:
                     '1m': cvd_1m,
                     '5m': cvd_5m
                 }
-            }
+            },
+            'regime': regime,
+            'gates': gates
         }
