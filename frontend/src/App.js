@@ -213,7 +213,10 @@ function App() {
           <div className="card-header">PHASE 2: INDICATORS</div>
           <div className="card-content">
             <div className="indicator-section">
-              <div className="indicator-title">EMA (1m)</div>
+              <div className="indicator-title">
+                EMA (1m)
+                {approximating['1m'] && <span className="approx-warning" title="Approximating - warming up"> ⚠️</span>}
+              </div>
               <div className="indicator-row">
                 <span>EMA20:</span>
                 <span data-testid="ema20-1m">{formatPrice(indicators.ema?.['1m']?.ema20)}</span>
@@ -225,7 +228,10 @@ function App() {
             </div>
             
             <div className="indicator-section">
-              <div className="indicator-title">EMA (5m)</div>
+              <div className="indicator-title">
+                EMA (5m)
+                {approximating['5m'] && <span className="approx-warning" title="Approximating - warming up"> ⚠️</span>}
+              </div>
               <div className="indicator-row">
                 <span>EMA20:</span>
                 <span data-testid="ema20-5m">{formatPrice(indicators.ema?.['5m']?.ema20)}</span>
@@ -237,7 +243,10 @@ function App() {
             </div>
             
             <div className="indicator-section">
-              <div className="indicator-title">EMA (15m)</div>
+              <div className="indicator-title">
+                EMA (15m)
+                {approximating['15m'] && <span className="approx-warning" title="Approximating - warming up"> ⚠️</span>}
+              </div>
               <div className="indicator-row">
                 <span>EMA20:</span>
                 <span data-testid="ema20-15m">{formatPrice(indicators.ema?.['15m']?.ema20)}</span>
