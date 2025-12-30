@@ -1,6 +1,36 @@
 {
-  "candles_1m": [],
-  "candles_5m": [],
-  "candles_15m": [],
-  "last_updated": "2025-12-30T12:58:09.061662+00:00"
+  "candles_1m": [
+    {
+      "timestamp": 1767099480,
+      "timeframe": "1m",
+      "open": 87954.8,
+      "high": 87963.9,
+      "low": 87954.7,
+      "close": 87963.9,
+      "volume": 1144.7999999999975
+    }
+  ],
+  "candles_5m": [
+    {
+      "timestamp": 1767099300,
+      "timeframe": "5m",
+      "open": 87954.8,
+      "high": 87963.9,
+      "low": 87954.7,
+      "close": 87963.9,
+      "volume": 1144.7999999999975
+    }
+  ],
+  "candles_15m": [
+    {
+      "timestamp": 1767098700,
+      "timeframe": "15m",
+      "open": 87954.8,
+      "high": 87963.9,
+      "low": 87954.7,
+      "close": 87963.9,
+      "volume": 1144.7999999999975
+    }
+  ],
+  "last_updated": "2025-12-30T12:59:00.268855+00:00"
 }
