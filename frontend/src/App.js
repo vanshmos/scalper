@@ -92,17 +92,17 @@ function App() {
 
         {/* Connection Status */}
         <div className="info-card">
-          <div className="card-header">BYBIT CONNECTION</div>
+          <div className="card-header">OKX CONNECTION</div>
           <div className="card-content">
             <div className="info-row">
               <span className="info-label">WebSocket Status:</span>
-              <span className={`info-value ${status?.connected ? 'text-green' : 'text-red'}`} data-testid="bybit-status">
+              <span className={`info-value ${status?.connected ? 'text-green' : 'text-red'}`} data-testid="okx-status">
                 {status?.connected ? 'CONNECTED' : 'DISCONNECTED'}
               </span>
             </div>
             <div className="info-row">
               <span className="info-label">Last Update:</span>
-              <span className="info-value" data-testid="last-bybit-update">
+              <span className="info-value" data-testid="last-okx-update">
                 {status?.last_update ? new Date(status.last_update).toLocaleTimeString() : '—'}
               </span>
             </div>
