@@ -68,15 +68,13 @@ class SignalEngine:
     
     async def start(self):
         """Start the signal engine"""
-        logger.info("Starting signal engine...")
+        logger.info(f"Starting signal engine for {self.symbol}...")
         self.is_connected = True
-        await self.ws_client.start()
     
     async def stop(self):
         """Stop the signal engine"""
-        logger.info("Stopping signal engine...")
+        logger.info(f"Stopping signal engine for {self.symbol}...")
         self.is_connected = False
-        await self.ws_client.stop()
         self.candle_builder.save_to_file()
     
     def _heartbeat_log(self, candle_status: dict, ema20_5m: Optional[float], ema50_5m: Optional[float], 
