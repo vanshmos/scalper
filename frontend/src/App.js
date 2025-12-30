@@ -114,6 +114,9 @@ function App() {
 
   return (
     <div className="app-container" data-testid="crypto-dashboard">
+      {/* Hidden audio element for alert sound */}
+      <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBCuC0PLNfC0GI3vJ8dybRgsXZLnp6aVMEgxMouHyvWklBCl/zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dyb" />
+      
       <div className="header">
         <h1 className="title" data-testid="dashboard-title">BTC SCALPING ENGINE</h1>
         <div className="header-status">
@@ -121,11 +124,84 @@ function App() {
             <div className="status-dot"></div>
             <span>{wsConnected ? 'CONNECTED' : 'DISCONNECTED'}</span>
           </div>
+          <button 
+            className={`mute-button ${audioMuted ? 'muted' : ''}`}
+            onClick={() => setAudioMuted(!audioMuted)}
+            data-testid="mute-button"
+            title={audioMuted ? 'Unmute alerts' : 'Mute alerts'}
+          >
+            {audioMuted ? '🔇' : '🔊'}
+          </button>
           {lastUpdate && (
             <div className="last-update" data-testid="last-update">Updated: {lastUpdate}</div>
           )}
         </div>
       </div>
+
+      {/* Active Signal Card - Only show when FORMING or ACTIVE */}
+      {(signalStatus.state === 'FORMING' || signalStatus.state === 'ACTIVE') && (
+        <div className="active-signal-card" data-testid="active-signal-card">
+          <div className="signal-card-header">
+            <div className={`signal-direction ${signalStatus.direction?.toLowerCase()}`}>
+              {signalStatus.direction === 'SHORT' ? '🔴' : '🟢'} {signalStatus.direction} SIGNAL
+            </div>
+            <div className={`signal-state ${signalStatus.state.toLowerCase()}`}>
+              {signalStatus.state}
+            </div>
+          </div>
+          
+          {signalStatus.state === 'FORMING' && (
+            <div className="signal-card-content">
+              <div className="countdown">
+                <div className="countdown-label">Forming Timer</div>
+                <div className="countdown-value" data-testid="forming-countdown">
+                  {Math.ceil(signalStatus.forming_remaining || 0)}s
+                </div>
+                <div className="countdown-bar">
+                  <div 
+                    className="countdown-progress"
+                    style={{width: `${((signalStatus.forming_elapsed || 0) / 20) * 100}%`}}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {signalStatus.state === 'ACTIVE' && (
+            <div className="signal-card-content">
+              <div className="signal-levels">
+                <div className="level-row">
+                  <span>Entry:</span>
+                  <span className="level-value" data-testid="signal-entry">${signalStatus.entry?.toFixed(2)}</span>
+                </div>
+                <div className="level-row">
+                  <span>Stop Loss:</span>
+                  <span className="level-value text-red" data-testid="signal-sl">${signalStatus.stop_loss?.toFixed(2)}</span>
+                </div>
+                <div className="level-row">
+                  <span>TP1:</span>
+                  <span className="level-value text-green" data-testid="signal-tp1">${signalStatus.tp1?.toFixed(2)}</span>
+                </div>
+                <div className="level-row">
+                  <span>TP2:</span>
+                  <span className="level-value text-green" data-testid="signal-tp2">${signalStatus.tp2?.toFixed(2)}</span>
+                </div>
+                <div className="level-row">
+                  <span>Confidence:</span>
+                  <span className="level-value" data-testid="signal-confidence-active">{signalStatus.confidence}/100</span>
+                </div>
+              </div>
+              
+              <div className="countdown">
+                <div className="countdown-label">Time Remaining</div>
+                <div className="countdown-value" data-testid="active-countdown">
+                  {Math.floor((signalStatus.active_remaining || 0) / 60)}:{String(Math.floor((signalStatus.active_remaining || 0) % 60)).padStart(2, '0')}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="content">
         {/* Price Display */}
