@@ -454,6 +454,12 @@ body {
   cursor: help;
 }
 
+.stale-warning {
+  color: #ffa500;
+  font-size: 12px;
+  margin-left: 5px;
+}
+
 .indicator-row {
   display: flex;
   justify-content: space-between;
