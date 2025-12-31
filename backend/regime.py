@@ -204,22 +204,33 @@ class RegimeDetector:
         
         return False
     
-    def get_gates_status(self, spread: Optional[float], depth: Optional[float]) -> dict:
-        """Get all gates status"""
-        spread_pass = self.check_spread_gate(spread)
-        depth_pass = self.check_depth_gate(depth)
+    def get_gates_status(self, spread: Optional[float], depth: Optional[float], orderbook_timestamp: Optional[float] = None) -> dict:
+        """Get all gates status with health monitoring"""
+        # Check data staleness
+        is_stale = self.check_data_staleness(orderbook_timestamp)
+        
+        # If data is stale, maintain current gate states
+        if is_stale:
+            spread_pass = self.spread_gate.current_state
+            depth_pass = self.depth_gate.current_state
+        else:
+            spread_pass = self.check_spread_gate(spread)
+            depth_pass = self.check_depth_gate(depth)
         
         return {
             'spread': {
                 'pass': spread_pass,
                 'value': spread,
-                'threshold': 2.0
+                'threshold': 2.0,
+                'pending': self.spread_gate.pending_count if self.spread_gate.pending_state is not None else 0
             },
             'depth': {
                 'pass': depth_pass,
                 'value': depth,
-                'pass_threshold': self.depth_pass_threshold,
-                'fail_threshold': self.depth_fail_threshold
+                'pass_threshold': 60000,
+                'fail_threshold': 40000,
+                'pending': self.depth_gate.pending_count if self.depth_gate.pending_state is not None else 0
             },
-            'all_pass': spread_pass and depth_pass
+            'all_pass': spread_pass and depth_pass,
+            'data_stale': is_stale
         }
