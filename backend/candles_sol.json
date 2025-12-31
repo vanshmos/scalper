@@ -1,15 +1,6 @@
 {
   "candles_1m": [
     {
-      "timestamp": 1767109440,
-      "timeframe": "1m",
-      "open": 124.42,
-      "high": 124.63,
-      "low": 124.41,
-      "close": 124.61,
-      "volume": 1582.15
-    },
-    {
       "timestamp": 1767109500,
       "timeframe": "1m",
       "open": 124.6,
@@ -1619,18 +1610,18 @@
       "low": 125.81,
       "close": 125.83,
       "volume": 2074.6800000000003
+    },
+    {
+      "timestamp": 1767163920,
+      "timeframe": "1m",
+      "open": 125.82,
+      "high": 125.87,
+      "low": 125.82,
+      "close": 125.83,
+      "volume": 1430.7999999999995
     }
   ],
   "candles_5m": [
-    {
-      "timestamp": 1767109200,
-      "timeframe": "5m",
-      "open": 124.42,
-      "high": 124.63,
-      "low": 124.41,
-      "close": 124.61,
-      "volume": 1582.15
-    },
     {
       "timestamp": 1767109500,
       "timeframe": "5m",
@@ -1980,19 +1971,10 @@
       "high": 125.93,
       "low": 125.81,
       "close": 125.83,
-      "volume": 6171.75
+      "volume": 6958.669999999998
     }
   ],
   "candles_15m": [
-    {
-      "timestamp": 1767108600,
-      "timeframe": "15m",
-      "open": 124.42,
-      "high": 124.63,
-      "low": 124.41,
-      "close": 124.61,
-      "volume": 1582.15
-    },
     {
       "timestamp": 1767109500,
       "timeframe": "15m",
@@ -2117,8 +2099,8 @@
       "high": 125.93,
       "low": 125.81,
       "close": 125.83,
-      "volume": 7762.950000000001
+      "volume": 8549.869999999999
     }
   ],
-  "last_updated": "2025-12-31T06:52:00.201114+00:00"
+  "last_updated": "2025-12-31T06:53:00.503715+00:00"
 }
