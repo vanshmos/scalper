@@ -38,18 +38,28 @@ class SignalDetector:
         }
         
         try:
+            # Calculate actual market structure (same for both directions)
+            structure_5m_state = "NEUTRAL"
+            structure_15m_state = "NEUTRAL"
+            
+            if ema20_5m and ema50_5m:
+                structure_5m_state = "BULL" if ema20_5m > ema50_5m else "BEAR"
+            
+            if ema20_15m and ema50_15m:
+                structure_15m_state = "BULL" if ema20_15m > ema50_15m else "BEAR"
+            
             if direction == SignalDirection.SHORT:
                 # SHORT checklist
                 # 1. Regime is TRENDING_BEAR
                 checklist['regime']['pass'] = regime == RegimeType.TRENDING_BEAR
                 checklist['regime']['description'] = f"Regime: {regime}"
                 
-                # 2. Structure: 5m BEAR and 15m BEAR
+                # 2. Structure: 5m BEAR and 15m BEAR (show actual structure)
                 if ema20_5m and ema50_5m and ema20_15m and ema50_15m:
                     structure_5m_bear = ema20_5m < ema50_5m
                     structure_15m_bear = ema20_15m < ema50_15m
                     checklist['structure']['pass'] = structure_5m_bear and structure_15m_bear
-                    checklist['structure']['description'] = f"5m: {'BEAR' if structure_5m_bear else 'BULL'}, 15m: {'BEAR' if structure_15m_bear else 'BULL'}"
+                    checklist['structure']['description'] = f"5m: {structure_5m_state}, 15m: {structure_15m_state}"
                 
                 # 3. CVD 5m below -0.15
                 if cvd_5m is not None:
