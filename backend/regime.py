@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Optional, List
 from candle_builder import Candle
 from enum import Enum
@@ -11,6 +12,52 @@ class RegimeType(str, Enum):
     RANGING = "RANGING"
     CHAOTIC = "CHAOTIC"
 
+class GateState:
+    """Track gate state with stabilization"""
+    def __init__(self, name: str, stability_threshold: int = 3):
+        self.name = name
+        self.current_state = False
+        self.pending_state = None
+        self.pending_count = 0
+        self.stability_threshold = stability_threshold  # Require 3 consecutive readings
+        self.last_change_time = 0
+        self.last_log_time = 0
+        
+    def update(self, new_reading: bool) -> bool:
+        """Update gate state with stabilization logic"""
+        # If reading matches current state, reset pending
+        if new_reading == self.current_state:
+            if self.pending_state is not None:
+                self.pending_state = None
+                self.pending_count = 0
+            return self.current_state
+        
+        # If reading differs from current state
+        if self.pending_state == new_reading:
+            # Same pending state, increment counter
+            self.pending_count += 1
+        else:
+            # New pending state, reset counter
+            self.pending_state = new_reading
+            self.pending_count = 1
+        
+        # Check if we've reached threshold
+        if self.pending_count >= self.stability_threshold:
+            # Change state
+            old_state = self.current_state
+            self.current_state = new_reading
+            self.pending_state = None
+            self.pending_count = 0
+            self.last_change_time = time.time()
+            
+            # Log state change (throttled to once per 10 seconds)
+            current_time = time.time()
+            if current_time - self.last_log_time >= 10:
+                logger.info(f"Gate '{self.name}' changed: {old_state} → {new_reading}")
+                self.last_log_time = current_time
+        
+        return self.current_state
+
 class RegimeDetector:
     def __init__(self):
         self.current_regime = RegimeType.RANGING
@@ -18,10 +65,13 @@ class RegimeDetector:
         self.atr_baseline_samples = []
         self.atr_baseline_period = 100  # Build baseline from 100 samples
         
-        # Hysteresis for gates
-        self.depth_passing = False
-        self.depth_pass_threshold = 60000  # $60k
-        self.depth_fail_threshold = 40000  # $40k
+        # Gate state trackers with stabilization
+        self.spread_gate = GateState("spread", stability_threshold=3)
+        self.depth_gate = GateState("depth", stability_threshold=3)
+        
+        # Data staleness tracking
+        self.last_orderbook_time = 0
+        self.data_staleness_threshold = 10  # 10 seconds
         
     def detect_regime(
         self,
