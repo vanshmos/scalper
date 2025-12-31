@@ -149,33 +149,60 @@ class RegimeDetector:
             return self.current_regime
     
     def check_spread_gate(self, spread: Optional[float]) -> bool:
-        """Check if spread is below 2 bps"""
+        """Check if spread is below 2 bps with stabilization"""
         try:
             if spread is None:
-                return False
-            return spread < 2.0
+                logger.warning("Spread gate: Missing spread data")
+                return self.spread_gate.current_state  # Maintain current state on missing data
+            
+            # Check reading
+            new_reading = spread < 2.0
+            return self.spread_gate.update(new_reading)
+            
         except Exception as e:
             logger.error(f"Error checking spread gate: {e}")
-            return False
+            return self.spread_gate.current_state
     
     def check_depth_gate(self, depth: Optional[float]) -> bool:
-        """Check depth gate with hysteresis"""
+        """Check depth gate with hysteresis and stabilization"""
         try:
             if depth is None:
-                return self.depth_passing
+                logger.warning("Depth gate: Missing depth data")
+                return self.depth_gate.current_state  # Maintain current state on missing data
             
-            # Hysteresis logic
-            if depth > self.depth_pass_threshold:
-                self.depth_passing = True
-            elif depth < self.depth_fail_threshold:
-                self.depth_passing = False
-            # Between thresholds: maintain current state
+            # Hysteresis thresholds
+            pass_threshold = 60000  # $60k
+            fail_threshold = 40000  # $40k
             
-            return self.depth_passing
+            # Determine raw reading based on hysteresis
+            if depth > pass_threshold:
+                new_reading = True
+            elif depth < fail_threshold:
+                new_reading = False
+            else:
+                # In hysteresis zone - maintain current state
+                return self.depth_gate.current_state
+            
+            return self.depth_gate.update(new_reading)
             
         except Exception as e:
             logger.error(f"Error checking depth gate: {e}")
-            return False
+            return self.depth_gate.current_state
+    
+    def check_data_staleness(self, orderbook_timestamp: Optional[float] = None) -> bool:
+        """Check if orderbook data is stale"""
+        if orderbook_timestamp:
+            self.last_orderbook_time = orderbook_timestamp
+        
+        if self.last_orderbook_time == 0:
+            return False  # No data received yet
+        
+        age = time.time() - self.last_orderbook_time
+        if age > self.data_staleness_threshold:
+            logger.warning(f"Orderbook data is stale: {age:.1f}s old")
+            return True
+        
+        return False
     
     def get_gates_status(self, spread: Optional[float], depth: Optional[float]) -> dict:
         """Get all gates status"""
