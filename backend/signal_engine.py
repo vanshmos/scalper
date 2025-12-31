@@ -40,6 +40,7 @@ class SignalEngine:
         """Handle orderbook updates"""
         try:
             self.last_orderbook = data
+            self.last_orderbook_time = time.time()  # Track reception time
             self.last_update_time = datetime.now(timezone.utc)
         except Exception as e:
             logger.error(f"Error handling orderbook for {self.symbol}: {e}")
