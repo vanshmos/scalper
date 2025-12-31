@@ -24,6 +24,7 @@ class SignalEngine:
         self.alert_manager = AlertManager()
         self.is_connected = False
         self.last_orderbook: Optional[dict] = None
+        self.last_orderbook_time: float = 0  # Track orderbook reception time
         self.last_ticker: Optional[dict] = None
         self.last_update_time = None
         
