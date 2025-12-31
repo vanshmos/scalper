@@ -83,12 +83,12 @@ class SignalDetector:
                 checklist['regime']['pass'] = regime == RegimeType.TRENDING_BULL
                 checklist['regime']['description'] = f"Regime: {regime}"
                 
-                # 2. Structure: 5m BULL and 15m BULL
+                # 2. Structure: 5m BULL and 15m BULL (show actual structure)
                 if ema20_5m and ema50_5m and ema20_15m and ema50_15m:
                     structure_5m_bull = ema20_5m > ema50_5m
                     structure_15m_bull = ema20_15m > ema50_15m
                     checklist['structure']['pass'] = structure_5m_bull and structure_15m_bull
-                    checklist['structure']['description'] = f"5m: {'BULL' if structure_5m_bull else 'BEAR'}, 15m: {'BULL' if structure_15m_bull else 'BEAR'}"
+                    checklist['structure']['description'] = f"5m: {structure_5m_state}, 15m: {structure_15m_state}"
                 
                 # 3. CVD 5m above 0.15
                 if cvd_5m is not None:
