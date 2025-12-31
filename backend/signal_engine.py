@@ -201,7 +201,7 @@ class SignalEngine:
             )
             
             # Gates check
-            gates = self.regime_detector.get_gates_status(spread, depth)
+            gates = self.regime_detector.get_gates_status(spread, depth, self.last_orderbook_time)
             
             # Signal detection
             signals = self.signal_detector.detect_signal(
