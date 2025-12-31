@@ -1,24 +1,6 @@
 {
   "candles_1m": [
     {
-      "timestamp": 1767109320,
-      "timeframe": "1m",
-      "open": 124.43,
-      "high": 124.47,
-      "low": 124.37,
-      "close": 124.38,
-      "volume": 2371.3
-    },
-    {
-      "timestamp": 1767109380,
-      "timeframe": "1m",
-      "open": 124.38,
-      "high": 124.44,
-      "low": 124.35,
-      "close": 124.42,
-      "volume": 3528.07
-    },
-    {
       "timestamp": 1767109440,
       "timeframe": "1m",
       "open": 124.42,
@@ -1619,17 +1601,35 @@
       "low": 125.89,
       "close": 125.93,
       "volume": 1591.2
+    },
+    {
+      "timestamp": 1767163800,
+      "timeframe": "1m",
+      "open": 125.93,
+      "high": 125.93,
+      "low": 125.88,
+      "close": 125.88,
+      "volume": 2022.3899999999999
+    },
+    {
+      "timestamp": 1767163860,
+      "timeframe": "1m",
+      "open": 125.88,
+      "high": 125.89,
+      "low": 125.81,
+      "close": 125.83,
+      "volume": 2074.6800000000003
     }
   ],
   "candles_5m": [
     {
       "timestamp": 1767109200,
       "timeframe": "5m",
-      "open": 124.43,
+      "open": 124.42,
       "high": 124.63,
-      "low": 124.35,
+      "low": 124.41,
       "close": 124.61,
-      "volume": 7481.52
+      "volume": 1582.15
     },
     {
       "timestamp": 1767109500,
@@ -1971,18 +1971,27 @@
       "high": 125.93,
       "low": 125.89,
       "close": 125.93,
-      "volume": 3182.4
+      "volume": 1591.2
+    },
+    {
+      "timestamp": 1767163800,
+      "timeframe": "5m",
+      "open": 125.93,
+      "high": 125.93,
+      "low": 125.81,
+      "close": 125.83,
+      "volume": 6171.75
     }
   ],
   "candles_15m": [
     {
       "timestamp": 1767108600,
       "timeframe": "15m",
-      "open": 124.43,
+      "open": 124.42,
       "high": 124.63,
-      "low": 124.35,
+      "low": 124.41,
       "close": 124.61,
-      "volume": 7481.52
+      "volume": 1582.15
     },
     {
       "timestamp": 1767109500,
@@ -2106,10 +2115,10 @@
       "timeframe": "15m",
       "open": 125.93,
       "high": 125.93,
-      "low": 125.89,
-      "close": 125.93,
-      "volume": 3182.4
+      "low": 125.81,
+      "close": 125.83,
+      "volume": 7762.950000000001
     }
   ],
-  "last_updated": "2025-12-31T06:50:00.491480+00:00"
+  "last_updated": "2025-12-31T06:52:00.201114+00:00"
 }
