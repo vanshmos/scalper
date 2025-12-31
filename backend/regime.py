@@ -152,8 +152,8 @@ class RegimeDetector:
         """Check if spread is below 2 bps with stabilization"""
         try:
             if spread is None:
-                logger.warning("Spread gate: Missing spread data")
-                return self.spread_gate.current_state  # Maintain current state on missing data
+                # Maintain current state on missing data (don't log every time)
+                return self.spread_gate.current_state
             
             # Check reading
             new_reading = spread < 2.0
@@ -167,8 +167,8 @@ class RegimeDetector:
         """Check depth gate with hysteresis and stabilization"""
         try:
             if depth is None:
-                logger.warning("Depth gate: Missing depth data")
-                return self.depth_gate.current_state  # Maintain current state on missing data
+                # Maintain current state on missing data (don't log every time)
+                return self.depth_gate.current_state
             
             # Hysteresis thresholds
             pass_threshold = 60000  # $60k
