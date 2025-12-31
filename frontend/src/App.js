@@ -330,6 +330,7 @@ function App() {
               <span className="info-label">All Gates:</span>
               <span className={`info-value ${gates.all_pass ? 'text-green' : 'text-red'}`} data-testid="gate-all">
                 {gates.all_pass ? 'PASS' : 'FAIL'}
+                {gates.data_stale && <span className="stale-warning" title="Data may be stale"> ⚠️</span>}
               </span>
             </div>
           </div>
