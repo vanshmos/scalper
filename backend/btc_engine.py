@@ -524,25 +524,95 @@ class BTCSignalEngine:
             indicators = self._calculate_indicators()
             checklist = self._build_checklist(indicators)
             
+            # Format indicators to match frontend expectations
+            formatted_indicators = {
+                'ema': {
+                    '1m': {
+                        'ema20': indicators.get('ema20_1m'),
+                        'ema50': indicators.get('ema50_1m')
+                    },
+                    '5m': {
+                        'ema20': indicators.get('ema20_5m'),
+                        'ema50': indicators.get('ema50_5m')
+                    },
+                    '15m': {  # Not available, set to None
+                        'ema20': None,
+                        'ema50': None
+                    }
+                },
+                'atr_5m': indicators.get('atr'),
+                'rsi_5m': indicators.get('rsi'),
+                'cvd': {
+                    '1m': None,  # Not tracking per-timeframe CVD
+                    '5m': indicators.get('taker_buy_ratio', 0.5) - 0.5  # Convert ratio to CVD-like value
+                },
+                'obi': indicators.get('obi'),
+                'spread': indicators.get('spread'),
+                'depth': indicators.get('depth')
+            }
+            
+            # Build signal structure for frontend
+            signals_data = {
+                'short': {
+                    'score': 100 if checklist.get('trend_direction') == 'BEAR' and all(checklist.get(k) for k in ['regime', 'trend_align', 'cvd', 'obi', 'ema_dist', 'funding', 'gates']) else 0,
+                    'hard_gates': {
+                        'regime_filter': {'pass': checklist.get('regime', False), 'detail': checklist.get('regime_direction', 'N/A')},
+                        'rsi_filter': {'pass': indicators.get('rsi', 50) >= 30 and indicators.get('rsi', 50) <= 70, 'detail': f"{indicators.get('rsi', 0):.0f}"},
+                        'ema_proximity': {'pass': checklist.get('ema_dist', False), 'detail': f"{checklist.get('ema_dist_value', 0):.2f}%"},
+                        'spread': {'pass': checklist.get('gates', False), 'detail': f"{indicators.get('spread', 0):.2f} bps"},
+                        'directional_alignment': {'pass': checklist.get('cvd', False) and checklist.get('obi', False), 'detail': f"CVD {indicators.get('taker_buy_ratio', 0.5):.3f}, OBI {indicators.get('obi', 0):.3f}"},
+                        'atr_sufficient': {'pass': indicators.get('atr', 0) > 100, 'detail': f"${indicators.get('atr', 0):.0f}"},
+                        'volume_surge': {'pass': True, 'detail': 'N/A'},
+                        'all_pass': all(checklist.get(k) for k in ['regime', 'trend_align', 'cvd', 'obi', 'ema_dist', 'funding', 'gates'])
+                    },
+                    'signal_ready': self.signal_state.status == 'ACTIVE' and self.signal_state.direction == 'SHORT',
+                    'quality': 'HIGH' if all(checklist.get(k) for k in ['regime', 'trend_align', 'cvd', 'obi', 'ema_dist', 'funding', 'gates']) else 'LOW'
+                },
+                'long': {
+                    'score': 100 if checklist.get('trend_direction') == 'BULL' and all(checklist.get(k) for k in ['regime', 'trend_align', 'cvd', 'obi', 'ema_dist', 'funding', 'gates']) else 0,
+                    'hard_gates': {
+                        'regime_filter': {'pass': checklist.get('regime', False), 'detail': checklist.get('regime_direction', 'N/A')},
+                        'rsi_filter': {'pass': indicators.get('rsi', 50) >= 30 and indicators.get('rsi', 50) <= 70, 'detail': f"{indicators.get('rsi', 0):.0f}"},
+                        'ema_proximity': {'pass': checklist.get('ema_dist', False), 'detail': f"{checklist.get('ema_dist_value', 0):.2f}%"},
+                        'spread': {'pass': checklist.get('gates', False), 'detail': f"{indicators.get('spread', 0):.2f} bps"},
+                        'directional_alignment': {'pass': checklist.get('cvd', False) and checklist.get('obi', False), 'detail': f"CVD {indicators.get('taker_buy_ratio', 0.5):.3f}, OBI {indicators.get('obi', 0):.3f}"},
+                        'atr_sufficient': {'pass': indicators.get('atr', 0) > 100, 'detail': f"${indicators.get('atr', 0):.0f}"},
+                        'volume_surge': {'pass': True, 'detail': 'N/A'},
+                        'all_pass': all(checklist.get(k) for k in ['regime', 'trend_align', 'cvd', 'obi', 'ema_dist', 'funding', 'gates'])
+                    },
+                    'signal_ready': self.signal_state.status == 'ACTIVE' and self.signal_state.direction == 'LONG',
+                    'quality': 'HIGH' if all(checklist.get(k) for k in ['regime', 'trend_align', 'cvd', 'obi', 'ema_dist', 'funding', 'gates']) else 'LOW'
+                }
+            }
+            
+            # Signal status for countdown
+            signal_status_data = {
+                'state': self.signal_state.status,
+                'direction': self.signal_state.direction,
+                'forming_remaining': max(0, 12 - (time.time() - self.signal_state.forming_start)) if self.signal_state.status == 'FORMING' and self.signal_state.forming_start else 0,
+                'active_remaining': max(0, 300 - (time.time() - self.signal_state.entry_time)) if self.signal_state.status == 'ACTIVE' and self.signal_state.entry_time else 0,
+                'entry_min': self.signal_state.entry_price,
+                'entry_max': self.signal_state.entry_price
+            }
+            
             return {
                 'symbol': self.symbol,
                 'connected': True,
-                'is_warmed_up': self.is_warmed_up,
+                'regime': checklist.get('regime_direction', 'RANGING'),
                 'current_price': self.current_price,
-                'mark_price': self.mark_price,
                 'candle_counts': {
                     '1m': len(self.candles_1m),
-                    '5m': len(self.candles_5m)
+                    '5m': len(self.candles_5m),
+                    '15m': 0
                 },
-                'indicators': indicators,
-                'checklist': checklist,
-                'signal_state': {
-                    'status': self.signal_state.status,
-                    'direction': self.signal_state.direction,
-                    'entry_price': self.signal_state.entry_price,
-                    'entry_time': self.signal_state.entry_time
+                'indicators': formatted_indicators,
+                'gates': {
+                    'all_pass': checklist.get('gates', False),
+                    'spread': indicators.get('spread'),
+                    'depth': indicators.get('depth')
                 },
-                'health': self.ws_client.get_health_status()
+                'signals': signals_data,
+                'signal_status': signal_status_data
             }
             
         except Exception as e:
