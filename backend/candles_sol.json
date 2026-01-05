@@ -1,46 +1,6 @@
 {
   "candles_1m": [
     {
-      "timestamp": 1767609720,
-      "timeframe": "1m",
-      "open": 135.35,
-      "high": 135.41,
-      "low": 135.28,
-      "close": 135.31,
-      "volume": 6188.91,
-      "vol_ma20": null
-    },
-    {
-      "timestamp": 1767609780,
-      "timeframe": "1m",
-      "open": 135.3,
-      "high": 135.45,
-      "low": 135.27,
-      "close": 135.45,
-      "volume": 1835.4,
-      "vol_ma20": null
-    },
-    {
-      "timestamp": 1767609840,
-      "timeframe": "1m",
-      "open": 135.45,
-      "high": 135.45,
-      "low": 135.35,
-      "close": 135.35,
-      "volume": 359.94,
-      "vol_ma20": null
-    },
-    {
-      "timestamp": 1767609900,
-      "timeframe": "1m",
-      "open": 135.35,
-      "high": 135.5,
-      "low": 135.34,
-      "close": 135.5,
-      "volume": 982.89,
-      "vol_ma20": null
-    },
-    {
       "timestamp": 1767609960,
       "timeframe": "1m",
       "open": 135.5,
@@ -1799,27 +1759,57 @@
       "close": 133.55,
       "volume": 18554.840000000037,
       "vol_ma20": null
+    },
+    {
+      "timestamp": 1767620760,
+      "timeframe": "1m",
+      "open": 133.55,
+      "high": 133.62,
+      "low": 133.54,
+      "close": 133.62,
+      "volume": 16249.890000000054,
+      "vol_ma20": null
+    },
+    {
+      "timestamp": 1767620820,
+      "timeframe": "1m",
+      "open": 133.62,
+      "high": 133.65,
+      "low": 133.52,
+      "close": 133.57,
+      "volume": 18525.660000000014,
+      "vol_ma20": null
+    },
+    {
+      "timestamp": 1767620880,
+      "timeframe": "1m",
+      "open": 133.56,
+      "high": 133.58,
+      "low": 133.5,
+      "close": 133.55,
+      "volume": 17607.93000000001,
+      "vol_ma20": null
+    },
+    {
+      "timestamp": 1767620940,
+      "timeframe": "1m",
+      "open": 133.56,
+      "high": 133.59,
+      "low": 133.47,
+      "close": 133.51,
+      "volume": 9707.070000000007,
+      "vol_ma20": null
     }
   ],
   "candles_5m": [
     {
-      "timestamp": 1767609600,
-      "timeframe": "5m",
-      "open": 135.35,
-      "high": 135.45,
-      "low": 135.27,
-      "close": 135.35,
-      "volume": 8384.25,
-      "vol_ma20": null
-    },
-    {
       "timestamp": 1767609900,
       "timeframe": "5m",
-      "open": 135.35,
+      "open": 135.5,
       "high": 135.7,
-      "low": 135.34,
+      "low": 135.49,
       "close": 135.63,
-      "volume": 7512.17,
+      "volume": 6529.280000000001,
       "vol_ma20": null
     },
     {
@@ -2000,7 +1990,7 @@
       "low": 135.41,
       "close": 135.51,
       "volume": 8168.01,
-      "vol_ma20": 14911.959999999997
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615600,
@@ -2010,7 +2000,7 @@
       "low": 135.26,
       "close": 135.35,
       "volume": 14422.6,
-      "vol_ma20": 15213.877499999997
+      "vol_ma20": 15164.732999999998
     },
     {
       "timestamp": 1767615900,
@@ -2177,31 +2167,21 @@
       "timeframe": "5m",
       "open": 133.61,
       "high": 133.65,
-      "low": 133.49,
-      "close": 133.55,
-      "volume": 37109.68000000007,
-      "vol_ma20": 34655.5835
+      "low": 133.47,
+      "close": 133.51,
+      "volume": 90352.46000000012,
+      "vol_ma20": 37317.7225
     }
   ],
   "candles_15m": [
     {
-      "timestamp": 1767609000,
-      "timeframe": "15m",
-      "open": 135.35,
-      "high": 135.45,
-      "low": 135.27,
-      "close": 135.35,
-      "volume": 8384.25,
-      "vol_ma20": null
-    },
-    {
       "timestamp": 1767609900,
       "timeframe": "15m",
-      "open": 135.35,
+      "open": 135.5,
       "high": 135.95,
-      "low": 135.34,
+      "low": 135.49,
       "close": 135.73,
-      "volume": 45185.47999999999,
+      "volume": 44202.58999999999,
       "vol_ma20": null
     },
     {
@@ -2319,11 +2299,11 @@
       "timeframe": "15m",
       "open": 133.61,
       "high": 133.65,
-      "low": 133.49,
-      "close": 133.55,
-      "volume": 37109.68000000007,
+      "low": 133.47,
+      "close": 133.51,
+      "volume": 90352.46000000012,
       "vol_ma20": null
     }
   ],
-  "last_updated": "2026-01-05T13:46:00.238295+00:00"
+  "last_updated": "2026-01-05T13:50:54.409019+00:00"
 }
