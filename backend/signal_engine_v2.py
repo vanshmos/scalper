@@ -258,23 +258,33 @@ class SignalEngine:
             logger.error(f"Error handling orderbook: {e}")
     
     async def _on_trade(self, data: dict):
-        """Handle trade updates - track taker buy/sell ratio"""
+        """Handle trade updates - track for CVD and taker buy/sell ratio"""
         try:
             # OKX trade format: {side: 'buy'/'sell', sz: size, px: price, ts: timestamp}
             side = data.get('side')
             size = float(data.get('sz', 0))
+            timestamp = int(data.get('ts', 0)) // 1000  # Convert to seconds
             
-            # Track for volume ratio calculation
-            self.trade_volume_1m.append({
+            # Store trade in format expected by indicators.calculate_cvd()
+            trade = {
                 'side': side,
-                'size': size,
-                'timestamp': int(data.get('ts', 0)) // 1000
+                'sz': size,  # indicators.py expects 'sz' key
+                'ts': timestamp  # indicators.py expects 'ts' key
+            }
+            
+            # Add to recent trades for CVD calculation
+            self.recent_trades.append(trade)
+            
+            # Also track for quick taker buy ratio (last 60 trades)
+            self.taker_buy_ratio_buffer.append({
+                'side': side,
+                'size': size
             })
             
-            # Calculate taker buy ratio (last 60 trades)
-            if len(self.trade_volume_1m) > 10:
-                buy_volume = sum(t['size'] for t in self.trade_volume_1m if t['side'] == 'buy')
-                total_volume = sum(t['size'] for t in self.trade_volume_1m)
+            # Calculate taker buy ratio (for display/quick checks)
+            if len(self.taker_buy_ratio_buffer) > 10:
+                buy_volume = sum(t['size'] for t in self.taker_buy_ratio_buffer if t['side'] == 'buy')
+                total_volume = sum(t['size'] for t in self.taker_buy_ratio_buffer)
                 self.taker_buy_ratio = buy_volume / total_volume if total_volume > 0 else 0.5
                 
         except Exception as e:
