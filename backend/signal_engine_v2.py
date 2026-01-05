@@ -508,7 +508,7 @@ class SignalEngine:
     async def _process_signal_state(self, checklist: Dict, indicators: Dict):
         """Process signal state machine with invalidation logic"""
         try:
-            # Check if all checklist items pass
+            # Check if all PRO SCALPER checklist items pass
             all_pass = all([
                 checklist.get('regime', False),
                 checklist.get('trend_align', False),
@@ -516,7 +516,14 @@ class SignalEngine:
                 checklist.get('obi', False),
                 checklist.get('ema_dist', False),
                 checklist.get('funding', False),
-                checklist.get('gates', False)
+                checklist.get('gates', False),
+                # PRO FILTERS (all must pass)
+                checklist.get('volume_surge', False),
+                checklist.get('clean_breakout', False),
+                checklist.get('atr_expansion', False),
+                checklist.get('rsi_momentum', False),
+                checklist.get('ema_quality', False),
+                checklist.get('time_filter', False)
             ])
             
             current_time = time.time()
