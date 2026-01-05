@@ -1,51 +1,6 @@
 {
   "candles_1m": [
     {
-      "timestamp": 1767164280,
-      "timeframe": "1m",
-      "open": 125.79,
-      "high": 125.84,
-      "low": 125.78,
-      "close": 125.81,
-      "volume": 1170.3700000000006
-    },
-    {
-      "timestamp": 1767164340,
-      "timeframe": "1m",
-      "open": 125.82,
-      "high": 125.82,
-      "low": 125.81,
-      "close": 125.81,
-      "volume": 315.91
-    },
-    {
-      "timestamp": 1767164400,
-      "timeframe": "1m",
-      "open": 125.82,
-      "high": 125.83,
-      "low": 125.79,
-      "close": 125.8,
-      "volume": 3094.4100000000044
-    },
-    {
-      "timestamp": 1767164460,
-      "timeframe": "1m",
-      "open": 125.8,
-      "high": 125.81,
-      "low": 125.79,
-      "close": 125.79,
-      "volume": 609.6699999999993
-    },
-    {
-      "timestamp": 1767164520,
-      "timeframe": "1m",
-      "open": 125.8,
-      "high": 125.8,
-      "low": 125.7,
-      "close": 125.71,
-      "volume": 2735.49
-    },
-    {
       "timestamp": 1767164580,
       "timeframe": "1m",
       "open": 125.72,
@@ -1619,26 +1574,62 @@
       "low": 135.37,
       "close": 135.4,
       "volume": 1001.9000000000003
+    },
+    {
+      "timestamp": 1767612240,
+      "timeframe": "1m",
+      "open": 135.45,
+      "high": 135.46,
+      "low": 135.45,
+      "close": 135.46,
+      "volume": 44.06
+    },
+    {
+      "timestamp": 1767612300,
+      "timeframe": "1m",
+      "open": 135.46,
+      "high": 135.54,
+      "low": 135.45,
+      "close": 135.46,
+      "volume": 2745.6799999999994
+    },
+    {
+      "timestamp": 1767612360,
+      "timeframe": "1m",
+      "open": 135.46,
+      "high": 135.52,
+      "low": 135.45,
+      "close": 135.52,
+      "volume": 10319.730000000007
+    },
+    {
+      "timestamp": 1767612420,
+      "timeframe": "1m",
+      "open": 135.52,
+      "high": 135.56,
+      "low": 135.51,
+      "close": 135.54,
+      "volume": 3445.000000000001
+    },
+    {
+      "timestamp": 1767612480,
+      "timeframe": "1m",
+      "open": 135.53,
+      "high": 135.55,
+      "low": 135.26,
+      "close": 135.26,
+      "volume": 4768.11
     }
   ],
   "candles_5m": [
     {
-      "timestamp": 1767164100,
-      "timeframe": "5m",
-      "open": 125.79,
-      "high": 125.84,
-      "low": 125.78,
-      "close": 125.81,
-      "volume": 1486.2800000000007
-    },
-    {
       "timestamp": 1767164400,
       "timeframe": "5m",
-      "open": 125.82,
-      "high": 125.83,
-      "low": 125.7,
+      "open": 125.72,
+      "high": 125.8,
+      "low": 125.71,
       "close": 125.73,
-      "volume": 11932.60000000001
+      "volume": 5493.030000000008
     },
     {
       "timestamp": 1767164700,
@@ -1968,30 +1959,30 @@
       "timestamp": 1767612000,
       "timeframe": "5m",
       "open": 135.3,
-      "high": 135.41,
+      "high": 135.46,
       "low": 135.29,
-      "close": 135.4,
-      "volume": 13400.97
+      "close": 135.46,
+      "volume": 12443.13
+    },
+    {
+      "timestamp": 1767612300,
+      "timeframe": "5m",
+      "open": 135.46,
+      "high": 135.56,
+      "low": 135.26,
+      "close": 135.26,
+      "volume": 26046.63000000001
     }
   ],
   "candles_15m": [
     {
-      "timestamp": 1767163500,
-      "timeframe": "15m",
-      "open": 125.79,
-      "high": 125.84,
-      "low": 125.78,
-      "close": 125.81,
-      "volume": 1486.2800000000007
-    },
-    {
       "timestamp": 1767164400,
       "timeframe": "15m",
-      "open": 125.82,
+      "open": 125.72,
       "high": 125.84,
-      "low": 125.7,
+      "low": 125.71,
       "close": 125.79,
-      "volume": 23602.18000000001
+      "volume": 17162.61000000001
     },
     {
       "timestamp": 1767165300,
@@ -2105,11 +2096,11 @@
       "timestamp": 1767611700,
       "timeframe": "15m",
       "open": 135.23,
-      "high": 135.41,
+      "high": 135.56,
       "low": 135.14,
-      "close": 135.4,
-      "volume": 36105.010000000024
+      "close": 135.26,
+      "volume": 61193.80000000003
     }
   ],
-  "last_updated": "2026-01-05T11:24:31.360510+00:00"
+  "last_updated": "2026-01-05T11:29:01.168340+00:00"
 }
