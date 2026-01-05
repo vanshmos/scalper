@@ -337,11 +337,12 @@ class SignalEngine:
                 logger.error(f"Error in signal processing loop: {e}")
     
     def _calculate_indicators(self) -> Dict:
-        """Calculate all indicators"""
+        """Calculate all indicators including ALPHA enhancements"""
         try:
             # Get candle lists
             candles_1m_list = list(self.candles_1m)
             candles_5m_list = list(self.candles_5m)
+            candles_15m_list = list(self.candles_15m)
             
             # EMAs on 1m
             ema20_1m = self.indicators.calculate_ema(candles_1m_list, 20)
@@ -352,12 +353,67 @@ class SignalEngine:
             ema50_5m = self.indicators.calculate_ema(candles_5m_list, 50)
             
             # EMAs on 15m
-            candles_15m_list = list(self.candles_15m)
             ema20_15m = self.indicators.calculate_ema(candles_15m_list, 20)
             ema50_15m = self.indicators.calculate_ema(candles_15m_list, 50)
             
             # ATR on 5m
             atr = self.indicators.calculate_atr(candles_5m_list, 14)
+            
+            # RSI on 5m
+            rsi = self.indicators.calculate_rsi(candles_5m_list, 14)
+            
+            # Orderbook indicators
+            obi = None
+            spread = None
+            depth = None
+            if self.last_orderbook:
+                obi = self.indicators.calculate_obi(self.last_orderbook)
+                spread = self.indicators.calculate_spread(self.last_orderbook)
+                depth = self.indicators.calculate_depth(self.last_orderbook)
+            
+            # ALPHA ENHANCEMENTS: New indicators
+            
+            # 1. Velocity signals (anti-spoofing)
+            obi_velocity = self.indicators.get_obi_velocity()
+            cvd_velocity = self.indicators.get_cvd_velocity()
+            
+            # 2. Bollinger Bands (liquidity sweep detection)
+            bollinger = self.indicators.calculate_bollinger_bands(candles_5m_list, period=20, std_dev=2.0)
+            
+            # 3. VWAP (slippage protection)
+            vwap = self.indicators.calculate_vwap(candles_5m_list)
+            
+            # 4. Trend Strength (adaptive targets)
+            trend_strength = self.indicators.calculate_trend_strength(candles_5m_list, period=20)
+            
+            # Use mark price for distance calculation (more stable)
+            price_for_distance = self.mark_price if self.mark_price else self.current_price
+            
+            return {
+                'ema20_1m': ema20_1m,
+                'ema50_1m': ema50_1m,
+                'ema20_5m': ema20_5m,
+                'ema50_5m': ema50_5m,
+                'ema20_15m': ema20_15m,
+                'ema50_15m': ema50_15m,
+                'atr': atr if atr and atr > 0 else 100,  # Default to 100 if ATR is 0
+                'rsi': rsi,
+                'obi': obi,
+                'spread': spread,
+                'depth': depth,
+                'price': price_for_distance,
+                'taker_buy_ratio': self.taker_buy_ratio,
+                # ALPHA indicators
+                'obi_velocity': obi_velocity,
+                'cvd_velocity': cvd_velocity,
+                'bollinger': bollinger,
+                'vwap': vwap,
+                'trend_strength': trend_strength
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating indicators: {e}")
+            return {}
             
             # RSI on 5m
             rsi = self.indicators.calculate_rsi(candles_5m_list, 14)
