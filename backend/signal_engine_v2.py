@@ -814,12 +814,20 @@ class SignalEngine:
                 'gates': {
                     'all_pass': checklist.get('gates', False),
                     'spread': {
-                        'pass': indicators.get('spread', 999) < 1.5 if indicators.get('spread') is not None else False,
-                        'value': indicators.get('spread', 0)
+                        'pass': (indicators.get('spread', 999) < checklist.get('spread_threshold', 1.5)) if indicators.get('spread') is not None else False,
+                        'value': indicators.get('spread', 0),
+                        'threshold': checklist.get('spread_threshold', 1.5),
+                        'mode': 'dynamic' if self.spread_stats.count() >= 10 else 'static'
                     },
                     'depth': {
-                        'pass': indicators.get('depth', 0) > 500000 if indicators.get('depth') is not None else False,
-                        'value': indicators.get('depth', 0)
+                        'pass': (indicators.get('depth', 0) > checklist.get('depth_threshold', 500000)) if indicators.get('depth') is not None else False,
+                        'value': indicators.get('depth', 0),
+                        'threshold': checklist.get('depth_threshold', 500000),
+                        'mode': 'dynamic' if self.depth_stats.count() >= 10 else 'static'
+                    },
+                    'ticker_staleness': {
+                        'age_ms': (time.time() - self.last_ticker_time) * 1000 if self.last_ticker_time else None,
+                        'pass': ((time.time() - self.last_ticker_time) * 1000 < 2000) if self.last_ticker_time else False
                     }
                 },
                 'signals': signals_data,
