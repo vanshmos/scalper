@@ -688,9 +688,10 @@ class SignalEngine:
     def _build_hard_gates(self, direction: str, indicators: Dict, checklist: Dict) -> Dict:
         """Build direction-specific hard gates"""
         regime = checklist.get('regime_direction', 'RANGING')
-        rsi = indicators.get('rsi', 50)
-        obi = indicators.get('obi', 0)
-        taker_ratio = indicators.get('taker_buy_ratio', 0.5)
+        rsi = indicators.get('rsi') or 50  # Default to 50 if None
+        obi = indicators.get('obi') or 0  # Default to 0 if None
+        taker_ratio = indicators.get('taker_buy_ratio') or 0.5  # Default to 0.5 if None
+        atr = indicators.get('atr') or 100  # Default to 100 if None
         
         # Direction-specific checks
         if direction == 'LONG':
@@ -726,12 +727,12 @@ class SignalEngine:
                 'detail': f"CVD {taker_ratio:.3f}, OBI {obi:.3f}"
             },
             'atr_sufficient': {
-                'pass': indicators.get('atr', 0) > 100,
-                'detail': f"${indicators.get('atr', 0):.0f}"
+                'pass': atr > 100,
+                'detail': f"${atr:.0f}"
             },
             'funding_filter': {
                 'pass': checklist.get('funding', False),
                 'detail': f"{checklist.get('funding_value', 0):.4%}"
             },
-            'all_pass': regime_pass and (30 <= rsi <= 70) and checklist.get('ema_dist', False) and checklist.get('gates', False) and cvd_pass and obi_pass and indicators.get('atr', 0) > 100 and checklist.get('funding', False)
+            'all_pass': regime_pass and (30 <= rsi <= 70) and checklist.get('ema_dist', False) and checklist.get('gates', False) and cvd_pass and obi_pass and atr > 100 and checklist.get('funding', False)
         }
