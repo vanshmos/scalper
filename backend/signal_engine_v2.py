@@ -59,6 +59,7 @@ class SignalEngine:
         # Candle storage (using deque for efficient operations)
         self.candles_1m = deque(maxlen=200)  # Keep last 200 1m candles
         self.candles_5m = deque(maxlen=100)  # Keep last 100 5m candles
+        self.candles_15m = deque(maxlen=50)  # Keep last 50 15m candles
         
         # Market data
         self.current_price = None
