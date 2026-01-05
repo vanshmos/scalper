@@ -50,40 +50,26 @@ async def route_ticker(symbol: str, data: dict):
 
 @app.on_event("startup")
 async def startup_event():
-    """Start all signal engines on app startup"""
-    global signal_engines, ws_client, engine_task
+    """Start BTC signal engine on app startup"""
+    global btc_engine, engine_task
     
-    logger.info(f"Starting signal engines for {len(symbols)} symbols...")
+    logger.info("Starting BTC signal engine...")
     
-    # Create signal engines for each symbol
-    for symbol in symbols:
-        signal_engines[symbol] = SignalEngine(symbol)
-        await signal_engines[symbol].start()
+    # Create and start BTC engine
+    btc_engine = BTCSignalEngine("BTC-USDT-SWAP")
+    await btc_engine.start()
     
-    # Create single WebSocket client for all symbols
-    ws_client = OKXWebSocketClient(
-        on_orderbook=route_orderbook,
-        on_trade=route_trade,
-        on_ticker=route_ticker
-    )
-    
-    # Start WebSocket client
-    engine_task = asyncio.create_task(ws_client.start())
-    
-    logger.info(f"All {len(symbols)} signal engines started")
+    logger.info("BTC signal engine started successfully")
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Stop all signal engines on app shutdown"""
-    global signal_engines, ws_client, engine_task
+    """Stop signal engine on app shutdown"""
+    global btc_engine, engine_task
     
-    logger.info("Stopping all signal engines...")
+    logger.info("Stopping BTC signal engine...")
     
-    for symbol, engine in signal_engines.items():
-        await engine.stop()
-    
-    if ws_client:
-        await ws_client.stop()
+    if btc_engine:
+        await btc_engine.ws_client.stop()
     
     if engine_task:
         engine_task.cancel()
@@ -94,11 +80,10 @@ async def shutdown_event():
 
 @app.get("/api/status")
 async def get_status():
-    """Get current status for all engines"""
-    status = {}
-    for symbol, engine in signal_engines.items():
-        status[symbol.lower()] = engine.get_status()
-    return status
+    """Get current status for BTC engine"""
+    if btc_engine:
+        return {"btc": btc_engine.get_status()}
+    return {"error": "Engine not initialized"}
 
 @app.get("/api/test-telegram")
 async def test_telegram():
@@ -110,12 +95,12 @@ async def test_telegram():
         if alert_manager.telegram_enabled:
             alert_manager.send_signal_alert(
                 direction="SHORT",
-                confidence=75,
+                confidence=100,
                 entry=92500.00,
                 stop_loss=92750.00,
                 tp1=92000.00,
                 tp2=91500.00,
-                symbol="BTC-TEST"
+                symbol="BTC-USDT-SWAP"
             )
             return {"status": "success", "message": "Test alert sent to Telegram"}
         else:
