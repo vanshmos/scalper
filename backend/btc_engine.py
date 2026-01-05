@@ -84,7 +84,7 @@ class SignalEngine:
         
     async def start(self):
         """Start the signal engine"""
-        logger.info(f"Starting BTC signal engine for {self.symbol}...")
+        logger.info(f"Starting {self.display_name} signal engine for {self.symbol}...")
         
         # 1. Backfill historical data
         await self._backfill_candles()
@@ -107,7 +107,7 @@ class SignalEngine:
         # 5. Start signal processing loop
         asyncio.create_task(self._signal_processing_loop())
         
-        logger.info("BTC signal engine started successfully")
+        logger.info(f"{self.display_name} signal engine started successfully")
     
     async def _backfill_candles(self):
         """Backfill historical candles from REST API"""
