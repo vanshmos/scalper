@@ -117,11 +117,11 @@ class SignalStateMachine:
         short_ready = signals.get('short', {}).get('signal_ready', False)
         long_ready = signals.get('long', {}).get('signal_ready', False)
         
-        short_checklist = signals.get('short', {}).get('checklist', {})
-        long_checklist = signals.get('long', {}).get('checklist', {})
+        short_hard_gates = signals.get('short', {}).get('hard_gates', {}).get('all_pass', False)
+        long_hard_gates = signals.get('long', {}).get('hard_gates', {}).get('all_pass', False)
         
-        short_confidence = signals.get('short', {}).get('confidence', 0)
-        long_confidence = signals.get('long', {}).get('confidence', 0)
+        short_score = signals.get('short', {}).get('score', 0)
+        long_score = signals.get('long', {}).get('score', 0)
         
         # Check cooldowns
         short_in_cooldown = self.is_in_cooldown(SignalDirection.SHORT)
