@@ -733,8 +733,8 @@ class SignalEngine:
                         'ema50': indicators.get('ema50_5m')
                     },
                     '15m': {
-                        'ema20': None,
-                        'ema50': None
+                        'ema20': indicators.get('ema20_15m'),
+                        'ema50': indicators.get('ema50_15m')
                     }
                 },
                 'atr_5m': indicators.get('atr'),
