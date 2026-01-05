@@ -45,11 +45,12 @@ class SignalState:
         self.forming_start = None
         self.atr_at_entry = None
 
-class BTCSignalEngine:
-    """BTC-only signal engine using OKX candle channels"""
+class SignalEngine:
+    """Multi-symbol signal engine using OKX candle channels"""
     
-    def __init__(self, symbol: str = "BTC-USDT-SWAP"):
-        self.symbol = symbol
+    def __init__(self, symbol: str, display_name: str):
+        self.symbol = symbol  # e.g. "BTC-USDT-SWAP"
+        self.display_name = display_name  # e.g. "BTC"
         self.rest_client = OKXRestClient()
         self.ws_client = OKXWebSocketClient(symbol)
         self.indicators = Indicators()
