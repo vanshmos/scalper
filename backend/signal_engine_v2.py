@@ -811,10 +811,10 @@ class SignalEngine:
                 },
                 'atr_5m': indicators.get('atr'),
                 'rsi_5m': indicators.get('rsi'),
-                'cvd': {
+                'cvd': indicators.get('cvd', {
                     '1m': None,
-                    '5m': indicators.get('taker_buy_ratio', 0.5) - 0.5
-                },
+                    '5m': None
+                }),
                 'obi': indicators.get('obi'),
                 'spread': indicators.get('spread'),
                 'depth': indicators.get('depth'),
@@ -823,7 +823,8 @@ class SignalEngine:
                 'trend_strength': indicators.get('trend_strength'),
                 'obi_velocity': indicators.get('obi_velocity'),
                 'cvd_velocity': indicators.get('cvd_velocity'),
-                'bollinger': indicators.get('bollinger')
+                'bollinger': indicators.get('bollinger'),
+                'taker_buy_ratio': indicators.get('taker_buy_ratio')
             }
             
             # Build signal structure
