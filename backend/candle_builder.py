@@ -230,9 +230,13 @@ class CandleBuilder:
             
             # Resample to 5m
             self.candles_5m = self._resample_to_timeframe(all_1m_candles, 5)
+            
+            # Calculate vol_ma20 for 5m candles
+            self._calculate_volume_ma(self.candles_5m, 20)
+            
             logger.debug(f"Resampled to {len(self.candles_5m)} 5m candles")
             if len(self.candles_5m) > 0:
-                logger.debug(f"Last 5m candle: timestamp={self.candles_5m[-1].timestamp}, close={self.candles_5m[-1].close}")
+                logger.debug(f"Last 5m candle: timestamp={self.candles_5m[-1].timestamp}, close={self.candles_5m[-1].close}, vol_ma20={self.candles_5m[-1].vol_ma20}")
             
             # Resample to 15m
             self.candles_15m = self._resample_to_timeframe(all_1m_candles, 15)
