@@ -12,6 +12,7 @@ from okx_rest import OKXRestClient
 from candle_builder import Candle  # Use existing Candle class
 from indicators import Indicators
 from alerts import AlertManager
+from rolling_stats import RollingStats
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,14 @@ class SignalEngine:
         
         # Performance tracking
         self.trade_volume_1m = deque(maxlen=60)  # Track last 60 trades for ratio
+        
+        # Statistical tracking for dynamic gates
+        self.spread_stats = RollingStats(window_seconds=3600)  # 60 min rolling window
+        self.depth_stats = RollingStats(window_seconds=3600)
+        self.volume_stats = RollingStats(window_seconds=3600)
+        
+        # Staleness tracking
+        self.last_ticker_time = None
         
     async def start(self):
         """Start the signal engine"""
