@@ -6,7 +6,7 @@ import logging
 import asyncio
 import json
 from pathlib import Path
-from btc_engine import BTCSignalEngine
+from signal_engine_v2 import SignalEngine
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -29,9 +29,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# BTC-only signal engine
-btc_engine: BTCSignalEngine = None
-engine_task: asyncio.Task = None
+# Multi-symbol signal engines
+SYMBOLS = {
+    'BTC': 'BTC-USDT-SWAP',
+    'ETH': 'ETH-USDT-SWAP',
+    'SOL': 'SOL-USDT-SWAP'
+}
+signal_engines = {}
+engine_tasks = []
 
 async def route_orderbook(symbol: str, data: dict):
     """Route orderbook data to appropriate engine"""
