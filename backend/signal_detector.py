@@ -20,6 +20,7 @@ class SignalDetector:
         self.max_ema_distance_pct = 1.0  # Must be within 1% of EMA20
         self.max_spread_bps = 5.0        # Spread must be < 5 bps
         self.min_flow_threshold = 0.08   # CVD or OBI must be > 0.08 or < -0.08
+        self.min_atr = 100               # Minimum ATR for sufficient volatility ($100)
     
     def calculate_signal_score(
         self,
