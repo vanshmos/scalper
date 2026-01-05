@@ -7,7 +7,8 @@
       "high": 135.71,
       "low": 135.56,
       "close": 135.62,
-      "volume": 5679.62
+      "volume": 5679.62,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608340,
@@ -16,7 +17,8 @@
       "high": 135.66,
       "low": 135.56,
       "close": 135.59,
-      "volume": 4436.61
+      "volume": 4436.61,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608400,
@@ -25,7 +27,8 @@
       "high": 135.59,
       "low": 135.53,
       "close": 135.55,
-      "volume": 955.6
+      "volume": 955.6,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608460,
@@ -34,7 +37,8 @@
       "high": 135.59,
       "low": 135.53,
       "close": 135.59,
-      "volume": 2785.57
+      "volume": 2785.57,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608520,
@@ -43,7 +47,8 @@
       "high": 135.72,
       "low": 135.58,
       "close": 135.62,
-      "volume": 4379.83
+      "volume": 4379.83,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608580,
@@ -52,7 +57,8 @@
       "high": 135.66,
       "low": 135.62,
       "close": 135.65,
-      "volume": 1440.83
+      "volume": 1440.83,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608640,
@@ -61,7 +67,8 @@
       "high": 135.74,
       "low": 135.64,
       "close": 135.7,
-      "volume": 932.01
+      "volume": 932.01,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608700,
@@ -70,7 +77,8 @@
       "high": 135.74,
       "low": 135.67,
       "close": 135.71,
-      "volume": 1507.32
+      "volume": 1507.32,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608760,
@@ -79,7 +87,8 @@
       "high": 135.71,
       "low": 135.63,
       "close": 135.65,
-      "volume": 1269.7
+      "volume": 1269.7,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608820,
@@ -88,7 +97,8 @@
       "high": 135.74,
       "low": 135.64,
       "close": 135.7,
-      "volume": 580.64
+      "volume": 580.64,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608880,
@@ -97,7 +107,8 @@
       "high": 135.7,
       "low": 135.62,
       "close": 135.66,
-      "volume": 4435.06
+      "volume": 4435.06,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608940,
@@ -106,7 +117,8 @@
       "high": 135.67,
       "low": 135.59,
       "close": 135.6,
-      "volume": 881.93
+      "volume": 881.93,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609000,
@@ -115,7 +127,8 @@
       "high": 135.6,
       "low": 135.5,
       "close": 135.5,
-      "volume": 1282.29
+      "volume": 1282.29,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609060,
@@ -124,7 +137,8 @@
       "high": 135.58,
       "low": 135.51,
       "close": 135.52,
-      "volume": 1319.36
+      "volume": 1319.36,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609120,
@@ -133,7 +147,8 @@
       "high": 135.7,
       "low": 135.51,
       "close": 135.68,
-      "volume": 1630.56
+      "volume": 1630.56,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609180,
@@ -142,7 +157,8 @@
       "high": 135.74,
       "low": 135.66,
       "close": 135.69,
-      "volume": 3781.93
+      "volume": 3781.93,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609240,
@@ -151,7 +167,8 @@
       "high": 135.69,
       "low": 135.6,
       "close": 135.67,
-      "volume": 1179.01
+      "volume": 1179.01,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609300,
@@ -160,7 +177,8 @@
       "high": 135.69,
       "low": 135.59,
       "close": 135.6,
-      "volume": 857.49
+      "volume": 857.49,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609360,
@@ -169,7 +187,8 @@
       "high": 135.6,
       "low": 135.45,
       "close": 135.47,
-      "volume": 2889.96
+      "volume": 2889.96,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609420,
@@ -178,7 +197,8 @@
       "high": 135.48,
       "low": 135.18,
       "close": 135.41,
-      "volume": 17168.51
+      "volume": 17168.51,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609480,
@@ -187,7 +207,8 @@
       "high": 135.67,
       "low": 135.41,
       "close": 135.56,
-      "volume": 5861.7
+      "volume": 5861.7,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609540,
@@ -196,7 +217,8 @@
       "high": 135.59,
       "low": 135.47,
       "close": 135.5,
-      "volume": 2466.59
+      "volume": 2466.59,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609600,
@@ -205,7 +227,8 @@
       "high": 135.51,
       "low": 135.41,
       "close": 135.44,
-      "volume": 5023.54
+      "volume": 5023.54,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609660,
@@ -214,7 +237,8 @@
       "high": 135.45,
       "low": 135.34,
       "close": 135.35,
-      "volume": 1786.58
+      "volume": 1786.58,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609720,
@@ -223,7 +247,8 @@
       "high": 135.41,
       "low": 135.28,
       "close": 135.31,
-      "volume": 6188.91
+      "volume": 6188.91,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609780,
@@ -232,7 +257,8 @@
       "high": 135.45,
       "low": 135.27,
       "close": 135.45,
-      "volume": 1835.4
+      "volume": 1835.4,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609840,
@@ -241,7 +267,8 @@
       "high": 135.45,
       "low": 135.35,
       "close": 135.35,
-      "volume": 359.94
+      "volume": 359.94,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609900,
@@ -250,7 +277,8 @@
       "high": 135.5,
       "low": 135.34,
       "close": 135.5,
-      "volume": 982.89
+      "volume": 982.89,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609960,
@@ -259,7 +287,8 @@
       "high": 135.59,
       "low": 135.49,
       "close": 135.59,
-      "volume": 1156.02
+      "volume": 1156.02,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610020,
@@ -268,7 +297,8 @@
       "high": 135.66,
       "low": 135.58,
       "close": 135.66,
-      "volume": 1871.2
+      "volume": 1871.2,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610080,
@@ -277,7 +307,8 @@
       "high": 135.7,
       "low": 135.64,
       "close": 135.68,
-      "volume": 3030.83
+      "volume": 3030.83,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610140,
@@ -286,7 +317,8 @@
       "high": 135.68,
       "low": 135.62,
       "close": 135.63,
-      "volume": 471.23
+      "volume": 471.23,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610200,
@@ -295,7 +327,8 @@
       "high": 135.64,
       "low": 135.61,
       "close": 135.63,
-      "volume": 2642.67
+      "volume": 2642.67,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610260,
@@ -304,7 +337,8 @@
       "high": 135.8,
       "low": 135.63,
       "close": 135.74,
-      "volume": 2743.25
+      "volume": 2743.25,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610320,
@@ -313,7 +347,8 @@
       "high": 135.83,
       "low": 135.74,
       "close": 135.8,
-      "volume": 5031.31
+      "volume": 5031.31,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610380,
@@ -322,7 +357,8 @@
       "high": 135.84,
       "low": 135.75,
       "close": 135.82,
-      "volume": 4197.39
+      "volume": 4197.39,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610440,
@@ -331,7 +367,8 @@
       "high": 135.95,
       "low": 135.81,
       "close": 135.89,
-      "volume": 5628.89
+      "volume": 5628.89,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610500,
@@ -340,7 +377,8 @@
       "high": 135.95,
       "low": 135.89,
       "close": 135.93,
-      "volume": 2377.85
+      "volume": 2377.85,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610560,
@@ -349,7 +387,8 @@
       "high": 135.93,
       "low": 135.81,
       "close": 135.85,
-      "volume": 3973.06
+      "volume": 3973.06,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610620,
@@ -358,7 +397,8 @@
       "high": 135.85,
       "low": 135.78,
       "close": 135.8,
-      "volume": 1958.34
+      "volume": 1958.34,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610680,
@@ -367,7 +407,8 @@
       "high": 135.86,
       "low": 135.79,
       "close": 135.86,
-      "volume": 2405.2
+      "volume": 2405.2,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610740,
@@ -376,7 +417,8 @@
       "high": 135.86,
       "low": 135.71,
       "close": 135.73,
-      "volume": 6715.35
+      "volume": 6715.35,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610800,
@@ -385,7 +427,8 @@
       "high": 135.73,
       "low": 135.54,
       "close": 135.62,
-      "volume": 4641.93
+      "volume": 4641.93,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610860,
@@ -394,7 +437,8 @@
       "high": 135.69,
       "low": 135.59,
       "close": 135.62,
-      "volume": 3715.04
+      "volume": 3715.04,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610920,
@@ -403,7 +447,8 @@
       "high": 135.63,
       "low": 135.56,
       "close": 135.57,
-      "volume": 1783.49
+      "volume": 1783.49,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610980,
@@ -412,7 +457,8 @@
       "high": 135.57,
       "low": 135.45,
       "close": 135.45,
-      "volume": 1172.63
+      "volume": 1172.63,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611040,
@@ -421,7 +467,8 @@
       "high": 135.48,
       "low": 135.4,
       "close": 135.43,
-      "volume": 2815.96
+      "volume": 2815.96,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611100,
@@ -430,7 +477,8 @@
       "high": 135.45,
       "low": 135.42,
       "close": 135.43,
-      "volume": 1741.08
+      "volume": 1741.08,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611160,
@@ -439,7 +487,8 @@
       "high": 135.44,
       "low": 135.34,
       "close": 135.42,
-      "volume": 5560.38
+      "volume": 5560.38,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611220,
@@ -448,7 +497,8 @@
       "high": 135.57,
       "low": 135.41,
       "close": 135.53,
-      "volume": 4805.68
+      "volume": 4805.68,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611280,
@@ -457,7 +507,8 @@
       "high": 135.53,
       "low": 135.38,
       "close": 135.42,
-      "volume": 1314.81
+      "volume": 1314.81,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611340,
@@ -466,7 +517,8 @@
       "high": 135.49,
       "low": 135.41,
       "close": 135.49,
-      "volume": 2749.47
+      "volume": 2749.47,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611400,
@@ -475,7 +527,8 @@
       "high": 135.48,
       "low": 135.37,
       "close": 135.39,
-      "volume": 4400.35
+      "volume": 4400.35,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611460,
@@ -484,7 +537,8 @@
       "high": 135.41,
       "low": 135.37,
       "close": 135.38,
-      "volume": 1339.25
+      "volume": 1339.25,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611520,
@@ -493,7 +547,8 @@
       "high": 135.41,
       "low": 135.31,
       "close": 135.31,
-      "volume": 2180.64
+      "volume": 2180.64,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611580,
@@ -502,7 +557,8 @@
       "high": 135.32,
       "low": 135.27,
       "close": 135.29,
-      "volume": 2894.37
+      "volume": 2894.37,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611640,
@@ -511,7 +567,8 @@
       "high": 135.31,
       "low": 135.28,
       "close": 135.29,
-      "volume": 1222.61
+      "volume": 1222.61,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611700,
@@ -520,7 +577,8 @@
       "high": 135.29,
       "low": 135.18,
       "close": 135.22,
-      "volume": 8243.37
+      "volume": 8243.37,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611760,
@@ -529,7 +587,8 @@
       "high": 135.23,
       "low": 135.14,
       "close": 135.22,
-      "volume": 12899.22
+      "volume": 12899.22,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611820,
@@ -538,7 +597,8 @@
       "high": 135.21,
       "low": 135.16,
       "close": 135.18,
-      "volume": 1946.81
+      "volume": 1946.81,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611880,
@@ -547,7 +607,8 @@
       "high": 135.23,
       "low": 135.17,
       "close": 135.23,
-      "volume": 2245.19
+      "volume": 2245.19,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611940,
@@ -556,7 +617,8 @@
       "high": 135.31,
       "low": 135.22,
       "close": 135.29,
-      "volume": 5469.55
+      "volume": 5469.55,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612000,
@@ -565,7 +627,8 @@
       "high": 135.37,
       "low": 135.3,
       "close": 135.37,
-      "volume": 8157.48
+      "volume": 8157.48,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612060,
@@ -574,7 +637,8 @@
       "high": 135.41,
       "low": 135.29,
       "close": 135.31,
-      "volume": 2077.64
+      "volume": 2077.64,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612120,
@@ -583,7 +647,8 @@
       "high": 135.4,
       "low": 135.3,
       "close": 135.36,
-      "volume": 1162.05
+      "volume": 1162.05,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612180,
@@ -592,7 +657,8 @@
       "high": 135.4,
       "low": 135.35,
       "close": 135.4,
-      "volume": 2211.54
+      "volume": 2211.54,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612240,
@@ -601,7 +667,8 @@
       "high": 135.56,
       "low": 135.39,
       "close": 135.46,
-      "volume": 6456.37
+      "volume": 6456.37,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612300,
@@ -610,7 +677,8 @@
       "high": 135.54,
       "low": 135.45,
       "close": 135.46,
-      "volume": 2745.68
+      "volume": 2745.68,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612360,
@@ -619,7 +687,8 @@
       "high": 135.52,
       "low": 135.45,
       "close": 135.52,
-      "volume": 10319.73
+      "volume": 10319.73,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612420,
@@ -628,7 +697,8 @@
       "high": 135.56,
       "low": 135.51,
       "close": 135.54,
-      "volume": 3445.0
+      "volume": 3445.0,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612480,
@@ -637,7 +707,8 @@
       "high": 135.55,
       "low": 135.26,
       "close": 135.26,
-      "volume": 4768.11
+      "volume": 4768.11,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612540,
@@ -646,7 +717,8 @@
       "high": 135.29,
       "low": 135.21,
       "close": 135.27,
-      "volume": 3311.37
+      "volume": 3311.37,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612600,
@@ -655,7 +727,8 @@
       "high": 135.32,
       "low": 135.22,
       "close": 135.3,
-      "volume": 1482.0
+      "volume": 1482.0,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612660,
@@ -664,7 +737,8 @@
       "high": 135.42,
       "low": 135.28,
       "close": 135.34,
-      "volume": 5523.34
+      "volume": 5523.34,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612720,
@@ -673,7 +747,8 @@
       "high": 135.39,
       "low": 135.33,
       "close": 135.38,
-      "volume": 1017.76
+      "volume": 1017.76,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612780,
@@ -682,7 +757,8 @@
       "high": 135.4,
       "low": 135.16,
       "close": 135.24,
-      "volume": 8913.15
+      "volume": 8913.15,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612840,
@@ -691,7 +767,8 @@
       "high": 135.26,
       "low": 135.21,
       "close": 135.26,
-      "volume": 862.17
+      "volume": 862.17,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612900,
@@ -700,7 +777,8 @@
       "high": 135.29,
       "low": 135.24,
       "close": 135.24,
-      "volume": 4147.41
+      "volume": 4147.41,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612960,
@@ -709,7 +787,8 @@
       "high": 135.34,
       "low": 135.25,
       "close": 135.33,
-      "volume": 1310.44
+      "volume": 1310.44,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613020,
@@ -718,7 +797,8 @@
       "high": 135.37,
       "low": 135.27,
       "close": 135.36,
-      "volume": 2972.09
+      "volume": 2972.09,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613080,
@@ -727,7 +807,8 @@
       "high": 135.41,
       "low": 135.31,
       "close": 135.33,
-      "volume": 2285.55
+      "volume": 2285.55,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613140,
@@ -736,7 +817,8 @@
       "high": 135.36,
       "low": 135.3,
       "close": 135.32,
-      "volume": 1387.1
+      "volume": 1387.1,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613200,
@@ -745,7 +827,8 @@
       "high": 135.38,
       "low": 135.31,
       "close": 135.35,
-      "volume": 3813.65
+      "volume": 3813.65,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613260,
@@ -754,7 +837,8 @@
       "high": 135.41,
       "low": 135.35,
       "close": 135.37,
-      "volume": 1857.75
+      "volume": 1857.75,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613320,
@@ -763,7 +847,8 @@
       "high": 135.48,
       "low": 135.36,
       "close": 135.46,
-      "volume": 3141.51
+      "volume": 3141.51,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613380,
@@ -772,7 +857,8 @@
       "high": 135.52,
       "low": 135.42,
       "close": 135.44,
-      "volume": 2720.17
+      "volume": 2720.17,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613440,
@@ -781,7 +867,8 @@
       "high": 135.45,
       "low": 135.36,
       "close": 135.4,
-      "volume": 2024.26
+      "volume": 2024.26,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613500,
@@ -790,7 +877,8 @@
       "high": 135.42,
       "low": 135.38,
       "close": 135.4,
-      "volume": 591.53
+      "volume": 591.53,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613560,
@@ -799,7 +887,8 @@
       "high": 135.52,
       "low": 135.39,
       "close": 135.5,
-      "volume": 689.27
+      "volume": 689.27,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613620,
@@ -808,7 +897,8 @@
       "high": 135.5,
       "low": 135.42,
       "close": 135.47,
-      "volume": 2701.6
+      "volume": 2701.6,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613680,
@@ -817,7 +907,8 @@
       "high": 135.65,
       "low": 135.47,
       "close": 135.59,
-      "volume": 8420.7
+      "volume": 8420.7,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613740,
@@ -826,7 +917,8 @@
       "high": 135.66,
       "low": 135.58,
       "close": 135.63,
-      "volume": 4073.48
+      "volume": 4073.48,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613800,
@@ -835,7 +927,8 @@
       "high": 135.62,
       "low": 135.54,
       "close": 135.6,
-      "volume": 4569.86
+      "volume": 4569.86,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613860,
@@ -844,7 +937,8 @@
       "high": 135.6,
       "low": 135.53,
       "close": 135.58,
-      "volume": 2736.59
+      "volume": 2736.59,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613920,
@@ -853,7 +947,8 @@
       "high": 135.65,
       "low": 135.58,
       "close": 135.63,
-      "volume": 4526.12
+      "volume": 4526.12,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613980,
@@ -862,7 +957,8 @@
       "high": 135.68,
       "low": 135.63,
       "close": 135.65,
-      "volume": 1468.21
+      "volume": 1468.21,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614040,
@@ -871,7 +967,8 @@
       "high": 135.7,
       "low": 135.62,
       "close": 135.64,
-      "volume": 1753.12
+      "volume": 1753.12,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614100,
@@ -880,7 +977,8 @@
       "high": 135.71,
       "low": 135.63,
       "close": 135.67,
-      "volume": 6342.11
+      "volume": 6342.11,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614160,
@@ -889,7 +987,8 @@
       "high": 135.71,
       "low": 135.55,
       "close": 135.56,
-      "volume": 1373.2
+      "volume": 1373.2,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614220,
@@ -898,7 +997,8 @@
       "high": 135.65,
       "low": 135.56,
       "close": 135.65,
-      "volume": 1084.12
+      "volume": 1084.12,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614280,
@@ -907,7 +1007,8 @@
       "high": 135.64,
       "low": 135.61,
       "close": 135.63,
-      "volume": 1209.13
+      "volume": 1209.13,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614340,
@@ -916,7 +1017,8 @@
       "high": 135.65,
       "low": 135.64,
       "close": 135.64,
-      "volume": 282.84
+      "volume": 282.84,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614400,
@@ -925,7 +1027,8 @@
       "high": 135.71,
       "low": 135.53,
       "close": 135.59,
-      "volume": 13494.35
+      "volume": 13494.35,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614460,
@@ -934,7 +1037,8 @@
       "high": 135.68,
       "low": 135.55,
       "close": 135.57,
-      "volume": 1140.72
+      "volume": 1140.72,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614520,
@@ -943,7 +1047,8 @@
       "high": 135.59,
       "low": 135.51,
       "close": 135.59,
-      "volume": 610.11
+      "volume": 610.11,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614580,
@@ -952,7 +1057,8 @@
       "high": 135.61,
       "low": 135.54,
       "close": 135.6,
-      "volume": 458.98
+      "volume": 458.98,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614640,
@@ -961,7 +1067,8 @@
       "high": 135.61,
       "low": 135.53,
       "close": 135.56,
-      "volume": 391.35
+      "volume": 391.35,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614700,
@@ -970,7 +1077,8 @@
       "high": 135.61,
       "low": 135.55,
       "close": 135.58,
-      "volume": 3562.18
+      "volume": 3562.18,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614760,
@@ -979,7 +1087,8 @@
       "high": 135.62,
       "low": 135.51,
       "close": 135.52,
-      "volume": 3325.17
+      "volume": 3325.17,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614820,
@@ -988,7 +1097,8 @@
       "high": 135.55,
       "low": 135.45,
       "close": 135.45,
-      "volume": 1728.2
+      "volume": 1728.2,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614880,
@@ -997,7 +1107,8 @@
       "high": 135.53,
       "low": 135.4,
       "close": 135.51,
-      "volume": 1374.99
+      "volume": 1374.99,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614940,
@@ -1006,7 +1117,8 @@
       "high": 135.54,
       "low": 135.46,
       "close": 135.54,
-      "volume": 315.89
+      "volume": 315.89,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615000,
@@ -1015,7 +1127,8 @@
       "high": 135.59,
       "low": 135.53,
       "close": 135.56,
-      "volume": 1403.07
+      "volume": 1403.07,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615060,
@@ -1024,7 +1137,8 @@
       "high": 135.65,
       "low": 135.56,
       "close": 135.59,
-      "volume": 1143.11
+      "volume": 1143.11,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615120,
@@ -1033,7 +1147,8 @@
       "high": 135.59,
       "low": 135.53,
       "close": 135.54,
-      "volume": 268.45
+      "volume": 268.45,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615180,
@@ -1042,7 +1157,8 @@
       "high": 135.69,
       "low": 135.53,
       "close": 135.6,
-      "volume": 3444.62
+      "volume": 3444.62,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615240,
@@ -1051,7 +1167,8 @@
       "high": 135.64,
       "low": 135.6,
       "close": 135.61,
-      "volume": 763.24
+      "volume": 763.24,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615300,
@@ -1060,7 +1177,8 @@
       "high": 135.66,
       "low": 135.58,
       "close": 135.65,
-      "volume": 1499.01
+      "volume": 1499.01,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615360,
@@ -1069,7 +1187,8 @@
       "high": 135.67,
       "low": 135.6,
       "close": 135.62,
-      "volume": 520.14
+      "volume": 520.14,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615420,
@@ -1078,7 +1197,8 @@
       "high": 135.71,
       "low": 135.61,
       "close": 135.7,
-      "volume": 814.26
+      "volume": 814.26,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615480,
@@ -1087,7 +1207,8 @@
       "high": 135.74,
       "low": 135.48,
       "close": 135.48,
-      "volume": 2887.74
+      "volume": 2887.74,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615540,
@@ -1096,7 +1217,8 @@
       "high": 135.51,
       "low": 135.41,
       "close": 135.51,
-      "volume": 2446.86
+      "volume": 2446.86,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615600,
@@ -1105,7 +1227,8 @@
       "high": 135.51,
       "low": 135.32,
       "close": 135.33,
-      "volume": 3283.28
+      "volume": 3283.28,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615660,
@@ -1114,7 +1237,8 @@
       "high": 135.4,
       "low": 135.32,
       "close": 135.4,
-      "volume": 3919.09
+      "volume": 3919.09,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615720,
@@ -1123,7 +1247,8 @@
       "high": 135.44,
       "low": 135.39,
       "close": 135.41,
-      "volume": 474.72
+      "volume": 474.72,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615780,
@@ -1132,7 +1257,8 @@
       "high": 135.41,
       "low": 135.26,
       "close": 135.38,
-      "volume": 3596.12
+      "volume": 3596.12,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615840,
@@ -1141,7 +1267,8 @@
       "high": 135.38,
       "low": 135.31,
       "close": 135.35,
-      "volume": 3149.39
+      "volume": 3149.39,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615900,
@@ -1150,7 +1277,8 @@
       "high": 135.35,
       "low": 135.24,
       "close": 135.25,
-      "volume": 3174.71
+      "volume": 3174.71,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615960,
@@ -1159,7 +1287,8 @@
       "high": 135.29,
       "low": 135.24,
       "close": 135.28,
-      "volume": 2523.37
+      "volume": 2523.37,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616020,
@@ -1168,7 +1297,8 @@
       "high": 135.32,
       "low": 135.24,
       "close": 135.29,
-      "volume": 6966.63
+      "volume": 6966.63,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616080,
@@ -1177,7 +1307,8 @@
       "high": 135.33,
       "low": 135.26,
       "close": 135.27,
-      "volume": 813.06
+      "volume": 813.06,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616140,
@@ -1186,7 +1317,8 @@
       "high": 135.28,
       "low": 135.25,
       "close": 135.25,
-      "volume": 1104.49
+      "volume": 1104.49,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616200,
@@ -1195,7 +1327,8 @@
       "high": 135.32,
       "low": 135.2,
       "close": 135.3,
-      "volume": 3488.13
+      "volume": 3488.13,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616260,
@@ -1204,7 +1337,8 @@
       "high": 135.37,
       "low": 135.25,
       "close": 135.29,
-      "volume": 3238.51
+      "volume": 3238.51,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616320,
@@ -1213,7 +1347,8 @@
       "high": 135.31,
       "low": 135.24,
       "close": 135.28,
-      "volume": 1192.35
+      "volume": 1192.35,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616380,
@@ -1222,7 +1357,8 @@
       "high": 135.37,
       "low": 135.22,
       "close": 135.3,
-      "volume": 4970.39
+      "volume": 4970.39,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616440,
@@ -1231,7 +1367,8 @@
       "high": 135.37,
       "low": 135.27,
       "close": 135.28,
-      "volume": 990.89
+      "volume": 990.89,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616500,
@@ -1240,7 +1377,8 @@
       "high": 135.32,
       "low": 135.24,
       "close": 135.31,
-      "volume": 2157.71
+      "volume": 2157.71,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616560,
@@ -1249,7 +1387,8 @@
       "high": 135.31,
       "low": 135.26,
       "close": 135.28,
-      "volume": 1441.67
+      "volume": 1441.67,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616620,
@@ -1258,7 +1397,8 @@
       "high": 135.31,
       "low": 135.21,
       "close": 135.23,
-      "volume": 611.95
+      "volume": 611.95,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616680,
@@ -1267,7 +1407,8 @@
       "high": 135.26,
       "low": 135.18,
       "close": 135.19,
-      "volume": 1632.35
+      "volume": 1632.35,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616740,
@@ -1276,7 +1417,8 @@
       "high": 135.19,
       "low": 135.0,
       "close": 135.09,
-      "volume": 11681.12
+      "volume": 11681.12,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616800,
@@ -1285,7 +1427,8 @@
       "high": 135.13,
       "low": 135.04,
       "close": 135.04,
-      "volume": 3583.87
+      "volume": 3583.87,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616860,
@@ -1294,7 +1437,8 @@
       "high": 135.11,
       "low": 135.01,
       "close": 135.09,
-      "volume": 1923.48
+      "volume": 1923.48,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616920,
@@ -1303,7 +1447,8 @@
       "high": 135.09,
       "low": 134.91,
       "close": 134.92,
-      "volume": 7072.24
+      "volume": 7072.24,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616980,
@@ -1312,7 +1457,8 @@
       "high": 134.97,
       "low": 134.83,
       "close": 134.91,
-      "volume": 8827.27
+      "volume": 8827.27,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617040,
@@ -1321,7 +1467,8 @@
       "high": 135.0,
       "low": 134.9,
       "close": 134.93,
-      "volume": 5550.35
+      "volume": 5550.35,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617100,
@@ -1330,7 +1477,8 @@
       "high": 135.02,
       "low": 134.93,
       "close": 134.94,
-      "volume": 1897.63
+      "volume": 1897.63,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617160,
@@ -1339,7 +1487,8 @@
       "high": 135.05,
       "low": 134.88,
       "close": 135.04,
-      "volume": 2494.02
+      "volume": 2494.02,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617220,
@@ -1348,7 +1497,8 @@
       "high": 135.18,
       "low": 135.01,
       "close": 135.1,
-      "volume": 4968.88
+      "volume": 4968.88,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617280,
@@ -1357,7 +1507,8 @@
       "high": 135.17,
       "low": 134.96,
       "close": 134.97,
-      "volume": 2475.82
+      "volume": 2475.82,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617340,
@@ -1366,7 +1517,8 @@
       "high": 134.98,
       "low": 134.8,
       "close": 134.95,
-      "volume": 7795.63
+      "volume": 7795.63,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617400,
@@ -1375,7 +1527,8 @@
       "high": 135.13,
       "low": 134.91,
       "close": 135.0,
-      "volume": 4775.67
+      "volume": 4775.67,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617460,
@@ -1384,7 +1537,8 @@
       "high": 135.08,
       "low": 134.96,
       "close": 135.0,
-      "volume": 2452.74
+      "volume": 2452.74,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617520,
@@ -1393,7 +1547,8 @@
       "high": 135.07,
       "low": 135.0,
       "close": 135.05,
-      "volume": 1019.53
+      "volume": 1019.53,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617580,
@@ -1402,7 +1557,8 @@
       "high": 135.08,
       "low": 135.02,
       "close": 135.03,
-      "volume": 1514.53
+      "volume": 1514.53,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617640,
@@ -1411,7 +1567,8 @@
       "high": 135.06,
       "low": 134.93,
       "close": 134.93,
-      "volume": 5637.33
+      "volume": 5637.33,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617700,
@@ -1420,7 +1577,8 @@
       "high": 135.04,
       "low": 134.91,
       "close": 135.0,
-      "volume": 2048.79
+      "volume": 2048.79,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617760,
@@ -1429,7 +1587,8 @@
       "high": 135.09,
       "low": 134.94,
       "close": 135.09,
-      "volume": 2914.3
+      "volume": 2914.3,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617820,
@@ -1438,7 +1597,8 @@
       "high": 135.11,
       "low": 135.0,
       "close": 135.02,
-      "volume": 3426.77
+      "volume": 3426.77,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617880,
@@ -1447,7 +1607,8 @@
       "high": 135.05,
       "low": 134.98,
       "close": 135.04,
-      "volume": 2748.97
+      "volume": 2748.97,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617940,
@@ -1456,7 +1617,8 @@
       "high": 135.04,
       "low": 135.01,
       "close": 135.04,
-      "volume": 914.16
+      "volume": 914.16,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618000,
@@ -1465,7 +1627,8 @@
       "high": 135.06,
       "low": 135.0,
       "close": 135.04,
-      "volume": 1446.43
+      "volume": 1446.43,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618000,
@@ -1474,7 +1637,8 @@
       "high": 135.1,
       "low": 134.98,
       "close": 134.99,
-      "volume": 5607.799999999999
+      "volume": 5607.799999999999,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618060,
@@ -1483,7 +1647,8 @@
       "high": 135.04,
       "low": 134.91,
       "close": 134.97,
-      "volume": 2874.8200000000015
+      "volume": 2874.8200000000015,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618120,
@@ -1492,7 +1657,8 @@
       "high": 134.97,
       "low": 134.9,
       "close": 134.9,
-      "volume": 1531.9099999999999
+      "volume": 1531.9099999999999,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618180,
@@ -1501,7 +1667,8 @@
       "high": 135.02,
       "low": 134.83,
       "close": 135.02,
-      "volume": 2740.6400000000003
+      "volume": 2740.6400000000003,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618240,
@@ -1510,7 +1677,8 @@
       "high": 135.06,
       "low": 134.94,
       "close": 134.99,
-      "volume": 5331.389999999999
+      "volume": 5331.389999999999,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618300,
@@ -1519,7 +1687,8 @@
       "high": 135.13,
       "low": 134.98,
       "close": 135.11,
-      "volume": 2367.82
+      "volume": 2367.82,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618360,
@@ -1528,7 +1697,8 @@
       "high": 135.24,
       "low": 135.11,
       "close": 135.24,
-      "volume": 5004.180000000003
+      "volume": 5004.180000000003,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618420,
@@ -1537,7 +1707,8 @@
       "high": 135.3,
       "low": 135.08,
       "close": 135.09,
-      "volume": 6304.11
+      "volume": 6304.11,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618480,
@@ -1546,7 +1717,8 @@
       "high": 135.11,
       "low": 135.02,
       "close": 135.03,
-      "volume": 1881.8299999999988
+      "volume": 1881.8299999999988,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618540,
@@ -1555,7 +1727,8 @@
       "high": 135.03,
       "low": 134.91,
       "close": 135.03,
-      "volume": 3156.6300000000006
+      "volume": 3156.6300000000006,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618600,
@@ -1564,7 +1737,8 @@
       "high": 135.12,
       "low": 135.08,
       "close": 135.08,
-      "volume": 2063.1200000000003
+      "volume": 2063.1200000000003,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618660,
@@ -1573,7 +1747,8 @@
       "high": 135.18,
       "low": 135.17,
       "close": 135.17,
-      "volume": 96.17000000000002
+      "volume": 96.17000000000002,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618720,
@@ -1582,7 +1757,8 @@
       "high": 135.18,
       "low": 135.11,
       "close": 135.18,
-      "volume": 391.08
+      "volume": 391.08,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618780,
@@ -1591,7 +1767,8 @@
       "high": 135.2,
       "low": 135.06,
       "close": 135.06,
-      "volume": 6319.730000000016
+      "volume": 6319.730000000016,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618840,
@@ -1600,7 +1777,8 @@
       "high": 135.12,
       "low": 135.04,
       "close": 135.07,
-      "volume": 2695.8800000000024
+      "volume": 2695.8800000000024,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618900,
@@ -1609,7 +1787,8 @@
       "high": 135.08,
       "low": 134.92,
       "close": 134.94,
-      "volume": 2382.580000000002
+      "volume": 2382.580000000002,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618960,
@@ -1618,7 +1797,8 @@
       "high": 134.98,
       "low": 134.9,
       "close": 134.94,
-      "volume": 2496.200000000004
+      "volume": 2496.200000000004,
+      "vol_ma20": null
     }
   ],
   "candles_5m": [
@@ -1629,7 +1809,8 @@
       "high": 135.71,
       "low": 135.56,
       "close": 135.59,
-      "volume": 10116.23
+      "volume": 10116.23,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608400,
@@ -1638,7 +1819,8 @@
       "high": 135.74,
       "low": 135.53,
       "close": 135.7,
-      "volume": 10493.84
+      "volume": 10493.84,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767608700,
@@ -1647,7 +1829,8 @@
       "high": 135.74,
       "low": 135.59,
       "close": 135.6,
-      "volume": 8674.65
+      "volume": 8674.65,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609000,
@@ -1656,7 +1839,8 @@
       "high": 135.74,
       "low": 135.5,
       "close": 135.67,
-      "volume": 9193.15
+      "volume": 9193.15,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609300,
@@ -1665,7 +1849,8 @@
       "high": 135.69,
       "low": 135.18,
       "close": 135.5,
-      "volume": 29244.25
+      "volume": 29244.25,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609600,
@@ -1674,7 +1859,8 @@
       "high": 135.51,
       "low": 135.27,
       "close": 135.35,
-      "volume": 15194.369999999999
+      "volume": 15194.369999999999,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609900,
@@ -1683,7 +1869,8 @@
       "high": 135.7,
       "low": 135.34,
       "close": 135.63,
-      "volume": 7512.17
+      "volume": 7512.17,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610200,
@@ -1692,7 +1879,8 @@
       "high": 135.95,
       "low": 135.61,
       "close": 135.89,
-      "volume": 20243.51
+      "volume": 20243.51,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610500,
@@ -1701,7 +1889,8 @@
       "high": 135.95,
       "low": 135.71,
       "close": 135.73,
-      "volume": 17429.800000000003
+      "volume": 17429.800000000003,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610800,
@@ -1710,7 +1899,8 @@
       "high": 135.73,
       "low": 135.4,
       "close": 135.43,
-      "volume": 14129.05
+      "volume": 14129.05,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611100,
@@ -1719,7 +1909,8 @@
       "high": 135.57,
       "low": 135.34,
       "close": 135.49,
-      "volume": 16171.419999999998
+      "volume": 16171.419999999998,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611400,
@@ -1728,7 +1919,8 @@
       "high": 135.48,
       "low": 135.27,
       "close": 135.29,
-      "volume": 12037.220000000001
+      "volume": 12037.220000000001,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611700,
@@ -1737,7 +1929,8 @@
       "high": 135.31,
       "low": 135.14,
       "close": 135.29,
-      "volume": 30804.14
+      "volume": 30804.14,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612000,
@@ -1746,7 +1939,8 @@
       "high": 135.56,
       "low": 135.29,
       "close": 135.46,
-      "volume": 20065.079999999998
+      "volume": 20065.079999999998,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612300,
@@ -1755,7 +1949,8 @@
       "high": 135.56,
       "low": 135.21,
       "close": 135.27,
-      "volume": 24589.89
+      "volume": 24589.89,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612600,
@@ -1764,7 +1959,8 @@
       "high": 135.42,
       "low": 135.16,
       "close": 135.26,
-      "volume": 17798.42
+      "volume": 17798.42,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612900,
@@ -1773,7 +1969,8 @@
       "high": 135.41,
       "low": 135.24,
       "close": 135.32,
-      "volume": 12102.590000000002
+      "volume": 12102.590000000002,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613200,
@@ -1782,7 +1979,8 @@
       "high": 135.52,
       "low": 135.31,
       "close": 135.4,
-      "volume": 13557.34
+      "volume": 13557.34,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613500,
@@ -1791,7 +1989,8 @@
       "high": 135.66,
       "low": 135.38,
       "close": 135.63,
-      "volume": 16476.58
+      "volume": 16476.58,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613800,
@@ -1800,7 +1999,8 @@
       "high": 135.7,
       "low": 135.53,
       "close": 135.64,
-      "volume": 15053.899999999998
+      "volume": 15053.899999999998,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614100,
@@ -1809,7 +2009,8 @@
       "high": 135.71,
       "low": 135.55,
       "close": 135.64,
-      "volume": 10291.400000000001
+      "volume": 10291.400000000001,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614400,
@@ -1818,7 +2019,8 @@
       "high": 135.71,
       "low": 135.51,
       "close": 135.56,
-      "volume": 16095.51
+      "volume": 16095.51,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614700,
@@ -1827,7 +2029,8 @@
       "high": 135.62,
       "low": 135.4,
       "close": 135.54,
-      "volume": 10306.43
+      "volume": 10306.43,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615000,
@@ -1836,7 +2039,8 @@
       "high": 135.69,
       "low": 135.53,
       "close": 135.61,
-      "volume": 7022.49
+      "volume": 7022.49,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615300,
@@ -1845,7 +2049,8 @@
       "high": 135.74,
       "low": 135.41,
       "close": 135.51,
-      "volume": 8168.01
+      "volume": 8168.01,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615600,
@@ -1854,7 +2059,8 @@
       "high": 135.51,
       "low": 135.26,
       "close": 135.35,
-      "volume": 14422.6
+      "volume": 14422.6,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615900,
@@ -1863,7 +2069,8 @@
       "high": 135.35,
       "low": 135.24,
       "close": 135.25,
-      "volume": 14582.259999999998
+      "volume": 14582.259999999998,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616200,
@@ -1872,7 +2079,8 @@
       "high": 135.37,
       "low": 135.2,
       "close": 135.28,
-      "volume": 13880.27
+      "volume": 13880.27,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616500,
@@ -1881,7 +2089,8 @@
       "high": 135.32,
       "low": 135.0,
       "close": 135.09,
-      "volume": 17524.800000000003
+      "volume": 17524.800000000003,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616800,
@@ -1890,7 +2099,8 @@
       "high": 135.13,
       "low": 134.83,
       "close": 134.93,
-      "volume": 26957.21
+      "volume": 26957.21,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617100,
@@ -1899,7 +2109,8 @@
       "high": 135.18,
       "low": 134.8,
       "close": 134.95,
-      "volume": 19631.98
+      "volume": 19631.98,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617400,
@@ -1908,7 +2119,8 @@
       "high": 135.13,
       "low": 134.91,
       "close": 134.93,
-      "volume": 15399.800000000001
+      "volume": 15399.800000000001,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617700,
@@ -1917,7 +2129,8 @@
       "high": 135.11,
       "low": 134.91,
       "close": 135.04,
-      "volume": 12052.99
+      "volume": 12052.99,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618000,
@@ -1926,7 +2139,8 @@
       "high": 135.1,
       "low": 134.83,
       "close": 134.99,
-      "volume": 19532.99
+      "volume": 19532.99,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618300,
@@ -1935,7 +2149,8 @@
       "high": 135.3,
       "low": 134.91,
       "close": 135.03,
-      "volume": 18714.570000000003
+      "volume": 18714.570000000003,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618600,
@@ -1944,7 +2159,8 @@
       "high": 135.2,
       "low": 135.04,
       "close": 135.07,
-      "volume": 11565.98000000002
+      "volume": 11565.98000000002,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618900,
@@ -1953,7 +2169,8 @@
       "high": 135.08,
       "low": 134.9,
       "close": 134.94,
-      "volume": 7374.9800000000105
+      "volume": 7374.9800000000105,
+      "vol_ma20": null
     }
   ],
   "candles_15m": [
@@ -1964,7 +2181,8 @@
       "high": 135.74,
       "low": 135.53,
       "close": 135.6,
-      "volume": 29284.719999999998
+      "volume": 29284.719999999998,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609000,
@@ -1973,7 +2191,8 @@
       "high": 135.74,
       "low": 135.18,
       "close": 135.35,
-      "volume": 53631.77
+      "volume": 53631.77,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767609900,
@@ -1982,7 +2201,8 @@
       "high": 135.95,
       "low": 135.34,
       "close": 135.73,
-      "volume": 45185.47999999999
+      "volume": 45185.47999999999,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767610800,
@@ -1991,7 +2211,8 @@
       "high": 135.73,
       "low": 135.27,
       "close": 135.29,
-      "volume": 42337.69
+      "volume": 42337.69,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767611700,
@@ -2000,7 +2221,8 @@
       "high": 135.56,
       "low": 135.14,
       "close": 135.27,
-      "volume": 75459.11
+      "volume": 75459.11,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767612600,
@@ -2009,7 +2231,8 @@
       "high": 135.52,
       "low": 135.16,
       "close": 135.4,
-      "volume": 43458.35
+      "volume": 43458.35,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767613500,
@@ -2018,7 +2241,8 @@
       "high": 135.71,
       "low": 135.38,
       "close": 135.64,
-      "volume": 41821.87999999999
+      "volume": 41821.87999999999,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767614400,
@@ -2027,7 +2251,8 @@
       "high": 135.71,
       "low": 135.4,
       "close": 135.61,
-      "volume": 33424.43
+      "volume": 33424.43,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767615300,
@@ -2036,7 +2261,8 @@
       "high": 135.74,
       "low": 135.24,
       "close": 135.25,
-      "volume": 37172.869999999995
+      "volume": 37172.869999999995,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767616200,
@@ -2045,7 +2271,8 @@
       "high": 135.37,
       "low": 134.83,
       "close": 134.93,
-      "volume": 58362.280000000006
+      "volume": 58362.280000000006,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767617100,
@@ -2054,7 +2281,8 @@
       "high": 135.18,
       "low": 134.8,
       "close": 135.04,
-      "volume": 47084.770000000004
+      "volume": 47084.770000000004,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618000,
@@ -2063,7 +2291,8 @@
       "high": 135.3,
       "low": 134.83,
       "close": 135.07,
-      "volume": 49813.54000000003
+      "volume": 49813.54000000003,
+      "vol_ma20": null
     },
     {
       "timestamp": 1767618900,
@@ -2072,8 +2301,9 @@
       "high": 135.08,
       "low": 134.9,
       "close": 134.94,
-      "volume": 7374.9800000000105
+      "volume": 7374.9800000000105,
+      "vol_ma20": null
     }
   ],
-  "last_updated": "2026-01-05T13:17:18.267248+00:00"
+  "last_updated": "2026-01-05T13:17:29.355833+00:00"
 }

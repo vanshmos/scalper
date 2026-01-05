@@ -269,6 +269,32 @@ class CandleBuilder:
                     htf_candle.open = candle_1m.open
                 if candle_1m.high is not None:
                     htf_candle.high = candle_1m.high if htf_candle.high is None else max(htf_candle.high, candle_1m.high)
+
+    def _calculate_volume_ma(self, candles: List[Candle], period: int = 20):
+        """Calculate volume moving average for candles"""
+        try:
+            if len(candles) < period:
+                # Not enough data, set all to None
+                for candle in candles:
+                    candle.vol_ma20 = None
+                return
+            
+            # Calculate vol_ma20 for each candle
+            for i in range(len(candles)):
+                if i < period - 1:
+                    # Not enough history yet
+                    candles[i].vol_ma20 = None
+                else:
+                    # Calculate average of last 20 volumes
+                    volumes = [candles[j].volume for j in range(i - period + 1, i + 1) if candles[j].volume > 0]
+                    if len(volumes) >= period:
+                        candles[i].vol_ma20 = sum(volumes) / len(volumes)
+                    else:
+                        candles[i].vol_ma20 = None
+                        
+        except Exception as e:
+            logger.error(f"Error calculating volume MA: {e}")
+
                 if candle_1m.low is not None:
                     htf_candle.low = candle_1m.low if htf_candle.low is None else min(htf_candle.low, candle_1m.low)
                 htf_candle.close = candle_1m.close
