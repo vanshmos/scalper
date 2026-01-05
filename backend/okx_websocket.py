@@ -20,6 +20,7 @@ class OKXWebSocketClient:
         # Callbacks
         self.on_candle_1m: Optional[Callable] = None
         self.on_candle_5m: Optional[Callable] = None
+        self.on_candle_15m: Optional[Callable] = None  # Add 15m callback
         self.on_ticker: Optional[Callable] = None
         self.on_orderbook: Optional[Callable] = None
         self.on_trade: Optional[Callable] = None
