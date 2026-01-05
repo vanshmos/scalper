@@ -215,7 +215,7 @@ class SignalStateMachine:
                 # Transition to EXPIRED
                 logger.info(f"Signal EXPIRED: {self.direction.value}")
                 self.state = SignalState.EXPIRED
-                self.start_cooldown(self.direction)
+                self.start_cooldown(self.direction, is_cancel=False)
                 
                 # Reset after showing EXPIRED briefly
                 self.state = SignalState.IDLE
