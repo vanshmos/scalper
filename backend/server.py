@@ -103,6 +103,29 @@ async def get_status():
         status[symbol.lower()] = engine.get_status()
     return status
 
+@app.get("/api/test-telegram")
+async def test_telegram():
+    """Test Telegram alert - sends a test message"""
+    try:
+        from alerts import AlertManager
+        alert_manager = AlertManager()
+        
+        if alert_manager.telegram_enabled:
+            alert_manager.send_signal_alert(
+                direction="SHORT",
+                confidence=75,
+                entry=92500.00,
+                stop_loss=92750.00,
+                tp1=92000.00,
+                tp2=91500.00,
+                symbol="BTC-TEST"
+            )
+            return {"status": "success", "message": "Test alert sent to Telegram"}
+        else:
+            return {"status": "error", "message": "Telegram not configured"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.websocket("/api/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time updates"""
