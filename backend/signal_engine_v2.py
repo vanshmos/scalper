@@ -82,7 +82,8 @@ class SignalEngine:
         self.cache_file.parent.mkdir(parents=True, exist_ok=True)
         
         # Performance tracking
-        self.trade_volume_1m = deque(maxlen=60)  # Track last 60 trades for ratio
+        self.recent_trades = deque(maxlen=2000)  # Track trades for CVD calculation (5m window needs ~300s of data)
+        self.taker_buy_ratio_buffer = deque(maxlen=60)  # Separate buffer for quick buy/sell ratio
         
         # Statistical tracking for dynamic gates
         self.spread_stats = RollingStats(window_seconds=3600)  # 60 min rolling window
