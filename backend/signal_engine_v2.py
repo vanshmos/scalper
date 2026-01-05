@@ -413,12 +413,13 @@ class SignalEngine:
                 checklist['funding'] = abs_funding < 0.0002  # 0.02% = 0.0002
                 checklist['funding_value'] = self.funding_rate
             
-            # 7. Gates (existing)
+            # 7. Gates - FIXED: Tightened depth to $500k (realistic for BTC)
             gates_pass = True
             if spread is not None:
                 gates_pass = gates_pass and spread < 1.5  # 1.5 bps
             if depth is not None:
-                gates_pass = gates_pass and depth > 50000  # $50k depth
+                # FIXED: $500k depth = ~5.4 BTC at $93k (reasonable minimum)
+                gates_pass = gates_pass and depth > 500000  # $500k depth
             checklist['gates'] = gates_pass
             checklist['spread_value'] = spread
             checklist['depth_value'] = depth
