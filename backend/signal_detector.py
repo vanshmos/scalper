@@ -474,7 +474,9 @@ class SignalDetector:
         current_price: Optional[float],
         rsi_5m: Optional[float],
         spread: Optional[float],
-        gates_pass: bool
+        gates_pass: bool,
+        atr_5m: Optional[float],
+        depth: Optional[float]
     ) -> Dict:
         """Detect signals using V1.5 hybrid scoring system with strict quality filters"""
         
@@ -489,7 +491,8 @@ class SignalDetector:
                         'all_pass': False
                     },
                     'signal_ready': False,
-                    'quality': 'BLOCKED'
+                    'quality': 'BLOCKED',
+                    'confidence': 0
                 },
                 'long': {
                     'score': 0,
@@ -499,7 +502,8 @@ class SignalDetector:
                         'all_pass': False
                     },
                     'signal_ready': False,
-                    'quality': 'BLOCKED'
+                    'quality': 'BLOCKED',
+                    'confidence': 0
                 }
             }
         
@@ -516,13 +520,28 @@ class SignalDetector:
             cvd_5m, obi, current_price, rsi_5m, spread, gates_pass
         )
         
-        # Check hard gates with STRICTER thresholds for both directions
+        # Check hard gates with STRICTER thresholds for both directions (including ATR)
         long_hard_gates = self.check_hard_gates(
-            SignalDirection.LONG, current_price, ema20_1m, cvd_5m, obi, spread, rsi_5m, regime
+            SignalDirection.LONG, current_price, ema20_1m, cvd_5m, obi, spread, rsi_5m, regime, atr_5m
         )
         
         short_hard_gates = self.check_hard_gates(
-            SignalDirection.SHORT, current_price, ema20_1m, cvd_5m, obi, spread, rsi_5m, regime
+            SignalDirection.SHORT, current_price, ema20_1m, cvd_5m, obi, spread, rsi_5m, regime, atr_5m
+        )
+        
+        # Calculate dynamic confidence for both directions
+        long_confidence_result = self.calculate_signal_confidence(
+            SignalDirection.LONG, regime,
+            ema20_5m, ema50_5m, ema20_15m, ema50_15m,
+            cvd_5m, obi, current_price, ema20_1m, rsi_5m,
+            spread, depth, atr_5m
+        )
+        
+        short_confidence_result = self.calculate_signal_confidence(
+            SignalDirection.SHORT, regime,
+            ema20_5m, ema50_5m, ema20_15m, ema50_15m,
+            cvd_5m, obi, current_price, ema20_1m, rsi_5m,
+            spread, depth, atr_5m
         )
         
         # Determine if signals are ready (score + hard gates)
