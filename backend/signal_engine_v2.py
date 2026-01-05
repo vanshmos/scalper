@@ -345,20 +345,27 @@ class SignalEngine:
             
             # 1. Regime (5m trend + price confirmation for fast moves)
             if ema20_5m and ema50_5m and price:
-                # Primary check: EMA crossover
-                is_bull_5m = ema20_5m > ema50_5m
-                is_bear_5m = ema20_5m < ema50_5m
+                # Calculate EMA separation percentage
+                ema_diff_pct = abs(ema20_5m - ema50_5m) / ema50_5m * 100
+                
+                # Primary check: EMA crossover (require >0.05% separation to avoid noise)
+                if ema_diff_pct > 0.05:
+                    is_bull_5m = ema20_5m > ema50_5m
+                    is_bear_5m = ema20_5m < ema50_5m
+                else:
+                    # EMAs too close = RANGING
+                    is_bull_5m = False
+                    is_bear_5m = False
                 
                 # Secondary check: Price position (catches fast moves)
-                # If price is >2% above both EMAs = bullish regardless of crossover
-                price_above_both = price > max(ema20_5m, ema50_5m) * 1.02
-                price_below_both = price < min(ema20_5m, ema50_5m) * 0.98
+                # If price is >1% above both EMAs = bullish override
+                avg_ema = (ema20_5m + ema50_5m) / 2
+                price_pct_diff = ((price - avg_ema) / avg_ema) * 100
                 
-                # Override regime if price shows strong directional move
-                if price_above_both:
+                if price_pct_diff > 1.0:
                     is_bull_5m = True
                     is_bear_5m = False
-                elif price_below_both:
+                elif price_pct_diff < -1.0:
                     is_bull_5m = False
                     is_bear_5m = True
                 
