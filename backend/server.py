@@ -6,8 +6,7 @@ import logging
 import asyncio
 import json
 from pathlib import Path
-from signal_engine import SignalEngine
-from okx_client import OKXWebSocketClient
+from btc_engine import BTCSignalEngine
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -30,10 +29,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Multi-symbol signal engines
-symbols = ['BTC', 'ETH', 'SOL']
-signal_engines = {}
-ws_client: OKXWebSocketClient = None
+# BTC-only signal engine
+btc_engine: BTCSignalEngine = None
 engine_task: asyncio.Task = None
 
 async def route_orderbook(symbol: str, data: dict):
