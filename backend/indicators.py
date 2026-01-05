@@ -1,6 +1,7 @@
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict
 from candle_builder import Candle
+from math import log
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +147,11 @@ class Indicators:
                 self.obi_smoothed = obi
             else:
                 self.obi_smoothed = self.alpha * obi + (1 - self.alpha) * self.obi_smoothed
+            
+            # ALPHA ENHANCEMENT: Track OBI history for velocity calculation
+            self.obi_history.append(self.obi_smoothed)
+            if len(self.obi_history) > self.max_history_length:
+                self.obi_history.pop(0)
             
             return self.obi_smoothed
             
