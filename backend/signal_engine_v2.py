@@ -525,7 +525,7 @@ class SignalEngine:
             logger.error(f"Error building checklist: {e}")
             return {}
     
-    async def _process_signal_state(self, checklist: Dict, indicators: Dict):
+    async def _process_signal_state(self, checklist: Dict, indicators: Dict, long_score: int, short_score: int):
         """Process signal state machine with invalidation logic"""
         try:
             # Check if all PRO SCALPER checklist items pass
