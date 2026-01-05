@@ -510,9 +510,3 @@ class Indicators:
         except Exception as e:
             logger.error(f"Error calculating trend strength: {e}")
             return None
-
-            return cvd
-            
-        except Exception as e:
-            logger.error(f"Error calculating CVD: {e}")
-            return None
