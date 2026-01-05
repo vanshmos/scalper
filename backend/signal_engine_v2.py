@@ -502,13 +502,33 @@ class SignalEngine:
                 checklist['funding'] = abs_funding < 0.0002  # 0.02% = 0.0002
                 checklist['funding_value'] = self.funding_rate
             
-            # 7. Gates - FIXED: Tightened depth to $500k (realistic for BTC)
+            # 7. Gates - DYNAMIC THRESHOLDS using statistical analysis
             gates_pass = True
+            
+            # Dynamic spread gate: Must be < (Mean + 1.0 * StDev)
             if spread is not None:
-                gates_pass = gates_pass and spread < 1.5  # 1.5 bps
+                spread_threshold_dynamic = self.spread_stats.get_threshold(mode='upper', std_multiplier=1.0)
+                if spread_threshold_dynamic is not None:
+                    # Use dynamic threshold
+                    gates_pass = gates_pass and spread < spread_threshold_dynamic
+                    checklist['spread_threshold'] = spread_threshold_dynamic
+                else:
+                    # Fallback to static threshold during warmup
+                    gates_pass = gates_pass and spread < 1.5
+                    checklist['spread_threshold'] = 1.5
+            
+            # Dynamic depth gate: Must be > (Mean - 0.5 * StDev)
             if depth is not None:
-                # FIXED: $500k depth = ~5.4 BTC at $93k (reasonable minimum)
-                gates_pass = gates_pass and depth > 500000  # $500k depth
+                depth_threshold_dynamic = self.depth_stats.get_threshold(mode='lower', std_multiplier=0.5)
+                if depth_threshold_dynamic is not None:
+                    # Use dynamic threshold
+                    gates_pass = gates_pass and depth > depth_threshold_dynamic
+                    checklist['depth_threshold'] = depth_threshold_dynamic
+                else:
+                    # Fallback to static threshold during warmup
+                    gates_pass = gates_pass and depth > 500000
+                    checklist['depth_threshold'] = 500000
+            
             checklist['gates'] = gates_pass
             checklist['spread_value'] = spread
             checklist['depth_value'] = depth
