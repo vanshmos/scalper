@@ -385,7 +385,8 @@ class BTCSignalEngine:
             # 7. Gates (existing)
             gates_pass = True
             if spread is not None:
-                gates_pass = gates_pass and spread < 0.0015  # 1.5 bps = 0.0015
+                # spread is already in bps from indicators
+                gates_pass = gates_pass and spread < 1.5  # 1.5 bps
             if depth is not None:
                 gates_pass = gates_pass and depth > 50000  # $50k depth
             checklist['gates'] = gates_pass
