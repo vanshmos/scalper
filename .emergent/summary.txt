@@ -1,0 +1,150 @@
+<analysis>**original_problem_statement:**
+The user's goal is to create a sophisticated crypto scalping signal engine for BTC, ETH, and SOL perpetual futures, with data sourced from OKX. The system must process real-time WebSocket data, build and manage candles, calculate a suite of technical indicators, and use an advanced scoring model to generate high-quality trading signals. These signals are displayed on a real-time web dashboard and trigger audio and Telegram alerts. The project has undergone numerous iterations to refine signal logic, improve data handling, and enhance overall robustness.
+
+PRODUCT REQUIREMENTS:
+- **Data Source:** OKX public WebSocket for candles (, , ), trades, order books, and tickers. OKX REST API for historical backfill.
+- **Data Processing:** Persist candles to JSON files and load on startup.
+- **Indicators:** Calculate EMAs, ATR, RSI, OBI (Order Book Imbalance), Spread, Market Depth, and CVD (Cumulative Volume Delta).
+- **Signal Logic:** A multi-layered system featuring:
+    - **Regime Detection:** Classifies market state (e.g., TRENDING_BULL, RANGING) based on EMA crossovers, price action, and volume.
+    - **Hybrid Scoring (0-100):** A gradient score calculated based on the alignment of multiple factors (trend, CVD, OBI, RSI, etc.).
+    - **Hard Gates:** A series of mandatory checks that must all pass for a signal to be valid (e.g., spread, depth, RSI zone, time-of-day).
+    - **Signal Activation:** Logic to confirm and activate a signal, which is currently being refactored to remove delays and verify strengthening conditions.
+- **Dashboard:** A multi-symbol (BTC, ETH, SOL) tabbed dashboard displaying connection status, real-time price, candle counts, all indicators, regime/gate status, and detailed signal scoring.
+- **Alerts:** Browser audio alert with a mute toggle and Telegram messages for active signals.
+
+**User's preferred language**: English
+
+**what currently exists?**
+A functional, multi-symbol (BTC, ETH, SOL) signal engine using a FastAPI backend and a React frontend. The backend connects directly to OKX WebSocket channels for real-time candle data, performs a REST API backfill on startup, calculates a comprehensive suite of indicators, and uses a highly refined V2 signal detection model. The model includes dynamic regime detection, gradient scoring, multiple hard gates (including pro scalper time-based filters), and logic to ensure signals are activated only on strengthening momentum. The frontend displays all this information in a tabbed interface. The system is currently undergoing another major refactor to implement institutional-grade features like statistical thresholding and zero-latency execution.
+
+**Last working item**:
+- **Last item agent was working:** Implementing a user-requested, institutional-grade refactor of the signal engine. This is a multi-part task aimed at improving adaptability and speed.
+    1.  **Dynamic Gates:** Replacing static gate thresholds (e.g., ) with dynamic ones based on the mean and standard deviation of recent market data ().
+    2.  **Latency Reduction:** Removing the 12-second FORMING state delay to execute signals immediately once conditions are met.
+    3.  **Execution Safety:** Adding a staleness circuit breaker to reject signals if the last ticker data is older than 2 seconds.
+    4.  **Architectural Cleanup:** Enforcing a strict warmup period and ensuring the main processing loop is non-blocking.
+- **Status:** IN PROGRESS
+- **Agent Testing Done:** N
+- **Which testing method agent to use?** Backend testing. After completing the refactor, the agent must restart the backend and monitor logs for errors. Then, using  against the  endpoint, verify that the new dynamic gate logic is active, that the  state is bypassed, and that the staleness check is in place.
+- **User Testing Done:** N
+
+**All Pending/In progress Issue list**:
+-   **Issue 1:** Complete the institutional-grade refactor. (Priority: P0)
+
+    **Issues Detail:**
+    -   **Issue 1:**
+        -   **Attempted fixes:** The agent has created a new  class in  to handle the statistical calculations for the dynamic gates. The integration of this class and the implementation of the other refactor requirements are still pending.
+        -   **Next debug checklist:**
+            1.  Integrate the  class into  to replace the hardcoded gate thresholds for  and  with dynamic, statistical values.
+            2.  In , modify the signal state logic to remove the FORMING state delay, allowing signals to become ACTIVE instantly if the score and gates pass.
+            3.  In , implement the staleness circuit breaker: if the last ticker update is > 2 seconds old, block all signals.
+            4.  Review and enforce the strict warmup logic () and ensure no approximated indicators are calculated before this.
+            5.  Restart the backend service and thoroughly test by inspecting logs and the  endpoint to confirm all parts of the refactor are working correctly.
+        -   **Why fix this issue and what will be achieved with the fix?** This will elevate the engine to a professional standard, making it more adaptive to changing market conditions, faster in execution, and safer by adding a circuit breaker.
+        -   **Status:** IN PROGRESS
+        -   **Is recurring issue?** N
+        -   **Should Test frontend/backend/both after fix?** Primarily backend. A quick frontend check via screenshot is recommended to ensure the UI remains functional.
+        -   **Blocked on other issue:** None.
+
+**In progress Task List**:
+-   **Task 1:** Complete the institutional-grade refactor.
+
+    **Task Detail:**
+    -   **Task 1:**
+        -   **Where to resume:** The agent has created the file . The next step is to import this into  and begin rewriting the  method to use the dynamic thresholds.
+        -   **What will be achieved with this?** A faster, more adaptive, and safer signal engine that meets institutional trading standards.
+        -   **Status:** IN PROGRESS
+        -   **Should Test frontend/backend/both after fix?** Backend.
+        -   **Blocked on something:** None.
+
+**Upcoming and Future Tasks**
+- **Future Task (P1):** The user has previously mentioned adding a signal history log. This feature would track both successful and near-miss signals, providing valuable data for auditing performance and future tuning of the logic. (Files: , , ).
+
+**Completed work in this session**
+- **V2 Signal Engine Refactor:** Performed a major refactor to use direct OKX WebSocket candle channels, add multi-timeframe trend alignment, implement a funding rate filter, and add signal invalidation logic. This replaced a less reliable trade-aggregation method.
+- **Multi-Symbol Re-integration:** Expanded the V2 engine from a BTC-only prototype back to a full multi-symbol (BTC, ETH, SOL) architecture.
+- **Data Flow & UI Fixes:** Resolved multiple issues where backend data structures did not match frontend expectations, fixing blank indicators and non-displaying gate values.
+- **Gradient Scoring Restoration:** Corrected a logic flaw to ensure LONG and SHORT signals have distinct, direction-specific checks and a non-binary (0-100) gradient score.
+- **Regime Logic Enhancement:** Improved the market regime detection to be more responsive to fast price moves and to correctly identify ranging/consolidating periods, preventing incorrect BEAR or BULL classifications during choppy price action.
+- **Institutional-Grade Fixes:** Addressed a list of 5 critical issues from the user, including tightening gate thresholds, using volume profiles in regime detection, and requiring signal conditions to be strengthening upon activation.
+- **15m Candle Integration:** Added support for 15m candles throughout the data pipeline, from WebSocket subscription to indicator calculation and frontend display.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+- **Backend:** FastAPI,  for concurrent WebSocket and signal processing loops.
+- **Frontend:** React with hooks.
+- **Real-time Communication:** Python usage: websockets [--version | <uri>] library for OKX connection; FastAPI  for pushing state to the frontend.
+- **Data Handling:**  for managing time-series candle data.
+- **Persistence:** State is persisted to local JSON files () to survive restarts.
+- **Statistical Analysis:** A new  class for calculating mean and standard deviation to enable dynamic, adaptive thresholds.
+
+**key DB schema**
+- No traditional database. Application state is held in memory and backed up to JSON files.
+  - : Stores lists of candle objects for , , and  timeframes.
+
+**changes in tech stack**
+- No changes to the core stack (FastAPI + React). MongoDB is not used.
+
+**All files of reference**
+- ****: The primary file orchestrating the entire signal generation process for each symbol. **This file is currently being refactored.**
+- ****: Contains the complex scoring algorithms and hard gate checks. **This file requires refactoring for dynamic gates.**
+- ****: The newly created file to house the statistical calculation logic for dynamic thresholds.
+- ****: The FastAPI application entry point, which instantiates the signal engines and manages the WebSocket connection to the frontend.
+- ****: The single large React component that renders the entire UI.
+
+**Areas that need refactoring**:
+- ****: This file remains a large monolith. Breaking it down into smaller, reusable components (e.g., , , ) would significantly improve maintainability.
+- **Obsolete Backend Files:** The codebase may contain old, unused files from previous refactors (e.g., , ). These should be identified and removed to reduce clutter.
+
+**key api endpoints**
+- ****: A REST endpoint that provides a complete JSON snapshot of the current state of all signal engines (BTC, ETH, SOL).
+- ****: The WebSocket endpoint that continuously pushes the full state object to the connected frontend client.
+- ****: A utility endpoint to send a test message to the configured Telegram chat to verify the alerting mechanism.
+
+**Critical Info for New Agent**
+- The user is highly technical and expects precise implementation of their detailed requirements. Adhere closely to their provided logic and specifications.
+- The highest priority is completing the institutional-grade refactor. This involves a shift from static, hardcoded values to dynamic, statistically-derived thresholds and a focus on minimizing execution latency.
+- The architecture now exclusively uses direct WebSocket candle channels from OKX (e.g., ), not raw trades. This is a fundamental design choice.
+- The active, in-development files are  and . Do not work on older, obsolete versions.
+
+**documents and test reports created in this job**
+- 
+- 
+- 
+- 
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **LATEST:** A detailed request for an institutional-grade refactor with 4 key tasks: architectural cleanup, dynamic gates using statistical analysis, latency reduction by removing the FORMING delay, and an execution safety circuit breaker.
+2.  Request to add 15m candles and make the funding rate visible in the hard gates.
+3.  Reported that gates were failing on the UI due to missing spread/depth values.
+4.  Reported a list of 5 critical issues with the engine's logic, concerning data quality, loose thresholds, flawed checklist logic, oversimplified regime detection, and a flawed signal activation timer.
+5.  Requested pro scalper filters to be applied to make signals even higher quality.
+6.  Reported that the regime detection was flawed (how the fuck is it bear regime right now, market is pumping).
+7.  Requested a deployment health check.
+8.  Requested to apply the refactored V2 logic to ETH and SOL and verify alerts.
+9.  Reported that LONG and SHORT signals were using the same logic and that scores were binary (0 or 100), not gradient.
+10. Reported that indicators were blank/failing on the UI after a major refactor.
+
+**Project Health Check:**
+- **Broken:** The application is in a transitional state due to the major, in-progress institutional-grade refactor. The core signal logic is being modified and is not yet complete or tested.
+- **Mocked:** None. The application uses live data from the OKX WebSocket and REST APIs.
+
+**3rd Party Integrations**
+- **OKX WebSocket:** Primary source for real-time market data (candles, tickers, order books).
+- **OKX REST API:** Used for one-time historical candle backfill on application startup.
+- **Telegram API:** Used to send signal alerts. Requires user-provided  and  in the  file.
+
+**Testing status**
+- **Testing agent used after significant changes:** NO
+- **Troubleshoot agent used after agent stuck in loop:** NO
+- **Test files created:** None.
+- **Known regressions:** The current refactor is a significant architectural change. Once complete, thorough testing will be required to ensure no regressions have been introduced.
+
+**Credentials to test flow:**
+- Telegram credentials must be configured in  to test the alert functionality. No other user credentials are required.
+
+**What agent forgot to execute**
+- The agent has just begun the institutional-grade refactor by creating the  class. The main work of integrating this class, removing the signal formation delay, and adding the staleness circuit breaker is still pending and is the immediate next task.</analysis>
