@@ -203,7 +203,7 @@ class SignalEngine:
             # Gates check
             gates = self.regime_detector.get_gates_status(spread, depth, self.last_orderbook_time)
             
-            # Signal detection
+            # Signal detection with V1.5 scoring system
             signals = self.signal_detector.detect_signal(
                 regime,
                 ema20_1m, ema50_1m,
@@ -211,7 +211,9 @@ class SignalEngine:
                 ema20_15m, ema50_15m,
                 cvd_5m, obi,
                 candle_status['current_price'],
-                rsi_5m
+                rsi_5m,
+                spread,
+                gates['all_pass']
             )
             
             # Check if we're approximating EMAs (insufficient data)
