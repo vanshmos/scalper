@@ -269,7 +269,13 @@ class CandleBuilder:
                     htf_candle.open = candle_1m.open
                 if candle_1m.high is not None:
                     htf_candle.high = candle_1m.high if htf_candle.high is None else max(htf_candle.high, candle_1m.high)
-
+                if candle_1m.low is not None:
+                    htf_candle.low = candle_1m.low if htf_candle.low is None else min(htf_candle.low, candle_1m.low)
+                htf_candle.close = candle_1m.close
+                htf_candle.volume += candle_1m.volume
+        
+        return resampled
+    
     def _calculate_volume_ma(self, candles: List[Candle], period: int = 20):
         """Calculate volume moving average for candles"""
         try:
@@ -294,13 +300,6 @@ class CandleBuilder:
                         
         except Exception as e:
             logger.error(f"Error calculating volume MA: {e}")
-
-                if candle_1m.low is not None:
-                    htf_candle.low = candle_1m.low if htf_candle.low is None else min(htf_candle.low, candle_1m.low)
-                htf_candle.close = candle_1m.close
-                htf_candle.volume += candle_1m.volume
-        
-        return resampled
     
     def get_status(self) -> dict:
         """Get current candle builder status"""
