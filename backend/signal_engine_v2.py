@@ -96,6 +96,7 @@ class SignalEngine:
         # 3. Setup WebSocket callbacks
         self.ws_client.on_candle_1m = self._on_candle_1m
         self.ws_client.on_candle_5m = self._on_candle_5m
+        self.ws_client.on_candle_15m = self._on_candle_15m  # Add 15m handler
         self.ws_client.on_ticker = self._on_ticker
         self.ws_client.on_orderbook = self._on_orderbook
         self.ws_client.on_trade = self._on_trade
