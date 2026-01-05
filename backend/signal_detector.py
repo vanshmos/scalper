@@ -220,7 +220,9 @@ class SignalDetector:
         ema20_1m: Optional[float],
         cvd_5m: Optional[float],
         obi: Optional[float],
-        spread: Optional[float]
+        spread: Optional[float],
+        rsi_5m: Optional[float],
+        regime: RegimeType
     ) -> Dict:
         """Check mandatory hard gates"""
         
@@ -228,38 +230,59 @@ class SignalDetector:
             'ema_proximity': {'pass': False, 'detail': 'N/A'},
             'spread': {'pass': False, 'detail': 'N/A'},
             'directional_alignment': {'pass': False, 'detail': 'N/A'},
+            'rsi_filter': {'pass': False, 'detail': 'N/A'},
+            'regime_filter': {'pass': False, 'detail': 'N/A'},
             'all_pass': False
         }
         
         try:
-            # 1. EMA Proximity (< 1%)
+            # 1. Regime Filter (CRITICAL: Block RANGING completely)
+            if regime == RegimeType.TRENDING_BULL or regime == RegimeType.TRENDING_BEAR:
+                hard_gates['regime_filter']['pass'] = True
+                hard_gates['regime_filter']['detail'] = str(regime)
+            else:
+                hard_gates['regime_filter']['pass'] = False
+                hard_gates['regime_filter']['detail'] = f'{regime} (BLOCKED)'
+            
+            # 2. RSI Filter (30-70 range for BULL/BEAR regimes)
+            if rsi_5m is not None:
+                if 30 <= rsi_5m <= 70:
+                    hard_gates['rsi_filter']['pass'] = True
+                    hard_gates['rsi_filter']['detail'] = f'{rsi_5m:.0f}'
+                else:
+                    hard_gates['rsi_filter']['pass'] = False
+                    hard_gates['rsi_filter']['detail'] = f'{rsi_5m:.0f} (must be 30-70)'
+            
+            # 3. EMA Proximity (< 1%)
             if current_price and ema20_1m:
                 distance_pct = abs(current_price - ema20_1m) / ema20_1m * 100
                 hard_gates['ema_proximity']['pass'] = distance_pct <= self.max_ema_distance_pct
                 hard_gates['ema_proximity']['detail'] = f'{distance_pct:.2f}%'
             
-            # 2. Spread (< 5 bps)
+            # 4. Spread (< 5 bps)
             if spread is not None:
                 hard_gates['spread']['pass'] = spread < self.max_spread_bps
                 hard_gates['spread']['detail'] = f'{spread:.2f} bps'
             
-            # 3. Directional Alignment
+            # 5. Directional Alignment with HIGHER thresholds
             if cvd_5m is not None and obi is not None:
                 if direction == SignalDirection.LONG:
-                    # Both must be positive and at least one > 0.08
-                    aligned = cvd_5m > 0 and obi > 0
-                    strong = abs(cvd_5m) > self.min_flow_threshold or abs(obi) > self.min_flow_threshold
-                    hard_gates['directional_alignment']['pass'] = aligned and strong
-                    hard_gates['directional_alignment']['detail'] = 'Aligned' if aligned and strong else 'Not aligned'
+                    # Both must be positive and strongly directional
+                    cvd_strong = cvd_5m >= 0.30  # Increased from 0.15
+                    obi_strong = obi >= 0.20      # Increased from 0.12
+                    hard_gates['directional_alignment']['pass'] = cvd_strong and obi_strong
+                    hard_gates['directional_alignment']['detail'] = f'CVD {cvd_5m:.3f}, OBI {obi:.3f}' + (' ✓' if (cvd_strong and obi_strong) else ' ✗')
                 else:  # SHORT
-                    # Both must be negative and at least one < -0.08
-                    aligned = cvd_5m < 0 and obi < 0
-                    strong = abs(cvd_5m) > self.min_flow_threshold or abs(obi) > self.min_flow_threshold
-                    hard_gates['directional_alignment']['pass'] = aligned and strong
-                    hard_gates['directional_alignment']['detail'] = 'Aligned' if aligned and strong else 'Not aligned'
+                    # Both must be negative and strongly directional
+                    cvd_strong = cvd_5m <= -0.30  # Increased from -0.15
+                    obi_strong = obi <= -0.20     # Increased from -0.12
+                    hard_gates['directional_alignment']['pass'] = cvd_strong and obi_strong
+                    hard_gates['directional_alignment']['detail'] = f'CVD {cvd_5m:.3f}, OBI {obi:.3f}' + (' ✓' if (cvd_strong and obi_strong) else ' ✗')
             
             # Check if all hard gates pass
             hard_gates['all_pass'] = all([
+                hard_gates['regime_filter']['pass'],
+                hard_gates['rsi_filter']['pass'],
                 hard_gates['ema_proximity']['pass'],
                 hard_gates['spread']['pass'],
                 hard_gates['directional_alignment']['pass']
