@@ -782,7 +782,7 @@ class SignalEngine:
                 'candle_counts': {
                     '1m': len(self.candles_1m),
                     '5m': len(self.candles_5m),
-                    '15m': 0
+                    '15m': len(self.candles_15m)
                 },
                 'indicators': formatted_indicators,
                 'gates': {
