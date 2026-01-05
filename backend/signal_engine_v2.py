@@ -321,16 +321,22 @@ class SignalEngine:
             return {}
     
     def _build_checklist(self, indicators: Dict) -> Dict:
-        """Build signal checklist with all 6 critical fixes"""
+        """Build signal checklist with PRO SCALPER quality filters"""
         try:
             checklist = {
                 'regime': False,
-                'trend_align': False,  # NEW: Multi-TF alignment
+                'trend_align': False,
                 'cvd': False,
                 'obi': False,
                 'ema_dist': False,
-                'funding': False,  # NEW: Funding filter
-                'gates': False
+                'funding': False,
+                'gates': False,
+                'volume_surge': False,        # NEW: Volume confirmation
+                'clean_breakout': False,      # NEW: No choppy wicks
+                'atr_expansion': False,       # NEW: Volatility increasing
+                'rsi_momentum': False,        # NEW: RSI moving with trend
+                'ema_quality': False,         # NEW: EMAs spreading not converging
+                'time_filter': False          # NEW: Avoid dead hours
             }
             
             # Get values
@@ -342,6 +348,8 @@ class SignalEngine:
             obi = indicators.get('obi')
             spread = indicators.get('spread')
             depth = indicators.get('depth')
+            rsi = indicators.get('rsi')
+            atr = indicators.get('atr')
             
             # 1. Regime (5m trend + price confirmation for fast moves)
             if ema20_5m and ema50_5m and price:
@@ -372,7 +380,7 @@ class SignalEngine:
                 checklist['regime'] = is_bull_5m or is_bear_5m
                 checklist['regime_direction'] = 'BULL' if is_bull_5m else 'BEAR' if is_bear_5m else 'RANGING'
             
-            # 2. Multi-TF alignment (NEW: 1m AND 5m must agree)
+            # 2. Multi-TF alignment (1m AND 5m must agree)
             if ema20_1m and ema50_1m and ema20_5m and ema50_5m:
                 trend_1m = 'BULL' if ema20_1m > ema50_1m else 'BEAR'
                 trend_5m = 'BULL' if ema20_5m > ema50_5m else 'BEAR'
@@ -380,41 +388,116 @@ class SignalEngine:
                 checklist['trend_direction'] = trend_1m if checklist['trend_align'] else 'DIVERGENT'
             
             # 3. CVD (using taker buy ratio as proxy)
-            # taker_buy_ratio > 0.57 = bullish, < 0.43 = bearish
+            # More strict: require >0.60 for BULL, <0.40 for BEAR (not 0.57/0.43)
             if checklist.get('regime_direction') == 'BULL':
-                checklist['cvd'] = self.taker_buy_ratio > 0.57
+                checklist['cvd'] = self.taker_buy_ratio > 0.60
             elif checklist.get('regime_direction') == 'BEAR':
-                checklist['cvd'] = self.taker_buy_ratio < 0.43
+                checklist['cvd'] = self.taker_buy_ratio < 0.40
             
-            # 4. OBI
+            # 4. OBI - More strict: require >0.20 for BULL, <-0.20 for BEAR
             if obi is not None:
                 if checklist.get('regime_direction') == 'BULL':
-                    checklist['obi'] = obi > 0.12
+                    checklist['obi'] = obi > 0.20
                 elif checklist.get('regime_direction') == 'BEAR':
-                    checklist['obi'] = obi < -0.12
+                    checklist['obi'] = obi < -0.20
             
-            # 5. EMA distance (WIDENED to 0.5% from 0.3%)
+            # 5. EMA distance (keep 0.5%)
             if price and ema20_5m:
                 distance_pct = abs(price - ema20_5m) / ema20_5m * 100
-                checklist['ema_dist'] = distance_pct < 0.5  # WIDENED threshold
+                checklist['ema_dist'] = distance_pct < 0.5
                 checklist['ema_dist_value'] = distance_pct
             
-            # 6. Funding filter (NEW: block when |funding| > 0.03%)
+            # 6. Funding filter (tighter: block when |funding| > 0.02% not 0.03%)
             if self.funding_rate is not None:
                 abs_funding = abs(self.funding_rate)
-                checklist['funding'] = abs_funding < 0.0003  # 0.03% = 0.0003
+                checklist['funding'] = abs_funding < 0.0002  # 0.02% = 0.0002
                 checklist['funding_value'] = self.funding_rate
             
             # 7. Gates (existing)
             gates_pass = True
             if spread is not None:
-                # spread is already in bps from indicators
                 gates_pass = gates_pass and spread < 1.5  # 1.5 bps
             if depth is not None:
                 gates_pass = gates_pass and depth > 50000  # $50k depth
             checklist['gates'] = gates_pass
             checklist['spread_value'] = spread
             checklist['depth_value'] = depth
+            
+            # === PRO SCALPER FILTERS ===
+            
+            # 8. Volume surge - check if current volume trending up
+            if len(self.candles_5m) >= 6:
+                recent_volumes = [c.volume for c in list(self.candles_5m)[-6:]]
+                current_vol = recent_volumes[-1]
+                avg_last_5 = sum(recent_volumes[-6:-1]) / 5
+                checklist['volume_surge'] = current_vol > avg_last_5 * 1.3
+                checklist['volume_ratio'] = current_vol / avg_last_5 if avg_last_5 > 0 else 0
+            
+            # 9. Clean breakout - check last 3 candles for clean move (no big wicks against trend)
+            if len(self.candles_5m) >= 3:
+                last_3 = list(self.candles_5m)[-3:]
+                clean = True
+                for candle in last_3:
+                    body_size = abs(candle.close - candle.open)
+                    total_range = candle.high - candle.low
+                    if total_range > 0:
+                        body_pct = body_size / total_range
+                        # Require at least 50% of candle is body (not wick)
+                        if body_pct < 0.5:
+                            clean = False
+                            break
+                checklist['clean_breakout'] = clean
+            
+            # 10. ATR expansion - volatility should be increasing, not dying
+            if len(self.candles_5m) >= 20:
+                current_atr = atr
+                # Calculate ATR from 10 candles ago
+                old_candles = list(self.candles_5m)[-20:-10]
+                old_atr = self.indicators.calculate_atr(old_candles, 14)
+                if old_atr and current_atr:
+                    checklist['atr_expansion'] = current_atr > old_atr * 1.1  # 10% increase
+                    checklist['atr_change_pct'] = ((current_atr - old_atr) / old_atr * 100) if old_atr > 0 else 0
+            
+            # 11. RSI momentum - RSI should be moving in signal direction
+            if len(self.candles_5m) >= 3 and rsi:
+                prev_candles = list(self.candles_5m)[-3:-1]
+                prev_rsi = self.indicators.calculate_rsi(prev_candles, 14)
+                if prev_rsi:
+                    rsi_change = rsi - prev_rsi
+                    if checklist.get('regime_direction') == 'BULL':
+                        checklist['rsi_momentum'] = rsi_change > 0  # RSI rising
+                    elif checklist.get('regime_direction') == 'BEAR':
+                        checklist['rsi_momentum'] = rsi_change < 0  # RSI falling
+                    checklist['rsi_change'] = rsi_change
+            
+            # 12. EMA quality - EMAs should be spreading, not converging
+            if ema20_5m and ema50_5m and len(self.candles_5m) >= 3:
+                current_spread = abs(ema20_5m - ema50_5m)
+                # Calculate EMA spread 2 candles ago
+                old_candles = list(self.candles_5m)[:-2]
+                old_ema20 = self.indicators.calculate_ema(old_candles, 20)
+                old_ema50 = self.indicators.calculate_ema(old_candles, 50)
+                if old_ema20 and old_ema50:
+                    old_spread = abs(old_ema20 - old_ema50)
+                    checklist['ema_quality'] = current_spread > old_spread  # Spreading
+            
+            # 13. Time filter - avoid dead hours (2-6am ET, 11:30am-12:30pm ET)
+            from datetime import datetime, timezone
+            import pytz
+            et_tz = pytz.timezone('America/New_York')
+            current_et = datetime.now(timezone.utc).astimezone(et_tz)
+            hour = current_et.hour
+            minute = current_et.minute
+            
+            # Block: 2am-6am ET (Asian dead hours) and 11:30am-12:30pm ET (lunch)
+            if 2 <= hour < 6:
+                checklist['time_filter'] = False
+            elif hour == 11 and minute >= 30:
+                checklist['time_filter'] = False
+            elif hour == 12 and minute < 30:
+                checklist['time_filter'] = False
+            else:
+                checklist['time_filter'] = True
             
             return checklist
             
