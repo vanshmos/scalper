@@ -414,41 +414,6 @@ class SignalEngine:
         except Exception as e:
             logger.error(f"Error calculating indicators: {e}")
             return {}
-            
-            # RSI on 5m
-            rsi = self.indicators.calculate_rsi(candles_5m_list, 14)
-            
-            # Orderbook indicators
-            obi = None
-            spread = None
-            depth = None
-            if self.last_orderbook:
-                obi = self.indicators.calculate_obi(self.last_orderbook)
-                spread = self.indicators.calculate_spread(self.last_orderbook)
-                depth = self.indicators.calculate_depth(self.last_orderbook)
-            
-            # Use mark price for distance calculation (more stable)
-            price_for_distance = self.mark_price if self.mark_price else self.current_price
-            
-            return {
-                'ema20_1m': ema20_1m,
-                'ema50_1m': ema50_1m,
-                'ema20_5m': ema20_5m,
-                'ema50_5m': ema50_5m,
-                'ema20_15m': ema20_15m,
-                'ema50_15m': ema50_15m,
-                'atr': atr if atr and atr > 0 else 100,  # Default to 100 if ATR is 0
-                'rsi': rsi,
-                'obi': obi,
-                'spread': spread,
-                'depth': depth,
-                'price': price_for_distance,
-                'taker_buy_ratio': self.taker_buy_ratio
-            }
-            
-        except Exception as e:
-            logger.error(f"Error calculating indicators: {e}")
-            return {}
     
     def _build_checklist(self, indicators: Dict) -> Dict:
         """Build signal checklist with PRO SCALPER quality filters"""
