@@ -794,7 +794,7 @@ class SignalEngine:
             signal_status_data = {
                 'state': self.signal_state.status,
                 'direction': self.signal_state.direction,
-                'forming_remaining': max(0, 12 - (time.time() - self.signal_state.forming_start)) if self.signal_state.status == 'FORMING' and self.signal_state.forming_start else 0,
+                'forming_remaining': 0,  # No FORMING state anymore (zero-latency)
                 'active_remaining': max(0, 300 - (time.time() - self.signal_state.entry_time)) if self.signal_state.status == 'ACTIVE' and self.signal_state.entry_time else 0,
                 'entry_min': self.signal_state.entry_price,
                 'entry_max': self.signal_state.entry_price
