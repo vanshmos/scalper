@@ -106,6 +106,11 @@ class OKXWebSocketClient:
                     for candle in data['data']:
                         await self.on_candle_5m(candle)
                         
+            elif channel == 'candle15m':
+                if self.on_candle_15m and data.get('data'):
+                    for candle in data['data']:
+                        await self.on_candle_15m(candle)
+                        
             elif channel == 'tickers':
                 self.last_data_time['ticker'] = time.time()
                 if self.on_ticker and data.get('data'):
