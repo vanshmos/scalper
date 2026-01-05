@@ -9,32 +9,23 @@ from pathlib import Path
 
 from okx_websocket import OKXWebSocketClient
 from okx_rest import OKXRestClient
+from candle_builder import Candle  # Use existing Candle class
 from indicators import Indicators
 from alerts import AlertManager
 
 logger = logging.getLogger(__name__)
 
-class Candle:
-    """Simple candle data structure"""
-    def __init__(self, data: List):
-        # OKX format: [ts, o, h, l, c, vol, volCcy, volCcyQuote, confirm]
-        self.timestamp = int(data[0]) // 1000  # Convert ms to seconds
-        self.open = float(data[1])
-        self.high = float(data[2])
-        self.low = float(data[3])
-        self.close = float(data[4])
-        self.volume = float(data[5])
-        self.confirm = data[8] if len(data) > 8 else '0'
-        
-    def to_dict(self):
-        return {
-            'timestamp': self.timestamp,
-            'open': self.open,
-            'high': self.high,
-            'low': self.low,
-            'close': self.close,
-            'volume': self.volume
-        }
+def okx_to_candle(data: List) -> Candle:
+    """Convert OKX candle format to Candle object"""
+    # OKX format: [ts, o, h, l, c, vol, volCcy, volCcyQuote, confirm]
+    timestamp = int(data[0]) // 1000  # Convert ms to seconds
+    candle = Candle(timestamp, '1m')  # Timeframe doesn't matter for data storage
+    candle.open = float(data[1])
+    candle.high = float(data[2])
+    candle.low = float(data[3])
+    candle.close = float(data[4])
+    candle.volume = float(data[5])
+    return candle
 
 class SignalState:
     """Track active signal state"""
