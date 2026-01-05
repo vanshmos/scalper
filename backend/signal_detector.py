@@ -535,15 +535,6 @@ class SignalDetector:
             cvd_5m, obi, current_price, rsi_5m, spread, gates_pass
         )
         
-        # Check hard gates with STRICTER thresholds for both directions (including ATR and volume)
-        long_hard_gates = self.check_hard_gates(
-            SignalDirection.LONG, current_price, ema20_1m, cvd_5m, obi, spread, rsi_5m, regime, atr_5m, current_volume, vol_ma20
-        )
-        
-        short_hard_gates = self.check_hard_gates(
-            SignalDirection.SHORT, current_price, ema20_1m, cvd_5m, obi, spread, rsi_5m, regime, atr_5m, current_volume, vol_ma20
-        )
-        
         # Calculate dynamic confidence for both directions
         long_confidence_result = self.calculate_signal_confidence(
             SignalDirection.LONG, regime,
