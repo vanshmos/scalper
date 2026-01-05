@@ -16,7 +16,7 @@ class Indicators:
         self.depth_smoothed: Optional[float] = None
         
     def calculate_ema(self, candles: List[Candle], period: int) -> Optional[float]:
-        """Calculate EMA for given period (approximates if insufficient data)"""
+        """Calculate EMA for given period - returns None if insufficient data"""
         try:
             if len(candles) == 0:
                 return None
@@ -26,11 +26,12 @@ class Indicators:
             if len(closes) == 0:
                 return None
             
-            # If we have less data than period, use whatever we have (approximation)
-            actual_period = min(len(closes), period)
+            # STRICT: Require full period of data, no approximation
+            if len(closes) < period:
+                return None
             
             # Calculate EMA
-            multiplier = 2 / (actual_period + 1)
+            multiplier = 2 / (period + 1)
             ema = closes[0]
             
             for price in closes[1:]:
