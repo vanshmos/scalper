@@ -388,18 +388,18 @@ class SignalEngine:
                 checklist['trend_direction'] = trend_1m if checklist['trend_align'] else 'DIVERGENT'
             
             # 3. CVD (using taker buy ratio as proxy)
-            # More strict: require >0.60 for BULL, <0.40 for BEAR (not 0.57/0.43)
+            # FIXED: Loosened from 0.60/0.40 to 0.55/0.45 (more realistic)
             if checklist.get('regime_direction') == 'BULL':
-                checklist['cvd'] = self.taker_buy_ratio > 0.60
+                checklist['cvd'] = self.taker_buy_ratio > 0.55
             elif checklist.get('regime_direction') == 'BEAR':
-                checklist['cvd'] = self.taker_buy_ratio < 0.40
+                checklist['cvd'] = self.taker_buy_ratio < 0.45
             
-            # 4. OBI - More strict: require >0.20 for BULL, <-0.20 for BEAR
+            # 4. OBI - FIXED: Loosened from 0.20 to 0.15 (more realistic)
             if obi is not None:
                 if checklist.get('regime_direction') == 'BULL':
-                    checklist['obi'] = obi > 0.20
+                    checklist['obi'] = obi > 0.15
                 elif checklist.get('regime_direction') == 'BEAR':
-                    checklist['obi'] = obi < -0.20
+                    checklist['obi'] = obi < -0.15
             
             # 5. EMA distance (keep 0.5%)
             if price and ema20_5m:
