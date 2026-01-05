@@ -465,6 +465,14 @@ function App() {
               <div className="gates-title">Hard Gates:</div>
               {signals.short?.hard_gates && (
                 <>
+                  <div className={`gate-item ${signals.short.hard_gates.regime_filter?.pass ? 'pass' : 'fail'}`}>
+                    <span className="gate-icon">{signals.short.hard_gates.regime_filter?.pass ? '✓' : '✗'}</span>
+                    <span>Regime Filter: {signals.short.hard_gates.regime_filter?.detail || 'N/A'}</span>
+                  </div>
+                  <div className={`gate-item ${signals.short.hard_gates.rsi_filter?.pass ? 'pass' : 'fail'}`}>
+                    <span className="gate-icon">{signals.short.hard_gates.rsi_filter?.pass ? '✓' : '✗'}</span>
+                    <span>RSI (30-70): {signals.short.hard_gates.rsi_filter?.detail || 'N/A'}</span>
+                  </div>
                   <div className={`gate-item ${signals.short.hard_gates.ema_proximity?.pass ? 'pass' : 'fail'}`}>
                     <span className="gate-icon">{signals.short.hard_gates.ema_proximity?.pass ? '✓' : '✗'}</span>
                     <span>EMA Proximity (&lt;1%): {signals.short.hard_gates.ema_proximity?.detail || 'N/A'}</span>
@@ -475,7 +483,7 @@ function App() {
                   </div>
                   <div className={`gate-item ${signals.short.hard_gates.directional_alignment?.pass ? 'pass' : 'fail'}`}>
                     <span className="gate-icon">{signals.short.hard_gates.directional_alignment?.pass ? '✓' : '✗'}</span>
-                    <span>CVD/OBI Direction: {signals.short.hard_gates.directional_alignment?.detail || 'N/A'}</span>
+                    <span>CVD/OBI Alignment: {signals.short.hard_gates.directional_alignment?.detail || 'N/A'}</span>
                   </div>
                 </>
               )}
