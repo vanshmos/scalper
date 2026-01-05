@@ -43,10 +43,11 @@ class SignalStateMachine:
         
         return time.time() < self.cooldowns[direction.value]
     
-    def start_cooldown(self, direction: SignalDirection):
+    def start_cooldown(self, direction: SignalDirection, is_cancel: bool = False):
         """Start cooldown for direction"""
-        self.cooldowns[direction.value] = time.time() + self.cooldown_duration
-        logger.info(f"Started {self.cooldown_duration}s cooldown for {direction.value}")
+        cooldown_duration = self.cancel_cooldown if is_cancel else self.signal_cooldown
+        self.cooldowns[direction.value] = time.time() + cooldown_duration
+        logger.info(f"Started {cooldown_duration}s cooldown for {direction.value} ({'cancel' if is_cancel else 'signal'})")
     
     def check_core_conditions(
         self,
