@@ -263,8 +263,12 @@ class SignalEngine:
                 # Check signal conditions
                 checklist = self._build_checklist(indicators)
                 
-                # Process signal state machine
-                await self._process_signal_state(checklist, indicators)
+                # Calculate scores for signal strengthening check
+                long_score = self._calculate_signal_score('LONG', indicators, checklist)
+                short_score = self._calculate_signal_score('SHORT', indicators, checklist)
+                
+                # Process signal state machine (pass scores for strengthening verification)
+                await self._process_signal_state(checklist, indicators, long_score, short_score)
                 
             except Exception as e:
                 logger.error(f"Error in signal processing loop: {e}")
