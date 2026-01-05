@@ -518,9 +518,9 @@ class SignalEngine:
                     gates_pass = gates_pass and spread < 2.0
                     checklist['spread_threshold'] = 2.0
             
-            # Dynamic depth gate: Must be > (Mean - 1.5 * StDev) - loosened for market fluctuations
+            # Dynamic depth gate: Must be > (Mean - 2.0 * StDev) - very loose for crypto volatility
             if depth is not None:
-                depth_threshold_dynamic = self.depth_stats.get_threshold(mode='lower', std_multiplier=1.5)
+                depth_threshold_dynamic = self.depth_stats.get_threshold(mode='lower', std_multiplier=2.0)
                 if depth_threshold_dynamic is not None:
                     # Use dynamic threshold (but floor at $100k minimum)
                     effective_threshold = max(depth_threshold_dynamic, 100000)
