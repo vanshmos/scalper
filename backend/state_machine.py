@@ -19,6 +19,7 @@ class SignalStateMachine:
         self.forming_start_time: Optional[float] = None
         self.active_start_time: Optional[float] = None
         self.last_cancel_time: Optional[float] = None
+        self.forming_fail_count: int = 0  # Track consecutive failures during FORMING
         
         # Locked levels (set when ACTIVE)
         self.entry_price: Optional[float] = None
@@ -35,6 +36,7 @@ class SignalStateMachine:
         self.active_duration = 300  # 5 minutes
         self.signal_cooldown = 300  # 5 minutes after signal fires
         self.cancel_cooldown = 120  # 2 minutes after signal cancels
+        self.forming_fail_threshold = 3  # Require 3 consecutive failures before cancelling
         
     def is_in_cooldown(self, direction: SignalDirection) -> bool:
         """Check if direction is in cooldown"""
