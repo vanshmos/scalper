@@ -134,6 +134,15 @@ class SignalEngine:
                     self.candles_5m.append(candle)
                 logger.info(f"Backfilled {len(candles_5m_data)} 5m candles")
             
+            # Fetch 15m candles
+            candles_15m_data = self.rest_client.get_candles(self.symbol, "15m", 30)
+            if candles_15m_data:
+                for candle_data in reversed(candles_15m_data):
+                    candle = okx_to_candle(candle_data)
+                    candle.timeframe = '15m'
+                    self.candles_15m.append(candle)
+                logger.info(f"Backfilled {len(candles_15m_data)} 15m candles")
+            
             # Check warmup status
             if len(self.candles_1m) >= self.warmup_threshold:
                 self.is_warmed_up = True
