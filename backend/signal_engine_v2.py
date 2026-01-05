@@ -884,6 +884,7 @@ class SignalEngine:
         obi = indicators.get('obi') or 0  # Default to 0 if None
         taker_ratio = indicators.get('taker_buy_ratio') or 0.5  # Default to 0.5 if None
         atr = indicators.get('atr') or 100  # Default to 100 if None
+        funding = self.funding_rate or 0  # Get funding rate
         
         # Direction-specific checks
         if direction == 'LONG':
@@ -923,8 +924,8 @@ class SignalEngine:
                 'detail': f"${atr:.0f}"
             },
             'funding_filter': {
-                'pass': checklist.get('funding', False),
-                'detail': f"{checklist.get('funding_value', 0):.4%}"
+                'pass': abs(funding) < 0.0002,  # 0.02%
+                'detail': f"{funding:.4%}" + (' ✓' if abs(funding) < 0.0002 else ' (need <0.02%)')
             },
-            'all_pass': regime_pass and (30 <= rsi <= 70) and checklist.get('ema_dist', False) and checklist.get('gates', False) and cvd_pass and obi_pass and atr > 100 and checklist.get('funding', False)
+            'all_pass': regime_pass and (30 <= rsi <= 70) and checklist.get('ema_dist', False) and checklist.get('gates', False) and cvd_pass and obi_pass and atr > 100 and abs(funding) < 0.0002
         }
