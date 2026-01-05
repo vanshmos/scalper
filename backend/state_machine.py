@@ -226,7 +226,7 @@ class SignalStateMachine:
                 if elapsed >= self.forming_duration:
                     # Transition to ACTIVE
                     if current_price and atr:
-                        levels = self.calculate_levels(current_price, atr, self.direction)
+                        levels = self.calculate_levels(current_price, atr, self.direction, rsi)
                         if levels:
                             self.entry_price = levels['entry']
                             self.stop_loss = levels['stop_loss']
@@ -237,7 +237,8 @@ class SignalStateMachine:
                             self.active_start_time = current_time
                             signal_triggered = True
                             
-                            logger.info(f"Signal ACTIVE: {self.direction.value} at ${self.entry_price:.2f}")
+                            # Log with adaptive multipliers
+                            logger.info(f"Signal ACTIVE: {self.direction.value} at ${self.entry_price:.2f} (SL: {levels.get('sl_multiplier', 1.5)}x, TP1: {levels.get('tp1_multiplier', 2.0)}x, TP2: {levels.get('tp2_multiplier', 3.5)}x ATR, RSI: {rsi:.0f if rsi else 'N/A'})")
                         else:
                             logger.error("Failed to calculate levels, returning to IDLE")
                             self.state = SignalState.IDLE
