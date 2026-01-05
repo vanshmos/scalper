@@ -225,11 +225,12 @@ class SignalEngine:
                 '15m': len(self.candle_builder.candles_15m) < 50
             }
             
-            # Update state machine
+            # Update state machine (with RSI for adaptive position sizing)
             signal_status = self.state_machine.update(
                 signals,
                 candle_status['current_price'],
-                atr_5m
+                atr_5m,
+                rsi_5m
             )
             
             # Send alerts if signal triggered
