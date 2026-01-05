@@ -454,9 +454,6 @@ class SignalDetector:
                 hard_gates['directional_alignment']['pass'],
                 hard_gates['atr_sufficient']['pass']
             ])
-                hard_gates['spread']['pass'],
-                hard_gates['directional_alignment']['pass']
-            ])
             
         except Exception as e:
             logger.error(f"Error checking hard gates: {e}")
