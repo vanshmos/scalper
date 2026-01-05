@@ -745,35 +745,35 @@ class SignalEngine:
                 score += 5  # Aligned but wrong direction
         
         # 3. CVD/Taker buy ratio (15 points)
-        taker_ratio = indicators.get('taker_buy_ratio', 0.5)
+        taker_ratio = indicators.get('taker_buy_ratio') or 0.5
         if direction == 'LONG':
             if taker_ratio > 0.65:
                 score += 15
-            elif taker_ratio > 0.57:
+            elif taker_ratio > 0.60:
                 score += 10
             elif taker_ratio > 0.50:
                 score += 5
         else:  # SHORT
             if taker_ratio < 0.35:
                 score += 15
-            elif taker_ratio < 0.43:
+            elif taker_ratio < 0.40:
                 score += 10
             elif taker_ratio < 0.50:
                 score += 5
         
         # 4. OBI (15 points)
-        obi = indicators.get('obi', 0)
+        obi = indicators.get('obi') or 0
         if direction == 'LONG':
             if obi > 0.20:
                 score += 15
-            elif obi > 0.12:
+            elif obi > 0.15:
                 score += 10
             elif obi > 0:
                 score += 5
         else:  # SHORT
             if obi < -0.20:
                 score += 15
-            elif obi < -0.12:
+            elif obi < -0.15:
                 score += 10
             elif obi < 0:
                 score += 5
@@ -783,7 +783,7 @@ class SignalEngine:
             score += 10
         
         # 6. RSI position (10 points)
-        rsi = indicators.get('rsi', 50)
+        rsi = indicators.get('rsi') or 50
         if 40 <= rsi <= 60:
             score += 10
         elif 35 <= rsi <= 65:
