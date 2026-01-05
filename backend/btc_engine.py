@@ -154,13 +154,15 @@ class BTCSignalEngine:
     async def _on_candle_1m(self, data: dict):
         """Handle 1m candle updates"""
         try:
-            candle = Candle(data)
+            candle = okx_to_candle(data)
+            confirm = data[8] if len(data) > 8 else '0'
             
             # Only add confirmed candles to avoid duplicates
-            if candle.confirm == '1':
+            if confirm == '1':
                 # Check if this candle already exists (by timestamp)
                 if not self.candles_1m or self.candles_1m[-1].timestamp != candle.timestamp:
                     self.candles_1m.append(candle)
+                    logger.debug(f"Added confirmed 1m candle: {candle.timestamp}")
                     
                     # Update warmup status
                     if not self.is_warmed_up and len(self.candles_1m) >= self.warmup_threshold:
@@ -176,12 +178,15 @@ class BTCSignalEngine:
     async def _on_candle_5m(self, data: dict):
         """Handle 5m candle updates"""
         try:
-            candle = Candle(data)
+            candle = okx_to_candle(data)
+            candle.timeframe = '5m'
+            confirm = data[8] if len(data) > 8 else '0'
             
             # Only add confirmed candles
-            if candle.confirm == '1':
+            if confirm == '1':
                 if not self.candles_5m or self.candles_5m[-1].timestamp != candle.timestamp:
                     self.candles_5m.append(candle)
+                    logger.debug(f"Added confirmed 5m candle: {candle.timestamp}")
                     
         except Exception as e:
             logger.error(f"Error handling 5m candle: {e}")
