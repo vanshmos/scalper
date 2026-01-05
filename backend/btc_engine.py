@@ -118,7 +118,7 @@ class BTCSignalEngine:
             if candles_1m_data:
                 # OKX returns newest first, reverse to get chronological order
                 for candle_data in reversed(candles_1m_data):
-                    candle = Candle(candle_data)
+                    candle = okx_to_candle(candle_data)
                     self.candles_1m.append(candle)
                 logger.info(f"Backfilled {len(candles_1m_data)} 1m candles")
             
@@ -126,7 +126,8 @@ class BTCSignalEngine:
             candles_5m_data = self.rest_client.get_candles(self.symbol, "5m", 50)
             if candles_5m_data:
                 for candle_data in reversed(candles_5m_data):
-                    candle = Candle(candle_data)
+                    candle = okx_to_candle(candle_data)
+                    candle.timeframe = '5m'
                     self.candles_5m.append(candle)
                 logger.info(f"Backfilled {len(candles_5m_data)} 5m candles")
             
