@@ -513,7 +513,7 @@ class SignalEngine:
                 stop_loss=sl,
                 tp1=tp1,
                 tp2=tp2,
-                symbol=self.symbol
+                symbol=self.display_name
             )
             
         except Exception as e:
