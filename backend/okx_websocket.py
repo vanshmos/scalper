@@ -85,8 +85,12 @@ class OKXWebSocketClient:
     async def _handle_message(self, data: dict):
         """Route messages to appropriate handlers"""
         try:
+            # Log every message for debugging
             arg = data.get('arg', {})
             channel = arg.get('channel', '')
+            
+            if channel:
+                logger.debug(f"Received {channel} message")
             
             if channel == 'candle1m':
                 self.last_data_time['candle_1m'] = time.time()
@@ -103,11 +107,13 @@ class OKXWebSocketClient:
             elif channel == 'tickers':
                 self.last_data_time['ticker'] = time.time()
                 if self.on_ticker and data.get('data'):
+                    logger.debug(f"Ticker data: {data['data'][0]}")
                     await self.on_ticker(data['data'][0])
                     
             elif channel == 'books5':
                 self.last_data_time['orderbook'] = time.time()
                 if self.on_orderbook and data.get('data'):
+                    logger.debug(f"Orderbook bids: {len(data['data'][0].get('bids', []))}, asks: {len(data['data'][0].get('asks', []))}")
                     await self.on_orderbook(data['data'][0])
                     
             elif channel == 'trades':
@@ -118,6 +124,7 @@ class OKXWebSocketClient:
             elif channel == 'funding-rate':
                 self.last_data_time['funding'] = time.time()
                 if self.on_funding_rate and data.get('data'):
+                    logger.debug(f"Funding rate: {data['data'][0].get('fundingRate')}")
                     await self.on_funding_rate(data['data'][0])
                     
             elif channel == 'mark-price':
@@ -125,7 +132,7 @@ class OKXWebSocketClient:
                     await self.on_mark_price(data['data'][0])
                     
         except Exception as e:
-            logger.error(f"Error routing message: {e}")
+            logger.error(f"Error routing message: {e}, data: {data}")
     
     async def start(self):
         """Start the WebSocket client"""
