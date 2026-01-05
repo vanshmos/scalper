@@ -297,18 +297,33 @@ class SignalEngine:
             logger.error(f"Error handling mark price: {e}")
     
     async def _signal_processing_loop(self):
-        """Main signal processing loop"""
+        """Main signal processing loop - non-blocking"""
         while True:
             try:
                 await asyncio.sleep(1)  # Process every second
                 
-                if not self.is_warmed_up:
+                # STRICT WARMUP: Block all signals until sufficient data
+                if len(self.candles_5m) < 50:
+                    await asyncio.sleep(0)  # Yield control
                     continue
                 
-                # Calculate indicators
+                # STALENESS CIRCUIT BREAKER: Block signals if ticker data is stale
+                if self.last_ticker_time is None:
+                    await asyncio.sleep(0)
+                    continue
+                
+                ticker_age_ms = (time.time() - self.last_ticker_time) * 1000
+                if ticker_age_ms > 2000:  # 2 seconds
+                    logger.warning(f"⚠️  CIRCUIT BREAKER: Ticker data stale ({ticker_age_ms:.0f}ms old) - blocking signals")
+                    await asyncio.sleep(0)
+                    continue
+                
+                # Calculate indicators (offload heavy computation)
+                await asyncio.sleep(0)  # Non-blocking: yield before heavy calculation
                 indicators = self._calculate_indicators()
                 
                 # Check signal conditions
+                await asyncio.sleep(0)  # Yield control
                 checklist = self._build_checklist(indicators)
                 
                 # Calculate scores for signal strengthening check
