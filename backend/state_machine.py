@@ -143,12 +143,14 @@ class SignalStateMachine:
                 self.direction = SignalDirection.SHORT
                 self.forming_start_time = current_time
                 self.confidence = short_score
+                self.forming_fail_count = 0
                 logger.info(f"Signal entering FORMING state: SHORT (score: {short_score})")
             elif long_ready and not short_ready:
                 self.state = SignalState.FORMING
                 self.direction = SignalDirection.LONG
                 self.forming_start_time = current_time
                 self.confidence = long_score
+                self.forming_fail_count = 0
                 logger.info(f"Signal entering FORMING state: LONG (score: {long_score})")
             elif short_ready and long_ready:
                 # Both ready: choose higher score
@@ -157,12 +159,14 @@ class SignalStateMachine:
                     self.direction = SignalDirection.SHORT
                     self.forming_start_time = current_time
                     self.confidence = short_score
+                    self.forming_fail_count = 0
                     logger.info(f"Signal entering FORMING state: SHORT (score: {short_score}, higher than LONG {long_score})")
                 else:
                     self.state = SignalState.FORMING
                     self.direction = SignalDirection.LONG
                     self.forming_start_time = current_time
                     self.confidence = long_score
+                    self.forming_fail_count = 0
                     logger.info(f"Signal entering FORMING state: LONG (score: {long_score}, higher than SHORT {short_score})")
         
         elif self.state == SignalState.FORMING:
