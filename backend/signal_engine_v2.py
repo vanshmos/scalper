@@ -343,10 +343,25 @@ class SignalEngine:
             spread = indicators.get('spread')
             depth = indicators.get('depth')
             
-            # 1. Regime (5m trend)
-            if ema20_5m and ema50_5m:
+            # 1. Regime (5m trend + price confirmation for fast moves)
+            if ema20_5m and ema50_5m and price:
+                # Primary check: EMA crossover
                 is_bull_5m = ema20_5m > ema50_5m
                 is_bear_5m = ema20_5m < ema50_5m
+                
+                # Secondary check: Price position (catches fast moves)
+                # If price is >2% above both EMAs = bullish regardless of crossover
+                price_above_both = price > max(ema20_5m, ema50_5m) * 1.02
+                price_below_both = price < min(ema20_5m, ema50_5m) * 0.98
+                
+                # Override regime if price shows strong directional move
+                if price_above_both:
+                    is_bull_5m = True
+                    is_bear_5m = False
+                elif price_below_both:
+                    is_bull_5m = False
+                    is_bear_5m = True
+                
                 checklist['regime'] = is_bull_5m or is_bear_5m
                 checklist['regime_direction'] = 'BULL' if is_bull_5m else 'BEAR' if is_bear_5m else 'RANGING'
             
