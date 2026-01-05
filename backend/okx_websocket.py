@@ -49,6 +49,7 @@ class OKXWebSocketClient:
                     subscriptions = [
                         {"op": "subscribe", "args": [{"channel": "candle1m", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "candle5m", "instId": self.symbol}]},
+                        {"op": "subscribe", "args": [{"channel": "candle15m", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "tickers", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "books5", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "trades", "instId": self.symbol}]},
