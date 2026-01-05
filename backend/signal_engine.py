@@ -203,7 +203,15 @@ class SignalEngine:
             # Gates check
             gates = self.regime_detector.get_gates_status(spread, depth, self.last_orderbook_time)
             
-            # Signal detection with V1.5 scoring system (with ATR and depth for confidence)
+            # Get current 5m candle volume and vol_ma20 for volume surge check
+            current_volume = None
+            vol_ma20 = None
+            if len(self.candle_builder.candles_5m) > 0:
+                last_5m_candle = self.candle_builder.candles_5m[-1]
+                current_volume = last_5m_candle.volume
+                vol_ma20 = last_5m_candle.vol_ma20
+            
+            # Signal detection with V1.5 scoring system (with ATR, depth, and volume for confidence)
             signals = self.signal_detector.detect_signal(
                 regime,
                 ema20_1m, ema50_1m,
@@ -215,7 +223,9 @@ class SignalEngine:
                 spread,
                 gates['all_pass'],
                 atr_5m,
-                depth
+                depth,
+                current_volume,
+                vol_ma20
             )
             
             # Check if we're approximating EMAs (insufficient data)
