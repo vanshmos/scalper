@@ -52,22 +52,10 @@ class SignalStateMachine:
     def check_core_conditions(
         self,
         signal_ready: bool,
-        checklist: Dict
+        hard_gates_pass: bool
     ) -> bool:
-        """Check if core conditions (regime, structure, CVD, OBI, price) are passing"""
-        if not signal_ready:
-            return False
-        
-        # Core conditions that reset FORMING timer if they fail
-        core_checks = [
-            checklist.get('regime', {}).get('pass', False),
-            checklist.get('structure', {}).get('pass', False),
-            checklist.get('cvd', {}).get('pass', False),
-            checklist.get('obi', {}).get('pass', False),
-            checklist.get('pullback', {}).get('pass', False)
-        ]
-        
-        return all(core_checks)
+        """Check if core conditions (score + hard gates) are passing"""
+        return signal_ready and hard_gates_pass
     
     def calculate_levels(
         self,
