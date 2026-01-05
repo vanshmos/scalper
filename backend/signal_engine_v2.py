@@ -232,6 +232,7 @@ class SignalEngine:
         """Handle ticker updates"""
         try:
             self.last_ticker = data
+            self.last_ticker_time = time.time()  # Track ticker freshness
             if 'last' in data:
                 self.current_price = float(data['last'])
         except Exception as e:
@@ -241,6 +242,17 @@ class SignalEngine:
         """Handle orderbook updates"""
         try:
             self.last_orderbook = data
+            
+            # Feed spread and depth to rolling stats
+            if self.last_orderbook:
+                spread = self.indicators.calculate_spread(self.last_orderbook)
+                depth = self.indicators.calculate_depth(self.last_orderbook)
+                
+                if spread is not None:
+                    self.spread_stats.add(spread)
+                if depth is not None:
+                    self.depth_stats.add(depth)
+                    
         except Exception as e:
             logger.error(f"Error handling orderbook: {e}")
     
