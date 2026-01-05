@@ -315,6 +315,11 @@ class SignalEngine:
             ema20_5m = self.indicators.calculate_ema(candles_5m_list, 20)
             ema50_5m = self.indicators.calculate_ema(candles_5m_list, 50)
             
+            # EMAs on 15m
+            candles_15m_list = list(self.candles_15m)
+            ema20_15m = self.indicators.calculate_ema(candles_15m_list, 20)
+            ema50_15m = self.indicators.calculate_ema(candles_15m_list, 50)
+            
             # ATR on 5m
             atr = self.indicators.calculate_atr(candles_5m_list, 14)
             
