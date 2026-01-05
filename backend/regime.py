@@ -149,14 +149,25 @@ class RegimeDetector:
             return self.current_regime
     
     def check_spread_gate(self, spread: Optional[float]) -> bool:
-        """Check if spread is below 2 bps with stabilization"""
+        """Check if spread is below threshold with stabilization"""
         try:
             if spread is None:
-                # Maintain current state on missing data (don't log every time)
+                # Maintain current state on missing data
                 return self.spread_gate.current_state
             
-            # Check reading
-            new_reading = spread < 2.0
+            # V1.5 Thresholds: 2.5 bps pass, 4.0 bps fail
+            pass_threshold = 2.5
+            fail_threshold = 4.0
+            
+            # Determine raw reading based on hysteresis
+            if spread < pass_threshold:
+                new_reading = True
+            elif spread > fail_threshold:
+                new_reading = False
+            else:
+                # In hysteresis zone - maintain current state
+                return self.spread_gate.current_state
+            
             return self.spread_gate.update(new_reading)
             
         except Exception as e:
@@ -167,12 +178,12 @@ class RegimeDetector:
         """Check depth gate with hysteresis and stabilization"""
         try:
             if depth is None:
-                # Maintain current state on missing data (don't log every time)
+                # Maintain current state on missing data
                 return self.depth_gate.current_state
             
-            # Hysteresis thresholds
-            pass_threshold = 60000  # $60k
-            fail_threshold = 40000  # $40k
+            # V1.5 Hysteresis thresholds: $30k pass, $20k fail
+            pass_threshold = 30000  # $30k
+            fail_threshold = 20000  # $20k
             
             # Determine raw reading based on hysteresis
             if depth > pass_threshold:
