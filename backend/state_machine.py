@@ -18,6 +18,7 @@ class SignalStateMachine:
         self.direction: Optional[SignalDirection] = None
         self.forming_start_time: Optional[float] = None
         self.active_start_time: Optional[float] = None
+        self.last_cancel_time: Optional[float] = None
         
         # Locked levels (set when ACTIVE)
         self.entry_price: Optional[float] = None
@@ -29,10 +30,11 @@ class SignalStateMachine:
         # Cooldowns (direction -> cooldown_end_time)
         self.cooldowns: Dict[str, float] = {}
         
-        # Configuration
-        self.forming_duration = 20  # seconds
+        # V1.5 Configuration
+        self.forming_duration = 12  # Reduced from 20 to 12 seconds
         self.active_duration = 300  # 5 minutes
-        self.cooldown_duration = 600  # 10 minutes
+        self.signal_cooldown = 300  # 5 minutes after signal fires
+        self.cancel_cooldown = 120  # 2 minutes after signal cancels
         
     def is_in_cooldown(self, direction: SignalDirection) -> bool:
         """Check if direction is in cooldown"""
