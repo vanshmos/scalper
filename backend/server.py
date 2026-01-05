@@ -55,40 +55,43 @@ async def route_ticker(symbol: str, data: dict):
 
 @app.on_event("startup")
 async def startup_event():
-    """Start BTC signal engine on app startup"""
-    global btc_engine, engine_task
+    """Start all signal engines on app startup"""
+    global signal_engines, engine_tasks
     
-    logger.info("Starting BTC signal engine...")
+    logger.info(f"Starting signal engines for {len(SYMBOLS)} symbols...")
     
-    # Create and start BTC engine
-    btc_engine = BTCSignalEngine("BTC-USDT-SWAP")
-    await btc_engine.start()
+    # Create and start engines for each symbol
+    for display_name, okx_symbol in SYMBOLS.items():
+        engine = SignalEngine(okx_symbol, display_name)
+        signal_engines[display_name.lower()] = engine
+        await engine.start()
     
-    logger.info("BTC signal engine started successfully")
+    logger.info(f"All {len(SYMBOLS)} signal engines started successfully")
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Stop signal engine on app shutdown"""
-    global btc_engine, engine_task
+    """Stop all signal engines on app shutdown"""
+    global signal_engines, engine_tasks
     
-    logger.info("Stopping BTC signal engine...")
+    logger.info("Stopping all signal engines...")
     
-    if btc_engine:
-        await btc_engine.ws_client.stop()
+    for engine in signal_engines.values():
+        await engine.ws_client.stop()
     
-    if engine_task:
-        engine_task.cancel()
+    for task in engine_tasks:
+        task.cancel()
         try:
-            await engine_task
+            await task
         except asyncio.CancelledError:
             pass
 
 @app.get("/api/status")
 async def get_status():
-    """Get current status for BTC engine"""
-    if btc_engine:
-        return {"btc": btc_engine.get_status()}
-    return {"error": "Engine not initialized"}
+    """Get current status for all engines"""
+    status = {}
+    for display_name, engine in signal_engines.items():
+        status[display_name] = engine.get_status()
+    return status
 
 @app.get("/api/test-telegram")
 async def test_telegram():
@@ -105,7 +108,7 @@ async def test_telegram():
                 stop_loss=92750.00,
                 tp1=92000.00,
                 tp2=91500.00,
-                symbol="BTC-USDT-SWAP"
+                symbol="BTC-TEST"
             )
             return {"status": "success", "message": "Test alert sent to Telegram"}
         else:
