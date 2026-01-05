@@ -63,30 +63,52 @@ class SignalStateMachine:
         self,
         current_price: float,
         atr: float,
-        direction: SignalDirection
+        direction: SignalDirection,
+        rsi: Optional[float] = None
     ) -> Dict:
-        """Calculate entry, SL, and TP levels"""
+        """Calculate entry, SL, and TP levels with adaptive position sizing based on RSI"""
         try:
             # Entry: Current price with 0.05% zone
             entry = current_price
             
-            # Stop loss: 1.5 x ATR from entry
-            if direction == SignalDirection.SHORT:
-                stop_loss = entry + (1.5 * atr)
-            else:  # LONG
-                stop_loss = entry - (1.5 * atr)
-            
-            # TP1: 2 x ATR from entry
-            if direction == SignalDirection.SHORT:
-                tp1 = entry - (2 * atr)
-            else:  # LONG
-                tp1 = entry + (2 * atr)
-            
-            # TP2: 3.5 x ATR from entry
-            if direction == SignalDirection.SHORT:
-                tp2 = entry - (3.5 * atr)
-            else:  # LONG
-                tp2 = entry + (3.5 * atr)
+            # Adaptive position sizing based on RSI and signal direction
+            if direction == SignalDirection.LONG:
+                # LONG signals
+                if rsi is not None and rsi < 50:
+                    # Entering on strength/momentum (RSI < 50 means coming from oversold)
+                    # Wider stops because trend is strong, expect bigger move
+                    sl_multiplier = 2.0
+                    tp1_multiplier = 2.5
+                    tp2_multiplier = 4.0
+                else:
+                    # Entering on pullback/mean reversion (RSI > 50 = buying into resistance)
+                    # Tighter stops because buying into resistance, take profits faster
+                    sl_multiplier = 1.2
+                    tp1_multiplier = 1.8
+                    tp2_multiplier = 3.0
+                
+                stop_loss = entry - (sl_multiplier * atr)
+                tp1 = entry + (tp1_multiplier * atr)
+                tp2 = entry + (tp2_multiplier * atr)
+                
+            else:  # SHORT signals
+                # SHORT signals (inverted RSI logic)
+                if rsi is not None and rsi > 50:
+                    # Entering on strength/momentum (RSI > 50 = coming from overbought)
+                    # Wider stops because trend is strong, expect bigger move
+                    sl_multiplier = 2.0
+                    tp1_multiplier = 2.5
+                    tp2_multiplier = 4.0
+                else:
+                    # Entering on pullback/mean reversion (RSI < 50 = selling into support)
+                    # Tighter stops because selling into support, take profits faster
+                    sl_multiplier = 1.2
+                    tp1_multiplier = 1.8
+                    tp2_multiplier = 3.0
+                
+                stop_loss = entry + (sl_multiplier * atr)
+                tp1 = entry - (tp1_multiplier * atr)
+                tp2 = entry - (tp2_multiplier * atr)
             
             # Calculate R:R ratio
             risk = abs(entry - stop_loss)
@@ -98,7 +120,10 @@ class SignalStateMachine:
                 'stop_loss': stop_loss,
                 'tp1': tp1,
                 'tp2': tp2,
-                'rr_ratio': rr_ratio
+                'rr_ratio': rr_ratio,
+                'sl_multiplier': sl_multiplier,
+                'tp1_multiplier': tp1_multiplier,
+                'tp2_multiplier': tp2_multiplier
             }
         except Exception as e:
             logger.error(f"Error calculating levels: {e}")
