@@ -96,37 +96,65 @@ class SignalDetector:
             else:
                 breakdown['trends'] = {'points': 0, 'detail': '0/3 aligned'}
             
-            # 3. CVD Score (20 points)
+            # 3. CVD Score (20 points) - DIRECTION MATTERS
             if cvd_5m is not None:
-                abs_cvd = abs(cvd_5m)
-                if abs_cvd >= 0.12:
-                    score += 20
-                    breakdown['cvd'] = {'points': 20, 'detail': f'{cvd_5m:.3f}'}
-                elif abs_cvd >= 0.08:
-                    score += 12
-                    breakdown['cvd'] = {'points': 12, 'detail': f'{cvd_5m:.3f}'}
-                elif abs_cvd >= 0.05:
-                    score += 5
-                    breakdown['cvd'] = {'points': 5, 'detail': f'{cvd_5m:.3f}'}
-                else:
-                    breakdown['cvd'] = {'points': 0, 'detail': f'{cvd_5m:.3f}'}
+                if direction == SignalDirection.LONG:
+                    # LONG: Only positive CVD scores
+                    if cvd_5m > 0.12:
+                        score += 20
+                        breakdown['cvd'] = {'points': 20, 'detail': f'{cvd_5m:.3f}'}
+                    elif cvd_5m > 0.08:
+                        score += 12
+                        breakdown['cvd'] = {'points': 12, 'detail': f'{cvd_5m:.3f}'}
+                    elif cvd_5m > 0.05:
+                        score += 5
+                        breakdown['cvd'] = {'points': 5, 'detail': f'{cvd_5m:.3f}'}
+                    else:
+                        breakdown['cvd'] = {'points': 0, 'detail': f'{cvd_5m:.3f}'}
+                else:  # SHORT
+                    # SHORT: Only negative CVD scores
+                    if cvd_5m < -0.12:
+                        score += 20
+                        breakdown['cvd'] = {'points': 20, 'detail': f'{cvd_5m:.3f}'}
+                    elif cvd_5m < -0.08:
+                        score += 12
+                        breakdown['cvd'] = {'points': 12, 'detail': f'{cvd_5m:.3f}'}
+                    elif cvd_5m < -0.05:
+                        score += 5
+                        breakdown['cvd'] = {'points': 5, 'detail': f'{cvd_5m:.3f}'}
+                    else:
+                        breakdown['cvd'] = {'points': 0, 'detail': f'{cvd_5m:.3f}'}
             else:
                 breakdown['cvd'] = {'points': 0, 'detail': 'N/A'}
             
-            # 4. OBI Score (15 points)
+            # 4. OBI Score (15 points) - DIRECTION MATTERS
             if obi is not None:
-                abs_obi = abs(obi)
-                if abs_obi >= 0.10:
-                    score += 15
-                    breakdown['obi'] = {'points': 15, 'detail': f'{obi:.3f}'}
-                elif abs_obi >= 0.06:
-                    score += 10
-                    breakdown['obi'] = {'points': 10, 'detail': f'{obi:.3f}'}
-                elif abs_obi >= 0.03:
-                    score += 5
-                    breakdown['obi'] = {'points': 5, 'detail': f'{obi:.3f}'}
-                else:
-                    breakdown['obi'] = {'points': 0, 'detail': f'{obi:.3f}'}
+                if direction == SignalDirection.LONG:
+                    # LONG: Only positive OBI scores
+                    if obi > 0.10:
+                        score += 15
+                        breakdown['obi'] = {'points': 15, 'detail': f'{obi:.3f}'}
+                    elif obi > 0.06:
+                        score += 10
+                        breakdown['obi'] = {'points': 10, 'detail': f'{obi:.3f}'}
+                    elif obi > 0.03:
+                        score += 5
+                        breakdown['obi'] = {'points': 5, 'detail': f'{obi:.3f}'}
+                    else:
+                        breakdown['obi'] = {'points': 0, 'detail': f'{obi:.3f}'}
+                else:  # SHORT
+                    # SHORT: Only negative OBI scores
+                    if obi < -0.10:
+                        score += 15
+                        breakdown['obi'] = {'points': 15, 'detail': f'{obi:.3f}'}
+                    elif obi < -0.06:
+                        score += 10
+                        breakdown['obi'] = {'points': 10, 'detail': f'{obi:.3f}'}
+                    elif obi < -0.03:
+                        score += 5
+                        breakdown['obi'] = {'points': 5, 'detail': f'{obi:.3f}'}
+                    else:
+                        breakdown['obi'] = {'points': 0, 'detail': f'{obi:.3f}'}
             else:
                 breakdown['obi'] = {'points': 0, 'detail': 'N/A'}
             
