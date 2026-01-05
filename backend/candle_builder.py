@@ -90,12 +90,12 @@ class CandleBuilder:
         try:
             logger.info(f"Attempting historical backfill from OKX REST API for {self.symbol}...")
             
-            # OKX REST API endpoint for historical candles
-            url = "https://www.okx.com/api/v5/market/history-candles"
+            # OKX REST API endpoint for current market candles
+            url = "https://www.okx.com/api/v5/market/candles"
             params = {
                 "instId": f"{self.symbol}-USDT-SWAP",
                 "bar": "1m",
-                "limit": "100"
+                "limit": "200"  # Get 200 candles (3.3 hours of data)
             }
             
             response = requests.get(url, params=params, timeout=10)
@@ -106,10 +106,10 @@ class CandleBuilder:
                 if data.get('code') == '0':
                     candles_data = data.get('data', [])
                     
-                    # OKX returns: [timestamp, open, high, low, close, volume, ...]
+                    # OKX returns: [timestamp_ms, open, high, low, close, volume, volCcy, volCcyQuote, confirm]
                     # Process in reverse (oldest first)
                     for candle_data in reversed(candles_data):
-                        timestamp = int(candle_data[0]) // 1000  # Convert to seconds
+                        timestamp = int(candle_data[0]) // 1000  # Convert ms to seconds
                         
                         candle = Candle(timestamp, '1m')
                         candle.open = float(candle_data[1])
@@ -129,7 +129,7 @@ class CandleBuilder:
                     # Save to file
                     self.save_to_file()
                     
-                    logger.info(f"Successfully backfilled {len(candles_data)} 1m candles from REST API for {self.symbol}")
+                    logger.info(f"Successfully backfilled {len(candles_data)} 1m candles from REST API for {self.symbol} (3.3hrs history)")
                 else:
                     logger.warning(f"OKX REST API returned error code: {data.get('code')} for {self.symbol}")
             elif response.status_code == 403:
