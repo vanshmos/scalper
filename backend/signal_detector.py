@@ -486,7 +486,9 @@ class SignalDetector:
         spread: Optional[float],
         gates_pass: bool,
         atr_5m: Optional[float],
-        depth: Optional[float]
+        depth: Optional[float],
+        current_volume: Optional[float] = None,
+        vol_ma20: Optional[float] = None
     ) -> Dict:
         """Detect signals using V1.5 hybrid scoring system with strict quality filters"""
         
