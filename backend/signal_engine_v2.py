@@ -574,22 +574,42 @@ class SignalEngine:
             elif self.signal_state.status == "FORMING":
                 if not all_pass:
                     # Conditions no longer met, cancel
-                    logger.info(f"Signal FORMING cancelled: conditions no longer met")
+                    logger.info(f"{self.display_name} signal FORMING cancelled: conditions no longer met")
                     self.signal_state.reset()
                 else:
                     # Check if 12 seconds have passed
                     elapsed = current_time - self.signal_state.forming_start
                     if elapsed >= 12:
-                        # Transition to ACTIVE
-                        self.signal_state.status = "ACTIVE"
-                        self.signal_state.entry_price = indicators.get('price')
-                        self.signal_state.entry_time = current_time
-                        self.signal_state.atr_at_entry = indicators.get('atr')
+                        # CRITICAL FIX: Verify conditions are STRENGTHENING, not deteriorating
+                        # Compare current score vs score when FORMING started
+                        direction = self.signal_state.direction
+                        if direction == 'LONG':
+                            current_score = long_score
+                        else:
+                            current_score = short_score
                         
-                        logger.info(f"Signal ACTIVE: {self.signal_state.direction} at ${self.signal_state.entry_price:.2f}")
+                        # Store initial score when FORMING started
+                        if not hasattr(self.signal_state, 'initial_score'):
+                            self.signal_state.initial_score = current_score
                         
-                        # Send Telegram alert
-                        await self._send_signal_alert(indicators)
+                        # FIXED: Only activate if score improved or stayed strong
+                        score_change = current_score - self.signal_state.initial_score
+                        
+                        if score_change >= -5:  # Allow max 5 point degradation
+                            # Transition to ACTIVE
+                            self.signal_state.status = "ACTIVE"
+                            self.signal_state.entry_price = indicators.get('price')
+                            self.signal_state.entry_time = current_time
+                            self.signal_state.atr_at_entry = indicators.get('atr')
+                            
+                            logger.info(f"{self.display_name} Signal ACTIVE: {self.signal_state.direction} at ${self.signal_state.entry_price:.2f} (score: {current_score}/100, change: {score_change:+d})")
+                            
+                            # Send Telegram alert
+                            await self._send_signal_alert(indicators)
+                        else:
+                            # Conditions deteriorating, cancel
+                            logger.warning(f"{self.display_name} signal FORMING cancelled: conditions deteriorating (score dropped {score_change} points)")
+                            self.signal_state.reset()
                         
             elif self.signal_state.status == "ACTIVE":
                 # Active signals expire after 5 minutes
