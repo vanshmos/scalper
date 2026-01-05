@@ -437,36 +437,48 @@ function App() {
 
         {/* Signal Checklist - SHORT */}
         <div className="info-card signal-card">
-          <div className="card-header">PHASE 4: SHORT SIGNAL</div>
+          <div className="card-header">SHORT SIGNAL (V1.5)</div>
           <div className="card-content">
             <div className="confidence-row">
-              <span>Confidence:</span>
-              <span className={`confidence-value ${signals.short?.confidence >= 70 ? 'text-green' : 'text-red'}`} data-testid="short-confidence">
-                {signals.short?.confidence || 0}/100
+              <span>Score:</span>
+              <span className={`confidence-value quality-${signals.short?.quality?.toLowerCase()}`} data-testid="short-score">
+                {signals.short?.score || 0}/100 ({signals.short?.quality || 'LOW'})
               </span>
             </div>
             
-            <div className="checklist">
-              <div className={`checklist-item ${signals.short?.checklist?.regime?.pass ? 'pass' : 'fail'}`} data-testid="short-regime">
-                <span className="check-icon">{signals.short?.checklist?.regime?.pass ? '✓' : '✗'}</span>
-                <span>{signals.short?.checklist?.regime?.description || 'Regime check'}</span>
+            <div className="scoring-breakdown">
+              <div className="breakdown-title">Scoring Breakdown:</div>
+              {signals.short?.breakdown && Object.entries(signals.short.breakdown).map(([key, value]) => (
+                <div key={key} className="breakdown-item">
+                  <span className="breakdown-label">{key}:</span>
+                  <span className="breakdown-detail">{value.detail}</span>
+                  <span className="breakdown-points">+{value.points}</span>
+                </div>
+              ))}
+              <div className="breakdown-total">
+                <span>Total:</span>
+                <span className="total-score">{signals.short?.score || 0}</span>
               </div>
-              <div className={`checklist-item ${signals.short?.checklist?.structure?.pass ? 'pass' : 'fail'}`} data-testid="short-structure">
-                <span className="check-icon">{signals.short?.checklist?.structure?.pass ? '✓' : '✗'}</span>
-                <span>{signals.short?.checklist?.structure?.description || 'Structure check'}</span>
-              </div>
-              <div className={`checklist-item ${signals.short?.checklist?.cvd?.pass ? 'pass' : 'fail'}`} data-testid="short-cvd">
-                <span className="check-icon">{signals.short?.checklist?.cvd?.pass ? '✓' : '✗'}</span>
-                <span>{signals.short?.checklist?.cvd?.description || 'CVD check'}</span>
-              </div>
-              <div className={`checklist-item ${signals.short?.checklist?.obi?.pass ? 'pass' : 'fail'}`} data-testid="short-obi">
-                <span className="check-icon">{signals.short?.checklist?.obi?.pass ? '✓' : '✗'}</span>
-                <span>{signals.short?.checklist?.obi?.description || 'OBI check'}</span>
-              </div>
-              <div className={`checklist-item ${signals.short?.checklist?.pullback?.pass ? 'pass' : 'fail'}`} data-testid="short-pullback">
-                <span className="check-icon">{signals.short?.checklist?.pullback?.pass ? '✓' : '✗'}</span>
-                <span>{signals.short?.checklist?.pullback?.description || 'Pullback check'}</span>
-              </div>
+            </div>
+            
+            <div className="hard-gates-section">
+              <div className="gates-title">Hard Gates:</div>
+              {signals.short?.hard_gates && (
+                <>
+                  <div className={`gate-item ${signals.short.hard_gates.ema_proximity?.pass ? 'pass' : 'fail'}`}>
+                    <span className="gate-icon">{signals.short.hard_gates.ema_proximity?.pass ? '✓' : '✗'}</span>
+                    <span>EMA Proximity (&lt;1%): {signals.short.hard_gates.ema_proximity?.detail || 'N/A'}</span>
+                  </div>
+                  <div className={`gate-item ${signals.short.hard_gates.spread?.pass ? 'pass' : 'fail'}`}>
+                    <span className="gate-icon">{signals.short.hard_gates.spread?.pass ? '✓' : '✗'}</span>
+                    <span>Spread (&lt;5 bps): {signals.short.hard_gates.spread?.detail || 'N/A'}</span>
+                  </div>
+                  <div className={`gate-item ${signals.short.hard_gates.directional_alignment?.pass ? 'pass' : 'fail'}`}>
+                    <span className="gate-icon">{signals.short.hard_gates.directional_alignment?.pass ? '✓' : '✗'}</span>
+                    <span>CVD/OBI Direction: {signals.short.hard_gates.directional_alignment?.detail || 'N/A'}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
