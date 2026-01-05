@@ -351,34 +351,49 @@ class SignalEngine:
             rsi = indicators.get('rsi')
             atr = indicators.get('atr')
             
-            # 1. Regime (5m trend + price confirmation for fast moves)
+            # 1. Regime (5m trend + price confirmation + volume validation)
             if ema20_5m and ema50_5m and price:
                 # Calculate EMA separation percentage
                 ema_diff_pct = abs(ema20_5m - ema50_5m) / ema50_5m * 100
                 
-                # Primary check: EMA crossover (require >0.05% separation to avoid noise)
-                if ema_diff_pct > 0.05:
+                # Check if we have volume data for confidence
+                volume_confirms = False
+                if len(self.candles_5m) >= 3:
+                    recent_vols = [c.volume for c in list(self.candles_5m)[-3:]]
+                    avg_recent_vol = sum(recent_vols) / len(recent_vols)
+                    # Volume should be above 50% of recent average (not dead)
+                    if len(self.candles_5m) >= 10:
+                        older_vols = [c.volume for c in list(self.candles_5m)[-10:-3]]
+                        avg_older_vol = sum(older_vols) / len(older_vols) if older_vols else avg_recent_vol
+                        volume_confirms = avg_recent_vol > avg_older_vol * 0.5
+                    else:
+                        volume_confirms = True
+                
+                # Primary check: EMA crossover (require >0.1% separation to avoid noise)
+                # FIXED: Increased from 0.05% to 0.1% for cleaner signals
+                if ema_diff_pct > 0.1 and volume_confirms:
                     is_bull_5m = ema20_5m > ema50_5m
                     is_bear_5m = ema20_5m < ema50_5m
                 else:
-                    # EMAs too close = RANGING
+                    # EMAs too close or volume too low = RANGING
                     is_bull_5m = False
                     is_bear_5m = False
                 
                 # Secondary check: Price position (catches fast moves)
-                # If price is >1% above both EMAs = bullish override
                 avg_ema = (ema20_5m + ema50_5m) / 2
                 price_pct_diff = ((price - avg_ema) / avg_ema) * 100
                 
-                if price_pct_diff > 1.0:
+                # FIXED: Tightened from 1% to 1.5% to avoid false breakouts
+                if price_pct_diff > 1.5 and volume_confirms:
                     is_bull_5m = True
                     is_bear_5m = False
-                elif price_pct_diff < -1.0:
+                elif price_pct_diff < -1.5 and volume_confirms:
                     is_bull_5m = False
                     is_bear_5m = True
                 
                 checklist['regime'] = is_bull_5m or is_bear_5m
                 checklist['regime_direction'] = 'BULL' if is_bull_5m else 'BEAR' if is_bear_5m else 'RANGING'
+                checklist['ema_separation_pct'] = ema_diff_pct
             
             # 2. Multi-TF alignment (1m AND 5m must agree)
             if ema20_1m and ema50_1m and ema20_5m and ema50_5m:
