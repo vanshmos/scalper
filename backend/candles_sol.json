@@ -1,69 +1,6 @@
 {
   "candles_1m": [
     {
-      "timestamp": 1767607320,
-      "timeframe": "1m",
-      "open": 135.38,
-      "high": 135.48,
-      "low": 135.32,
-      "close": 135.38,
-      "volume": 2098.97
-    },
-    {
-      "timestamp": 1767607380,
-      "timeframe": "1m",
-      "open": 135.37,
-      "high": 135.43,
-      "low": 135.37,
-      "close": 135.4,
-      "volume": 605.81
-    },
-    {
-      "timestamp": 1767607440,
-      "timeframe": "1m",
-      "open": 135.39,
-      "high": 135.5,
-      "low": 135.39,
-      "close": 135.49,
-      "volume": 2092.05
-    },
-    {
-      "timestamp": 1767607500,
-      "timeframe": "1m",
-      "open": 135.49,
-      "high": 135.64,
-      "low": 135.48,
-      "close": 135.6,
-      "volume": 7077.17
-    },
-    {
-      "timestamp": 1767607560,
-      "timeframe": "1m",
-      "open": 135.59,
-      "high": 135.59,
-      "low": 135.54,
-      "close": 135.54,
-      "volume": 3526.49
-    },
-    {
-      "timestamp": 1767607620,
-      "timeframe": "1m",
-      "open": 135.54,
-      "high": 135.57,
-      "low": 135.51,
-      "close": 135.55,
-      "volume": 1935.58
-    },
-    {
-      "timestamp": 1767607680,
-      "timeframe": "1m",
-      "open": 135.55,
-      "high": 135.56,
-      "low": 135.5,
-      "close": 135.54,
-      "volume": 1780.94
-    },
-    {
       "timestamp": 1767607740,
       "timeframe": "1m",
       "open": 135.53,
@@ -1619,26 +1556,80 @@
       "low": 134.98,
       "close": 134.99,
       "volume": 5607.799999999999
+    },
+    {
+      "timestamp": 1767618060,
+      "timeframe": "1m",
+      "open": 134.99,
+      "high": 135.04,
+      "low": 134.91,
+      "close": 134.97,
+      "volume": 2874.8200000000015
+    },
+    {
+      "timestamp": 1767618120,
+      "timeframe": "1m",
+      "open": 134.97,
+      "high": 134.97,
+      "low": 134.9,
+      "close": 134.9,
+      "volume": 1531.9099999999999
+    },
+    {
+      "timestamp": 1767618180,
+      "timeframe": "1m",
+      "open": 134.91,
+      "high": 135.02,
+      "low": 134.83,
+      "close": 135.02,
+      "volume": 2740.6400000000003
+    },
+    {
+      "timestamp": 1767618240,
+      "timeframe": "1m",
+      "open": 135.02,
+      "high": 135.06,
+      "low": 134.94,
+      "close": 134.99,
+      "volume": 5331.389999999999
+    },
+    {
+      "timestamp": 1767618300,
+      "timeframe": "1m",
+      "open": 134.98,
+      "high": 135.13,
+      "low": 134.98,
+      "close": 135.11,
+      "volume": 2367.82
+    },
+    {
+      "timestamp": 1767618360,
+      "timeframe": "1m",
+      "open": 135.11,
+      "high": 135.24,
+      "low": 135.11,
+      "close": 135.24,
+      "volume": 5004.180000000003
+    },
+    {
+      "timestamp": 1767618420,
+      "timeframe": "1m",
+      "open": 135.23,
+      "high": 135.3,
+      "low": 135.08,
+      "close": 135.09,
+      "volume": 6304.11
     }
   ],
   "candles_5m": [
     {
-      "timestamp": 1767607200,
-      "timeframe": "5m",
-      "open": 135.38,
-      "high": 135.5,
-      "low": 135.32,
-      "close": 135.49,
-      "volume": 4796.83
-    },
-    {
       "timestamp": 1767607500,
       "timeframe": "5m",
-      "open": 135.49,
-      "high": 135.64,
+      "open": 135.53,
+      "high": 135.6,
       "low": 135.48,
       "close": 135.6,
-      "volume": 26044.96
+      "volume": 11724.78
     },
     {
       "timestamp": 1767607800,
@@ -1951,20 +1942,29 @@
       "timeframe": "5m",
       "open": 135.04,
       "high": 135.1,
-      "low": 134.98,
+      "low": 134.83,
       "close": 134.99,
-      "volume": 12662.029999999999
+      "volume": 19532.99
+    },
+    {
+      "timestamp": 1767618300,
+      "timeframe": "5m",
+      "open": 134.98,
+      "high": 135.3,
+      "low": 134.98,
+      "close": 135.09,
+      "volume": 19980.220000000005
     }
   ],
   "candles_15m": [
     {
       "timestamp": 1767607200,
       "timeframe": "15m",
-      "open": 135.38,
+      "open": 135.53,
       "high": 135.74,
-      "low": 135.32,
+      "low": 135.42,
       "close": 135.71,
-      "volume": 44566.66
+      "volume": 25449.65
     },
     {
       "timestamp": 1767608100,
@@ -2069,11 +2069,11 @@
       "timestamp": 1767618000,
       "timeframe": "15m",
       "open": 135.04,
-      "high": 135.1,
-      "low": 134.98,
-      "close": 134.99,
-      "volume": 12662.029999999999
+      "high": 135.3,
+      "low": 134.83,
+      "close": 135.09,
+      "volume": 39513.21000000001
     }
   ],
-  "last_updated": "2026-01-05T13:01:01.373264+00:00"
+  "last_updated": "2026-01-05T13:08:00.307810+00:00"
 }
