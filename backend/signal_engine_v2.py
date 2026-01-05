@@ -753,8 +753,14 @@ class SignalEngine:
                 'indicators': formatted_indicators,
                 'gates': {
                     'all_pass': checklist.get('gates', False),
-                    'spread': indicators.get('spread'),
-                    'depth': indicators.get('depth')
+                    'spread': {
+                        'pass': indicators.get('spread', 999) < 1.5 if indicators.get('spread') is not None else False,
+                        'value': indicators.get('spread', 0)
+                    },
+                    'depth': {
+                        'pass': indicators.get('depth', 0) > 500000 if indicators.get('depth') is not None else False,
+                        'value': indicators.get('depth', 0)
+                    }
                 },
                 'signals': signals_data,
                 'signal_status': signal_status_data
