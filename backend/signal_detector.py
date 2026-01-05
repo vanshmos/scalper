@@ -213,6 +213,164 @@ class SignalDetector:
             'score': score,
             'breakdown': breakdown
         }
+
+    def calculate_signal_confidence(
+        self,
+        direction: SignalDirection,
+        regime: RegimeType,
+        ema20_5m: Optional[float],
+        ema50_5m: Optional[float],
+        ema20_15m: Optional[float],
+        ema50_15m: Optional[float],
+        cvd_5m: Optional[float],
+        obi: Optional[float],
+        current_price: Optional[float],
+        ema20_1m: Optional[float],
+        rsi_5m: Optional[float],
+        spread: Optional[float],
+        depth: Optional[float],
+        atr_5m: Optional[float]
+    ) -> Dict:
+        """
+        Calculate dynamic signal confidence (0-100) for quality control.
+        Only signals >= 65% confidence should be activated.
+        """
+        
+        confidence = 0
+        breakdown = {}
+        
+        try:
+            # 1. Regime alignment (5m+15m trends match): +20 points, else +10
+            if ema20_5m and ema50_5m and ema20_15m and ema50_15m:
+                tf_5m_aligned = (ema20_5m > ema50_5m and direction == SignalDirection.LONG) or \
+                                (ema20_5m < ema50_5m and direction == SignalDirection.SHORT)
+                tf_15m_aligned = (ema20_15m > ema50_15m and direction == SignalDirection.LONG) or \
+                                 (ema20_15m < ema50_15m and direction == SignalDirection.SHORT)
+                
+                if tf_5m_aligned and tf_15m_aligned:
+                    confidence += 20
+                    breakdown['regime_alignment'] = {'points': 20, 'detail': '5m+15m aligned'}
+                elif tf_5m_aligned or tf_15m_aligned:
+                    confidence += 10
+                    breakdown['regime_alignment'] = {'points': 10, 'detail': '1 timeframe aligned'}
+                else:
+                    breakdown['regime_alignment'] = {'points': 0, 'detail': 'No alignment'}
+            else:
+                breakdown['regime_alignment'] = {'points': 0, 'detail': 'N/A'}
+            
+            # 2. CVD magnitude: +15 if abs(cvd_5m)>0.4, +10 if >0.3, +5 if >0.2
+            if cvd_5m is not None:
+                abs_cvd = abs(cvd_5m)
+                # Check directional alignment
+                if (direction == SignalDirection.LONG and cvd_5m > 0) or \
+                   (direction == SignalDirection.SHORT and cvd_5m < 0):
+                    if abs_cvd > 0.4:
+                        confidence += 15
+                        breakdown['cvd_magnitude'] = {'points': 15, 'detail': f'{cvd_5m:.3f}'}
+                    elif abs_cvd > 0.3:
+                        confidence += 10
+                        breakdown['cvd_magnitude'] = {'points': 10, 'detail': f'{cvd_5m:.3f}'}
+                    elif abs_cvd > 0.2:
+                        confidence += 5
+                        breakdown['cvd_magnitude'] = {'points': 5, 'detail': f'{cvd_5m:.3f}'}
+                    else:
+                        breakdown['cvd_magnitude'] = {'points': 0, 'detail': f'{cvd_5m:.3f} weak'}
+                else:
+                    breakdown['cvd_magnitude'] = {'points': 0, 'detail': f'{cvd_5m:.3f} wrong direction'}
+            else:
+                breakdown['cvd_magnitude'] = {'points': 0, 'detail': 'N/A'}
+            
+            # 3. OBI strength: +15 if abs(obi)>0.3, +10 if >0.2, +5 if >0.15
+            if obi is not None:
+                abs_obi = abs(obi)
+                # Check directional alignment
+                if (direction == SignalDirection.LONG and obi > 0) or \
+                   (direction == SignalDirection.SHORT and obi < 0):
+                    if abs_obi > 0.3:
+                        confidence += 15
+                        breakdown['obi_strength'] = {'points': 15, 'detail': f'{obi:.3f}'}
+                    elif abs_obi > 0.2:
+                        confidence += 10
+                        breakdown['obi_strength'] = {'points': 10, 'detail': f'{obi:.3f}'}
+                    elif abs_obi > 0.15:
+                        confidence += 5
+                        breakdown['obi_strength'] = {'points': 5, 'detail': f'{obi:.3f}'}
+                    else:
+                        breakdown['obi_strength'] = {'points': 0, 'detail': f'{obi:.3f} weak'}
+                else:
+                    breakdown['obi_strength'] = {'points': 0, 'detail': f'{obi:.3f} wrong direction'}
+            else:
+                breakdown['obi_strength'] = {'points': 0, 'detail': 'N/A'}
+            
+            # 4. RSI position: +15 if 40-60 (neutral), +10 if 35-65, +5 if 30-70
+            if rsi_5m is not None:
+                if 40 <= rsi_5m <= 60:
+                    confidence += 15
+                    breakdown['rsi_position'] = {'points': 15, 'detail': f'{rsi_5m:.0f} (neutral zone)'}
+                elif 35 <= rsi_5m <= 65:
+                    confidence += 10
+                    breakdown['rsi_position'] = {'points': 10, 'detail': f'{rsi_5m:.0f}'}
+                elif 30 <= rsi_5m <= 70:
+                    confidence += 5
+                    breakdown['rsi_position'] = {'points': 5, 'detail': f'{rsi_5m:.0f}'}
+                else:
+                    breakdown['rsi_position'] = {'points': 0, 'detail': f'{rsi_5m:.0f} extreme'}
+            else:
+                breakdown['rsi_position'] = {'points': 0, 'detail': 'N/A'}
+            
+            # 5. EMA proximity: +15 if <0.15% from EMA20, +10 if <0.25%, +5 if <0.35%
+            if current_price and ema20_1m:
+                distance_pct = abs(current_price - ema20_1m) / ema20_1m * 100
+                if distance_pct < 0.15:
+                    confidence += 15
+                    breakdown['ema_proximity'] = {'points': 15, 'detail': f'{distance_pct:.2f}%'}
+                elif distance_pct < 0.25:
+                    confidence += 10
+                    breakdown['ema_proximity'] = {'points': 10, 'detail': f'{distance_pct:.2f}%'}
+                elif distance_pct < 0.35:
+                    confidence += 5
+                    breakdown['ema_proximity'] = {'points': 5, 'detail': f'{distance_pct:.2f}%'}
+                else:
+                    breakdown['ema_proximity'] = {'points': 0, 'detail': f'{distance_pct:.2f}% too far'}
+            else:
+                breakdown['ema_proximity'] = {'points': 0, 'detail': 'N/A'}
+            
+            # 6. Gates quality: +10 if spread<1bps AND depth>$25M, +5 if spread<1.5bps AND depth>$15M
+            if spread is not None and depth is not None:
+                depth_millions = depth / 1_000_000
+                if spread < 1.0 and depth_millions > 25:
+                    confidence += 10
+                    breakdown['gates_quality'] = {'points': 10, 'detail': f'{spread:.2f}bps, ${depth_millions:.0f}M'}
+                elif spread < 1.5 and depth_millions > 15:
+                    confidence += 5
+                    breakdown['gates_quality'] = {'points': 5, 'detail': f'{spread:.2f}bps, ${depth_millions:.0f}M'}
+                else:
+                    breakdown['gates_quality'] = {'points': 0, 'detail': f'{spread:.2f}bps, ${depth_millions:.0f}M'}
+            else:
+                breakdown['gates_quality'] = {'points': 0, 'detail': 'N/A'}
+            
+            # 7. ATR regime: +10 if >150 (sufficient volatility for scalping)
+            if atr_5m is not None:
+                if atr_5m > 150:
+                    confidence += 10
+                    breakdown['atr_regime'] = {'points': 10, 'detail': f'${atr_5m:.0f}'}
+                elif atr_5m > 100:
+                    confidence += 5
+                    breakdown['atr_regime'] = {'points': 5, 'detail': f'${atr_5m:.0f}'}
+                else:
+                    breakdown['atr_regime'] = {'points': 0, 'detail': f'${atr_5m:.0f} low volatility'}
+            else:
+                breakdown['atr_regime'] = {'points': 0, 'detail': 'N/A'}
+            
+        except Exception as e:
+            logger.error(f"Error calculating signal confidence: {e}")
+        
+        return {
+            'confidence': confidence,
+            'breakdown': breakdown,
+            'quality_grade': 'HIGH' if confidence >= 80 else 'MEDIUM' if confidence >= 65 else 'LOW'
+        }
+
     
     def check_hard_gates(
         self,
