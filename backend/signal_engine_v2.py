@@ -653,7 +653,7 @@ class SignalEngine:
                 # Active signals expire after 5 minutes
                 elapsed = current_time - self.signal_state.entry_time
                 if elapsed >= 300:
-                    logger.info(f"Signal EXPIRED after 5 minutes")
+                    logger.info("Signal EXPIRED after 5 minutes")
                     self.signal_state.reset()
                     
         except Exception as e:
