@@ -343,6 +343,8 @@ class SignalEngine:
                 'ema50_1m': ema50_1m,
                 'ema20_5m': ema20_5m,
                 'ema50_5m': ema50_5m,
+                'ema20_15m': ema20_15m,
+                'ema50_15m': ema50_15m,
                 'atr': atr if atr and atr > 0 else 100,  # Default to 100 if ATR is 0
                 'rsi': rsi,
                 'obi': obi,
