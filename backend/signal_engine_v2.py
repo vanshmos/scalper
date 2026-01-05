@@ -744,37 +744,36 @@ class SignalEngine:
             logger.error(f"Error processing signal state: {e}")
     
     async def _send_signal_alert(self, indicators: Dict):
-        """Send Telegram alert for active signal"""
+        """Send Telegram alert for active signal with ADAPTIVE TARGETS"""
         try:
             atr = indicators.get('atr', 100)
             entry = self.signal_state.entry_price
             direction = self.signal_state.direction
             
-            # Calculate levels with adaptive sizing (RSI-based)
-            rsi = indicators.get('rsi', 50)
+            # ALPHA ENHANCEMENT: Adaptive targets based on trend strength
+            trend_strength = indicators.get('trend_strength')
+            
+            # Import alpha detector for adaptive target calculation
+            from signal_detector_alpha import SignalDetector
+            alpha_detector = SignalDetector()
+            adaptive_targets = alpha_detector.calculate_adaptive_targets(atr, trend_strength=trend_strength)
+            
+            # Use adaptive multipliers instead of static values
+            tp1_mult = adaptive_targets['tp1_multiplier']
+            tp2_mult = adaptive_targets['tp2_multiplier']
+            sl_mult = adaptive_targets['sl_multiplier']
+            
+            logger.info(f"🎯 Adaptive Targets: {adaptive_targets['regime_detail']}")
+            logger.info(f"   TP1: {tp1_mult}x ATR, TP2: {tp2_mult}x ATR, SL: {sl_mult}x ATR")
             
             if direction == "LONG":
-                if rsi < 50:
-                    # Momentum entry
-                    sl = entry - (2.0 * atr)
-                    tp1 = entry + (2.5 * atr)
-                    tp2 = entry + (4.0 * atr)
-                else:
-                    # Pullback entry
-                    sl = entry - (1.2 * atr)
-                    tp1 = entry + (1.8 * atr)
-                    tp2 = entry + (3.0 * atr)
+                sl = entry - (sl_mult * atr)
+                tp1 = entry + (tp1_mult * atr)
+                tp2 = entry + (tp2_mult * atr)
             else:  # SHORT
-                if rsi > 50:
-                    # Momentum entry
-                    sl = entry + (2.0 * atr)
-                    tp1 = entry - (2.5 * atr)
-                    tp2 = entry - (4.0 * atr)
-                else:
-                    # Pullback entry
-                    sl = entry + (1.2 * atr)
-                    tp1 = entry - (1.8 * atr)
-                    tp2 = entry - (3.0 * atr)
+                sl = entry + (sl_mult * atr)
+                tp1 = entry - (tp1_mult * atr)
+                tp2 = entry - (tp2_mult * atr)
             
             self.alert_manager.send_signal_alert(
                 direction=direction,
