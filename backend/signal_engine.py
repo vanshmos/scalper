@@ -2,7 +2,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
-from bybit_client import OKXWebSocketClient
+from okx_client import OKXWebSocketClient
 from candle_builder import CandleBuilder
 from indicators import Indicators
 from regime import RegimeDetector
