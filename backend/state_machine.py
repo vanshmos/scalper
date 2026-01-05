@@ -133,7 +133,8 @@ class SignalStateMachine:
         self,
         signals: Dict,
         current_price: Optional[float],
-        atr: Optional[float]
+        atr: Optional[float],
+        rsi: Optional[float] = None
     ) -> Dict:
         """Update state machine and return current signal info"""
         
