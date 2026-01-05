@@ -1001,8 +1001,8 @@ class SignalEngine:
                 'detail': regime_detail
             },
             'rsi_filter': {
-                'pass': 30 <= rsi <= 70,
-                'detail': f"{rsi:.0f}" + ('' if 30 <= rsi <= 70 else ' (need 30-70)')
+                'pass': 30 <= rsi <= 70 if rsi is not None else False,
+                'detail': f"{rsi:.0f}" + (' (need 30-70)' if rsi and not (30 <= rsi <= 70) else '') if rsi else 'N/A'
             },
             'ema_proximity': {
                 'pass': checklist.get('ema_dist', False),
@@ -1010,15 +1010,15 @@ class SignalEngine:
             },
             'spread': {
                 'pass': checklist.get('gates', False),
-                'detail': f"{indicators.get('spread', 0):.2f} bps"
+                'detail': f"{indicators.get('spread', 0):.2f} bps" if indicators.get('spread') is not None else 'N/A'
             },
             'directional_alignment': {
                 'pass': cvd_pass and obi_pass,
-                'detail': f"CVD {taker_ratio:.3f}, OBI {obi:.3f}"
+                'detail': f"CVD {taker_ratio:.3f}, OBI {obi:.3f}" if obi is not None else f"CVD {taker_ratio:.3f}, OBI N/A"
             },
             'atr_sufficient': {
-                'pass': atr > 100,
-                'detail': f"${atr:.0f}"
+                'pass': atr > 100 if atr else False,
+                'detail': f"${atr:.0f}" if atr else 'N/A'
             },
             'funding_filter': {
                 'pass': abs(funding) < 0.0002,  # 0.02%
