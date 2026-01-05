@@ -15,6 +15,11 @@ class Indicators:
         self.cvd_5m_smoothed: Optional[float] = None
         self.depth_smoothed: Optional[float] = None
         
+        # ALPHA ENHANCEMENT: Velocity tracking for anti-spoofing
+        self.obi_history = []  # Track last N OBI values for ROC
+        self.cvd_history = []  # Track last N CVD values for ROC
+        self.max_history_length = 10  # Keep last 10 ticks
+        
     def calculate_ema(self, candles: List[Candle], period: int) -> Optional[float]:
         """Calculate EMA for given period - returns None if insufficient data"""
         try:
