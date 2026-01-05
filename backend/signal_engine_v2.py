@@ -263,13 +263,13 @@ class SignalEngine:
             # OKX trade format: {side: 'buy'/'sell', sz: size, px: price, ts: timestamp}
             side = data.get('side')
             size = float(data.get('sz', 0))
-            timestamp = int(data.get('ts', 0)) // 1000  # Convert to seconds
+            timestamp = int(data.get('ts', 0))  # Keep in milliseconds for indicators.py
             
             # Store trade in format expected by indicators.calculate_cvd()
             trade = {
                 'side': side,
                 'sz': size,  # indicators.py expects 'sz' key
-                'ts': timestamp  # indicators.py expects 'ts' key
+                'ts': timestamp  # indicators.py expects 'ts' key in milliseconds
             }
             
             # Add to recent trades for CVD calculation
