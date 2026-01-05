@@ -203,6 +203,22 @@ class SignalEngine:
         except Exception as e:
             logger.error(f"Error handling 5m candle: {e}")
     
+    async def _on_candle_15m(self, data: dict):
+        """Handle 15m candle updates"""
+        try:
+            candle = okx_to_candle(data)
+            candle.timeframe = '15m'
+            confirm = data[8] if len(data) > 8 else '0'
+            
+            # Only add confirmed candles
+            if confirm == '1':
+                if not self.candles_15m or self.candles_15m[-1].timestamp != candle.timestamp:
+                    self.candles_15m.append(candle)
+                    logger.debug(f"Added confirmed 15m candle: {candle.timestamp}")
+                    
+        except Exception as e:
+            logger.error(f"Error handling 15m candle: {e}")
+    
     async def _on_ticker(self, data: dict):
         """Handle ticker updates"""
         try:
