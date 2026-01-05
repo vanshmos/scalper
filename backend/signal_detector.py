@@ -382,7 +382,9 @@ class SignalDetector:
         spread: Optional[float],
         rsi_5m: Optional[float],
         regime: RegimeType,
-        atr_5m: Optional[float]
+        atr_5m: Optional[float],
+        current_volume: Optional[float] = None,
+        vol_ma20: Optional[float] = None
     ) -> Dict:
         """Check mandatory hard gates"""
         
@@ -393,6 +395,7 @@ class SignalDetector:
             'rsi_filter': {'pass': False, 'detail': 'N/A'},
             'regime_filter': {'pass': False, 'detail': 'N/A'},
             'atr_sufficient': {'pass': False, 'detail': 'N/A'},
+            'volume_surge': {'pass': False, 'detail': 'N/A'},
             'all_pass': False
         }
         
