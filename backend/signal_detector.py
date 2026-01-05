@@ -448,6 +448,12 @@ class SignalDetector:
                 hard_gates['atr_sufficient']['pass'] = atr_5m > self.min_atr
                 hard_gates['atr_sufficient']['detail'] = f'${atr_5m:.0f}' + (' ✓' if atr_5m > self.min_atr else f' (need >${self.min_atr})')
             
+            # 7. Volume Surge (> 1.3x vol_ma20 to avoid illiquid periods)
+            if current_volume is not None and vol_ma20 is not None and vol_ma20 > 0:
+                vol_ratio = current_volume / vol_ma20
+                hard_gates['volume_surge']['pass'] = vol_ratio > 1.3
+                hard_gates['volume_surge']['detail'] = f'{vol_ratio:.2f}x' + (' ✓' if vol_ratio > 1.3 else ' (need >1.3x)')
+            
             # Check if all hard gates pass
             hard_gates['all_pass'] = all([
                 hard_gates['regime_filter']['pass'],
@@ -455,7 +461,8 @@ class SignalDetector:
                 hard_gates['ema_proximity']['pass'],
                 hard_gates['spread']['pass'],
                 hard_gates['directional_alignment']['pass'],
-                hard_gates['atr_sufficient']['pass']
+                hard_gates['atr_sufficient']['pass'],
+                hard_gates['volume_surge']['pass']
             ])
             
         except Exception as e:
