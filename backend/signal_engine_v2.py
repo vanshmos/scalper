@@ -616,7 +616,7 @@ class SignalEngine:
             return {}
     
     async def _process_signal_state(self, checklist: Dict, indicators: Dict, long_score: int, short_score: int):
-        """Process signal state machine with invalidation logic"""
+        """Process signal state machine with ZERO-LATENCY activation"""
         try:
             # Check if all PRO SCALPER checklist items pass
             all_pass = all([
@@ -638,7 +638,7 @@ class SignalEngine:
             
             current_time = time.time()
             
-            # Signal invalidation (NEW: cancel if price moves 1 ATR adverse)
+            # Signal invalidation (cancel if price moves 1 ATR adverse)
             if self.signal_state.status == "ACTIVE":
                 atr = indicators.get('atr', 100)
                 price = indicators.get('price')
@@ -656,54 +656,24 @@ class SignalEngine:
                             self.signal_state.reset()
                             return
             
-            # State machine logic
+            # ZERO-LATENCY STATE MACHINE
             if self.signal_state.status == "IDLE":
                 if all_pass:
-                    # Enter FORMING state
-                    self.signal_state.status = "FORMING"
-                    self.signal_state.forming_start = current_time
-                    self.signal_state.direction = checklist.get('trend_direction')
-                    logger.info(f"Signal FORMING: {self.signal_state.direction}")
+                    # INSTANT ACTIVATION: No FORMING delay
+                    direction = checklist.get('trend_direction')
+                    current_score = long_score if direction == 'LONG' else short_score
                     
-            elif self.signal_state.status == "FORMING":
-                if not all_pass:
-                    # Conditions no longer met, cancel
-                    logger.info(f"{self.display_name} signal FORMING cancelled: conditions no longer met")
-                    self.signal_state.reset()
-                else:
-                    # Check if 12 seconds have passed
-                    elapsed = current_time - self.signal_state.forming_start
-                    if elapsed >= 12:
-                        # CRITICAL FIX: Verify conditions are STRENGTHENING, not deteriorating
-                        # Compare current score vs score when FORMING started
-                        direction = self.signal_state.direction
-                        if direction == 'LONG':
-                            current_score = long_score
-                        else:
-                            current_score = short_score
-                        
-                        # Store initial score when FORMING started
-                        if not hasattr(self.signal_state, 'initial_score'):
-                            self.signal_state.initial_score = current_score
-                        
-                        # FIXED: Only activate if score improved or stayed strong
-                        score_change = current_score - self.signal_state.initial_score
-                        
-                        if score_change >= -5:  # Allow max 5 point degradation
-                            # Transition to ACTIVE
-                            self.signal_state.status = "ACTIVE"
-                            self.signal_state.entry_price = indicators.get('price')
-                            self.signal_state.entry_time = current_time
-                            self.signal_state.atr_at_entry = indicators.get('atr')
-                            
-                            logger.info(f"{self.display_name} Signal ACTIVE: {self.signal_state.direction} at ${self.signal_state.entry_price:.2f} (score: {current_score}/100, change: {score_change:+d})")
-                            
-                            # Send Telegram alert
-                            await self._send_signal_alert(indicators)
-                        else:
-                            # Conditions deteriorating, cancel
-                            logger.warning(f"{self.display_name} signal FORMING cancelled: conditions deteriorating (score dropped {score_change} points)")
-                            self.signal_state.reset()
+                    # Activate signal immediately
+                    self.signal_state.status = "ACTIVE"
+                    self.signal_state.direction = direction
+                    self.signal_state.entry_price = indicators.get('price')
+                    self.signal_state.entry_time = current_time
+                    self.signal_state.atr_at_entry = indicators.get('atr')
+                    
+                    logger.info(f"🚀 {self.display_name} Signal ACTIVE IMMEDIATELY: {direction} at ${self.signal_state.entry_price:.2f} (score: {current_score}/100)")
+                    
+                    # Send Telegram alert
+                    await self._send_signal_alert(indicators)
                         
             elif self.signal_state.status == "ACTIVE":
                 # Active signals expire after 5 minutes
