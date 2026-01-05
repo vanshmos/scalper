@@ -382,9 +382,17 @@ class SignalEngine:
                 spread = self.indicators.calculate_spread(self.last_orderbook)
                 depth = self.indicators.calculate_depth(self.last_orderbook)
             
+            # CRITICAL: Calculate CVD explicitly to populate cvd_history for velocity
+            # Convert deque to list once
+            trades_list = list(self.recent_trades)
+            
+            # Calculate CVDs (This side-effect populates self.indicators.cvd_history)
+            cvd_1m = self.indicators.calculate_cvd(trades_list, window_seconds=60)
+            cvd_5m = self.indicators.calculate_cvd(trades_list, window_seconds=300)
+            
             # ALPHA ENHANCEMENTS: New indicators
             
-            # 1. Velocity signals (anti-spoofing)
+            # 1. Velocity signals (anti-spoofing) - NOW PROPERLY POPULATED
             obi_velocity = self.indicators.get_obi_velocity()
             cvd_velocity = self.indicators.get_cvd_velocity()
             
@@ -414,6 +422,11 @@ class SignalEngine:
                 'depth': depth,
                 'price': price_for_distance,
                 'taker_buy_ratio': self.taker_buy_ratio,
+                # CVD values (calculated from trades)
+                'cvd': {
+                    '1m': cvd_1m,
+                    '5m': cvd_5m
+                },
                 # ALPHA indicators
                 'obi_velocity': obi_velocity,
                 'cvd_velocity': cvd_velocity,
