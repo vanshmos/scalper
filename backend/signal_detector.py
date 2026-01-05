@@ -544,12 +544,19 @@ class SignalDetector:
             spread, depth, atr_5m
         )
         
-        # Determine if signals are ready (score + hard gates)
+        # Determine if signals are ready (score + hard gates + confidence >= 65)
         long_score = long_scoring['score']
         short_score = short_scoring['score']
+        long_confidence = long_confidence_result['confidence']
+        short_confidence = short_confidence_result['confidence']
         
-        long_ready = long_score >= self.forming_threshold and long_hard_gates['all_pass']
-        short_ready = short_score >= self.forming_threshold and short_hard_gates['all_pass']
+        # Signal ready requires: score >= threshold, all hard gates pass, AND confidence >= 65
+        long_ready = (long_score >= self.forming_threshold and 
+                     long_hard_gates['all_pass'] and 
+                     long_confidence >= 65)
+        short_ready = (short_score >= self.forming_threshold and 
+                      short_hard_gates['all_pass'] and 
+                      short_confidence >= 65)
         
         # Determine quality tier
         def get_quality_tier(score):
@@ -566,13 +573,19 @@ class SignalDetector:
                 'breakdown': short_scoring['breakdown'],
                 'hard_gates': short_hard_gates,
                 'signal_ready': short_ready,
-                'quality': get_quality_tier(short_score)
+                'quality': get_quality_tier(short_score),
+                'confidence': short_confidence,
+                'confidence_breakdown': short_confidence_result['breakdown'],
+                'quality_grade': short_confidence_result['quality_grade']
             },
             'long': {
                 'score': long_score,
                 'breakdown': long_scoring['breakdown'],
                 'hard_gates': long_hard_gates,
                 'signal_ready': long_ready,
-                'quality': get_quality_tier(long_score)
+                'quality': get_quality_tier(long_score),
+                'confidence': long_confidence,
+                'confidence_breakdown': long_confidence_result['breakdown'],
+                'quality_grade': long_confidence_result['quality_grade']
             }
         }
