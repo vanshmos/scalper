@@ -268,6 +268,12 @@ class Indicators:
                 
                 return self.cvd_5m_smoothed
             
+            return cvd
+            
+        except Exception as e:
+            logger.error(f"Error calculating CVD: {e}")
+            return None
+            
 
     # ==================== ALPHA ENHANCEMENTS ====================
     
