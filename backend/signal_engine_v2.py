@@ -505,29 +505,31 @@ class SignalEngine:
             # 7. Gates - DYNAMIC THRESHOLDS using statistical analysis
             gates_pass = True
             
-            # Dynamic spread gate: Must be < (Mean + 1.0 * StDev)
+            # Dynamic spread gate: Must be < (Mean + 2.5 * StDev) - loosened for crypto volatility
             if spread is not None:
-                spread_threshold_dynamic = self.spread_stats.get_threshold(mode='upper', std_multiplier=1.0)
+                spread_threshold_dynamic = self.spread_stats.get_threshold(mode='upper', std_multiplier=2.5)
                 if spread_threshold_dynamic is not None:
-                    # Use dynamic threshold
-                    gates_pass = gates_pass and spread < spread_threshold_dynamic
-                    checklist['spread_threshold'] = spread_threshold_dynamic
+                    # Use dynamic threshold (but cap at 3.0 bps for safety)
+                    effective_threshold = min(spread_threshold_dynamic, 3.0)
+                    gates_pass = gates_pass and spread < effective_threshold
+                    checklist['spread_threshold'] = effective_threshold
                 else:
                     # Fallback to static threshold during warmup
-                    gates_pass = gates_pass and spread < 1.5
-                    checklist['spread_threshold'] = 1.5
+                    gates_pass = gates_pass and spread < 2.0
+                    checklist['spread_threshold'] = 2.0
             
-            # Dynamic depth gate: Must be > (Mean - 0.5 * StDev)
+            # Dynamic depth gate: Must be > (Mean - 1.5 * StDev) - loosened for market fluctuations
             if depth is not None:
-                depth_threshold_dynamic = self.depth_stats.get_threshold(mode='lower', std_multiplier=0.5)
+                depth_threshold_dynamic = self.depth_stats.get_threshold(mode='lower', std_multiplier=1.5)
                 if depth_threshold_dynamic is not None:
-                    # Use dynamic threshold
-                    gates_pass = gates_pass and depth > depth_threshold_dynamic
-                    checklist['depth_threshold'] = depth_threshold_dynamic
+                    # Use dynamic threshold (but floor at $100k minimum)
+                    effective_threshold = max(depth_threshold_dynamic, 100000)
+                    gates_pass = gates_pass and depth > effective_threshold
+                    checklist['depth_threshold'] = effective_threshold
                 else:
                     # Fallback to static threshold during warmup
-                    gates_pass = gates_pass and depth > 500000
-                    checklist['depth_threshold'] = 500000
+                    gates_pass = gates_pass and depth > 200000
+                    checklist['depth_threshold'] = 200000
             
             checklist['gates'] = gates_pass
             checklist['spread_value'] = spread
