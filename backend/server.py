@@ -7,7 +7,7 @@ import asyncio
 import json
 from pathlib import Path
 from signal_engine import SignalEngine
-from bybit_client import OKXWebSocketClient
+from okx_client import OKXWebSocketClient
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
