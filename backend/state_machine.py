@@ -140,45 +140,47 @@ class SignalStateMachine:
                 self.state = SignalState.FORMING
                 self.direction = SignalDirection.SHORT
                 self.forming_start_time = current_time
-                self.confidence = short_confidence
-                logger.info("Signal entering FORMING state: SHORT")
+                self.confidence = short_score
+                logger.info(f"Signal entering FORMING state: SHORT (score: {short_score})")
             elif long_ready and not short_ready:
                 self.state = SignalState.FORMING
                 self.direction = SignalDirection.LONG
                 self.forming_start_time = current_time
-                self.confidence = long_confidence
-                logger.info("Signal entering FORMING state: LONG")
+                self.confidence = long_score
+                logger.info(f"Signal entering FORMING state: LONG (score: {long_score})")
             elif short_ready and long_ready:
-                # Both ready: choose higher confidence
-                if short_confidence > long_confidence:
+                # Both ready: choose higher score
+                if short_score > long_score:
                     self.state = SignalState.FORMING
                     self.direction = SignalDirection.SHORT
                     self.forming_start_time = current_time
-                    self.confidence = short_confidence
-                    logger.info("Signal entering FORMING state: SHORT (higher confidence)")
+                    self.confidence = short_score
+                    logger.info(f"Signal entering FORMING state: SHORT (score: {short_score}, higher than LONG {long_score})")
                 else:
                     self.state = SignalState.FORMING
                     self.direction = SignalDirection.LONG
                     self.forming_start_time = current_time
-                    self.confidence = long_confidence
-                    logger.info("Signal entering FORMING state: LONG (higher confidence)")
+                    self.confidence = long_score
+                    logger.info(f"Signal entering FORMING state: LONG (score: {long_score}, higher than SHORT {short_score})")
         
         elif self.state == SignalState.FORMING:
             # Check if core conditions still pass
             if self.direction == SignalDirection.SHORT:
-                core_pass = self.check_core_conditions(short_ready, short_checklist)
+                core_pass = self.check_core_conditions(short_ready, short_hard_gates)
             else:
-                core_pass = self.check_core_conditions(long_ready, long_checklist)
+                core_pass = self.check_core_conditions(long_ready, long_hard_gates)
             
             if not core_pass:
-                # Core conditions failed - reset to IDLE
-                logger.info(f"Signal FORMING cancelled: core conditions failed for {self.direction.value}")
+                # Core conditions failed - reset to IDLE with cancel cooldown
+                logger.info(f"Signal FORMING cancelled: conditions failed for {self.direction.value}")
+                self.start_cooldown(self.direction, is_cancel=True)
+                self.last_cancel_time = current_time
                 self.state = SignalState.IDLE
                 self.direction = None
                 self.forming_start_time = None
                 self.confidence = None
             else:
-                # Check if 20 seconds have passed
+                # Check if 12 seconds have passed
                 elapsed = current_time - self.forming_start_time
                 if elapsed >= self.forming_duration:
                     # Transition to ACTIVE
