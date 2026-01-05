@@ -249,19 +249,16 @@ class Indicators:
                 else:
                     self.cvd_1m_smoothed = self.alpha * cvd + (1 - self.alpha) * self.cvd_1m_smoothed
                 
-                # ALPHA ENHANCEMENT: Track CVD history for velocity
-                self.cvd_history.append(self.cvd_1m_smoothed)
-                if len(self.cvd_history) > self.max_history_length:
-                    self.cvd_history.pop(0)
-                
+                # DO NOT track history for 1m (would corrupt 5m velocity calculation)
                 return self.cvd_1m_smoothed
+                
             elif window_seconds == 300:
                 if self.cvd_5m_smoothed is None:
                     self.cvd_5m_smoothed = cvd
                 else:
                     self.cvd_5m_smoothed = self.alpha * cvd + (1 - self.alpha) * self.cvd_5m_smoothed
                 
-                # ALPHA ENHANCEMENT: Track CVD history for velocity (use 5m as primary)
+                # ALPHA ENHANCEMENT: Track CVD history ONLY for 5m (primary timeframe for velocity)
                 self.cvd_history.append(self.cvd_5m_smoothed)
                 if len(self.cvd_history) > self.max_history_length:
                     self.cvd_history.pop(0)
