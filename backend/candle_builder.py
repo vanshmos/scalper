@@ -17,6 +17,7 @@ class Candle:
         self.low: Optional[float] = None
         self.close: Optional[float] = None
         self.volume = 0.0
+        self.vol_ma20: Optional[float] = None  # 20-period volume moving average
         
     def update(self, price: float, volume: float):
         """Update candle with new trade data"""
@@ -35,7 +36,8 @@ class Candle:
             'high': self.high,
             'low': self.low,
             'close': self.close,
-            'volume': self.volume
+            'volume': self.volume,
+            'vol_ma20': self.vol_ma20
         }
     
     @classmethod
@@ -46,6 +48,7 @@ class Candle:
         candle.low = data.get('low')
         candle.close = data.get('close')
         candle.volume = data.get('volume', 0.0)
+        candle.vol_ma20 = data.get('vol_ma20')
         return candle
 
 
