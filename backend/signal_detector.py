@@ -492,16 +492,22 @@ class SignalDetector:
     ) -> Dict:
         """Detect signals using V1.5 hybrid scoring system with strict quality filters"""
         
-        # CRITICAL: Block all RANGING regime signals immediately
+        # Check hard gates for both directions (always evaluate for diagnostics)
+        long_hard_gates = self.check_hard_gates(
+            SignalDirection.LONG, current_price, ema20_1m, cvd_5m, obi, spread, rsi_5m, regime, atr_5m, current_volume, vol_ma20
+        )
+        
+        short_hard_gates = self.check_hard_gates(
+            SignalDirection.SHORT, current_price, ema20_1m, cvd_5m, obi, spread, rsi_5m, regime, atr_5m, current_volume, vol_ma20
+        )
+        
+        # CRITICAL: Block all RANGING regime signals (but show diagnostic info)
         if regime == RegimeType.RANGING or regime == RegimeType.CHAOTIC:
             return {
                 'short': {
                     'score': 0,
                     'breakdown': {'regime': {'points': 0, 'detail': f'{regime} (BLOCKED)'}},
-                    'hard_gates': {
-                        'regime_filter': {'pass': False, 'detail': f'{regime} (BLOCKED)'},
-                        'all_pass': False
-                    },
+                    'hard_gates': short_hard_gates,
                     'signal_ready': False,
                     'quality': 'BLOCKED',
                     'confidence': 0
@@ -509,10 +515,7 @@ class SignalDetector:
                 'long': {
                     'score': 0,
                     'breakdown': {'regime': {'points': 0, 'detail': f'{regime} (BLOCKED)'}},
-                    'hard_gates': {
-                        'regime_filter': {'pass': False, 'detail': f'{regime} (BLOCKED)'},
-                        'all_pass': False
-                    },
+                    'hard_gates': long_hard_gates,
                     'signal_ready': False,
                     'quality': 'BLOCKED',
                     'confidence': 0
