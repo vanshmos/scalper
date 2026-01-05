@@ -381,7 +381,8 @@ class SignalDetector:
         obi: Optional[float],
         spread: Optional[float],
         rsi_5m: Optional[float],
-        regime: RegimeType
+        regime: RegimeType,
+        atr_5m: Optional[float]
     ) -> Dict:
         """Check mandatory hard gates"""
         
@@ -391,6 +392,7 @@ class SignalDetector:
             'directional_alignment': {'pass': False, 'detail': 'N/A'},
             'rsi_filter': {'pass': False, 'detail': 'N/A'},
             'regime_filter': {'pass': False, 'detail': 'N/A'},
+            'atr_sufficient': {'pass': False, 'detail': 'N/A'},
             'all_pass': False
         }
         
@@ -438,11 +440,20 @@ class SignalDetector:
                     hard_gates['directional_alignment']['pass'] = cvd_strong and obi_strong
                     hard_gates['directional_alignment']['detail'] = f'CVD {cvd_5m:.3f}, OBI {obi:.3f}' + (' ✓' if (cvd_strong and obi_strong) else ' ✗')
             
+            # 6. ATR Minimum (> $100 for sufficient volatility)
+            if atr_5m is not None:
+                hard_gates['atr_sufficient']['pass'] = atr_5m > self.min_atr
+                hard_gates['atr_sufficient']['detail'] = f'${atr_5m:.0f}' + (' ✓' if atr_5m > self.min_atr else f' (need >${self.min_atr})')
+            
             # Check if all hard gates pass
             hard_gates['all_pass'] = all([
                 hard_gates['regime_filter']['pass'],
                 hard_gates['rsi_filter']['pass'],
                 hard_gates['ema_proximity']['pass'],
+                hard_gates['spread']['pass'],
+                hard_gates['directional_alignment']['pass'],
+                hard_gates['atr_sufficient']['pass']
+            ])
                 hard_gates['spread']['pass'],
                 hard_gates['directional_alignment']['pass']
             ])
