@@ -828,7 +828,13 @@ class SignalEngine:
                 },
                 'obi': indicators.get('obi'),
                 'spread': indicators.get('spread'),
-                'depth': indicators.get('depth')
+                'depth': indicators.get('depth'),
+                # ALPHA indicators
+                'vwap': indicators.get('vwap'),
+                'trend_strength': indicators.get('trend_strength'),
+                'obi_velocity': indicators.get('obi_velocity'),
+                'cvd_velocity': indicators.get('cvd_velocity'),
+                'bollinger': indicators.get('bollinger')
             }
             
             # Build signal structure
