@@ -309,9 +309,34 @@ class SignalDetector:
         spread: Optional[float],
         gates_pass: bool
     ) -> Dict:
-        """Detect signals using V1.5 hybrid scoring system"""
+        """Detect signals using V1.5 hybrid scoring system with strict quality filters"""
         
-        # Calculate scores for both directions
+        # CRITICAL: Block all RANGING regime signals immediately
+        if regime == RegimeType.RANGING or regime == RegimeType.CHAOTIC:
+            return {
+                'short': {
+                    'score': 0,
+                    'breakdown': {'regime': {'points': 0, 'detail': f'{regime} (BLOCKED)'}},
+                    'hard_gates': {
+                        'regime_filter': {'pass': False, 'detail': f'{regime} (BLOCKED)'},
+                        'all_pass': False
+                    },
+                    'signal_ready': False,
+                    'quality': 'BLOCKED'
+                },
+                'long': {
+                    'score': 0,
+                    'breakdown': {'regime': {'points': 0, 'detail': f'{regime} (BLOCKED)'}},
+                    'hard_gates': {
+                        'regime_filter': {'pass': False, 'detail': f'{regime} (BLOCKED)'},
+                        'all_pass': False
+                    },
+                    'signal_ready': False,
+                    'quality': 'BLOCKED'
+                }
+            }
+        
+        # Calculate scores for both directions (only for TRENDING regimes)
         long_scoring = self.calculate_signal_score(
             SignalDirection.LONG, regime,
             ema20_1m, ema50_1m, ema20_5m, ema50_5m, ema20_15m, ema50_15m,
@@ -324,13 +349,13 @@ class SignalDetector:
             cvd_5m, obi, current_price, rsi_5m, spread, gates_pass
         )
         
-        # Check hard gates for both directions
+        # Check hard gates with STRICTER thresholds for both directions
         long_hard_gates = self.check_hard_gates(
-            SignalDirection.LONG, current_price, ema20_1m, cvd_5m, obi, spread
+            SignalDirection.LONG, current_price, ema20_1m, cvd_5m, obi, spread, rsi_5m, regime
         )
         
         short_hard_gates = self.check_hard_gates(
-            SignalDirection.SHORT, current_price, ema20_1m, cvd_5m, obi, spread
+            SignalDirection.SHORT, current_price, ema20_1m, cvd_5m, obi, spread, rsi_5m, regime
         )
         
         # Determine if signals are ready (score + hard gates)
