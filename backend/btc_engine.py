@@ -524,6 +524,16 @@ class BTCSignalEngine:
             indicators = self._calculate_indicators()
             checklist = self._build_checklist(indicators)
             
+            # Calculate proper gradient scores for LONG and SHORT independently
+            long_score = self._calculate_signal_score('LONG', indicators, checklist)
+            short_score = self._calculate_signal_score('SHORT', indicators, checklist)
+            
+            # Build LONG hard gates (bullish requirements)
+            long_gates = self._build_hard_gates('LONG', indicators, checklist)
+            
+            # Build SHORT hard gates (bearish requirements)
+            short_gates = self._build_hard_gates('SHORT', indicators, checklist)
+            
             # Format indicators to match frontend expectations
             formatted_indicators = {
                 'ema': {
@@ -535,7 +545,7 @@ class BTCSignalEngine:
                         'ema20': indicators.get('ema20_5m'),
                         'ema50': indicators.get('ema50_5m')
                     },
-                    '15m': {  # Not available, set to None
+                    '15m': {
                         'ema20': None,
                         'ema50': None
                     }
@@ -543,45 +553,27 @@ class BTCSignalEngine:
                 'atr_5m': indicators.get('atr'),
                 'rsi_5m': indicators.get('rsi'),
                 'cvd': {
-                    '1m': None,  # Not tracking per-timeframe CVD
-                    '5m': indicators.get('taker_buy_ratio', 0.5) - 0.5  # Convert ratio to CVD-like value
+                    '1m': None,
+                    '5m': indicators.get('taker_buy_ratio', 0.5) - 0.5
                 },
                 'obi': indicators.get('obi'),
                 'spread': indicators.get('spread'),
                 'depth': indicators.get('depth')
             }
             
-            # Build signal structure for frontend
+            # Build signal structure
             signals_data = {
                 'short': {
-                    'score': 100 if checklist.get('trend_direction') == 'BEAR' and all(checklist.get(k) for k in ['regime', 'trend_align', 'cvd', 'obi', 'ema_dist', 'funding', 'gates']) else 0,
-                    'hard_gates': {
-                        'regime_filter': {'pass': checklist.get('regime', False), 'detail': checklist.get('regime_direction', 'N/A')},
-                        'rsi_filter': {'pass': indicators.get('rsi', 50) >= 30 and indicators.get('rsi', 50) <= 70, 'detail': f"{indicators.get('rsi', 0):.0f}"},
-                        'ema_proximity': {'pass': checklist.get('ema_dist', False), 'detail': f"{checklist.get('ema_dist_value', 0):.2f}%"},
-                        'spread': {'pass': checklist.get('gates', False), 'detail': f"{indicators.get('spread', 0):.2f} bps"},
-                        'directional_alignment': {'pass': checklist.get('cvd', False) and checklist.get('obi', False), 'detail': f"CVD {indicators.get('taker_buy_ratio', 0.5):.3f}, OBI {indicators.get('obi', 0):.3f}"},
-                        'atr_sufficient': {'pass': indicators.get('atr', 0) > 100, 'detail': f"${indicators.get('atr', 0):.0f}"},
-                        'volume_surge': {'pass': True, 'detail': 'N/A'},
-                        'all_pass': all(checklist.get(k) for k in ['regime', 'trend_align', 'cvd', 'obi', 'ema_dist', 'funding', 'gates'])
-                    },
+                    'score': short_score,
+                    'hard_gates': short_gates,
                     'signal_ready': self.signal_state.status == 'ACTIVE' and self.signal_state.direction == 'SHORT',
-                    'quality': 'HIGH' if all(checklist.get(k) for k in ['regime', 'trend_align', 'cvd', 'obi', 'ema_dist', 'funding', 'gates']) else 'LOW'
+                    'quality': 'HIGH' if short_score >= 80 else 'MEDIUM' if short_score >= 65 else 'LOW'
                 },
                 'long': {
-                    'score': 100 if checklist.get('trend_direction') == 'BULL' and all(checklist.get(k) for k in ['regime', 'trend_align', 'cvd', 'obi', 'ema_dist', 'funding', 'gates']) else 0,
-                    'hard_gates': {
-                        'regime_filter': {'pass': checklist.get('regime', False), 'detail': checklist.get('regime_direction', 'N/A')},
-                        'rsi_filter': {'pass': indicators.get('rsi', 50) >= 30 and indicators.get('rsi', 50) <= 70, 'detail': f"{indicators.get('rsi', 0):.0f}"},
-                        'ema_proximity': {'pass': checklist.get('ema_dist', False), 'detail': f"{checklist.get('ema_dist_value', 0):.2f}%"},
-                        'spread': {'pass': checklist.get('gates', False), 'detail': f"{indicators.get('spread', 0):.2f} bps"},
-                        'directional_alignment': {'pass': checklist.get('cvd', False) and checklist.get('obi', False), 'detail': f"CVD {indicators.get('taker_buy_ratio', 0.5):.3f}, OBI {indicators.get('obi', 0):.3f}"},
-                        'atr_sufficient': {'pass': indicators.get('atr', 0) > 100, 'detail': f"${indicators.get('atr', 0):.0f}"},
-                        'volume_surge': {'pass': True, 'detail': 'N/A'},
-                        'all_pass': all(checklist.get(k) for k in ['regime', 'trend_align', 'cvd', 'obi', 'ema_dist', 'funding', 'gates'])
-                    },
+                    'score': long_score,
+                    'hard_gates': long_gates,
                     'signal_ready': self.signal_state.status == 'ACTIVE' and self.signal_state.direction == 'LONG',
-                    'quality': 'HIGH' if all(checklist.get(k) for k in ['regime', 'trend_align', 'cvd', 'obi', 'ema_dist', 'funding', 'gates']) else 'LOW'
+                    'quality': 'HIGH' if long_score >= 80 else 'MEDIUM' if long_score >= 65 else 'LOW'
                 }
             }
             
@@ -618,3 +610,127 @@ class BTCSignalEngine:
         except Exception as e:
             logger.error(f"Error getting status: {e}")
             return {'error': str(e)}
+    
+    def _calculate_signal_score(self, direction: str, indicators: Dict, checklist: Dict) -> int:
+        """Calculate gradient score 0-100 for a signal direction"""
+        score = 0
+        
+        # 1. Regime alignment (20 points) - must match direction
+        regime = checklist.get('regime_direction', 'RANGING')
+        if direction == 'LONG' and regime == 'BULL':
+            score += 20
+        elif direction == 'SHORT' and regime == 'BEAR':
+            score += 20
+        elif checklist.get('regime', False):
+            score += 10  # Trending but wrong direction
+        
+        # 2. Multi-TF alignment (20 points)
+        if checklist.get('trend_align', False):
+            if checklist.get('trend_direction') == ('BULL' if direction == 'LONG' else 'BEAR'):
+                score += 20
+            else:
+                score += 5  # Aligned but wrong direction
+        
+        # 3. CVD/Taker buy ratio (15 points)
+        taker_ratio = indicators.get('taker_buy_ratio', 0.5)
+        if direction == 'LONG':
+            if taker_ratio > 0.65:
+                score += 15
+            elif taker_ratio > 0.57:
+                score += 10
+            elif taker_ratio > 0.50:
+                score += 5
+        else:  # SHORT
+            if taker_ratio < 0.35:
+                score += 15
+            elif taker_ratio < 0.43:
+                score += 10
+            elif taker_ratio < 0.50:
+                score += 5
+        
+        # 4. OBI (15 points)
+        obi = indicators.get('obi', 0)
+        if direction == 'LONG':
+            if obi > 0.20:
+                score += 15
+            elif obi > 0.12:
+                score += 10
+            elif obi > 0:
+                score += 5
+        else:  # SHORT
+            if obi < -0.20:
+                score += 15
+            elif obi < -0.12:
+                score += 10
+            elif obi < 0:
+                score += 5
+        
+        # 5. EMA distance (10 points)
+        if checklist.get('ema_dist', False):
+            score += 10
+        
+        # 6. RSI position (10 points)
+        rsi = indicators.get('rsi', 50)
+        if 40 <= rsi <= 60:
+            score += 10
+        elif 35 <= rsi <= 65:
+            score += 7
+        elif 30 <= rsi <= 70:
+            score += 5
+        
+        # 7. Gates (10 points)
+        if checklist.get('gates', False):
+            score += 10
+        
+        return min(100, score)
+    
+    def _build_hard_gates(self, direction: str, indicators: Dict, checklist: Dict) -> Dict:
+        """Build direction-specific hard gates"""
+        regime = checklist.get('regime_direction', 'RANGING')
+        rsi = indicators.get('rsi', 50)
+        obi = indicators.get('obi', 0)
+        taker_ratio = indicators.get('taker_buy_ratio', 0.5)
+        
+        # Direction-specific checks
+        if direction == 'LONG':
+            regime_pass = regime == 'BULL'
+            cvd_pass = taker_ratio > 0.57
+            obi_pass = obi > 0.12
+            regime_detail = regime if regime == 'BULL' else f'{regime} (need BULL)'
+        else:  # SHORT
+            regime_pass = regime == 'BEAR'
+            cvd_pass = taker_ratio < 0.43
+            obi_pass = obi < -0.12
+            regime_detail = regime if regime == 'BEAR' else f'{regime} (need BEAR)'
+        
+        return {
+            'regime_filter': {
+                'pass': regime_pass,
+                'detail': regime_detail
+            },
+            'rsi_filter': {
+                'pass': 30 <= rsi <= 70,
+                'detail': f"{rsi:.0f}" + ('' if 30 <= rsi <= 70 else ' (need 30-70)')
+            },
+            'ema_proximity': {
+                'pass': checklist.get('ema_dist', False),
+                'detail': f"{checklist.get('ema_dist_value', 0):.2f}%"
+            },
+            'spread': {
+                'pass': checklist.get('gates', False),
+                'detail': f"{indicators.get('spread', 0):.2f} bps"
+            },
+            'directional_alignment': {
+                'pass': cvd_pass and obi_pass,
+                'detail': f"CVD {taker_ratio:.3f}, OBI {obi:.3f}"
+            },
+            'atr_sufficient': {
+                'pass': indicators.get('atr', 0) > 100,
+                'detail': f"${indicators.get('atr', 0):.0f}"
+            },
+            'funding_filter': {
+                'pass': checklist.get('funding', False),
+                'detail': f"{checklist.get('funding_value', 0):.4%}"
+            },
+            'all_pass': regime_pass and (30 <= rsi <= 70) and checklist.get('ema_dist', False) and checklist.get('gates', False) and cvd_pass and obi_pass and indicators.get('atr', 0) > 100 and checklist.get('funding', False)
+        }
