@@ -230,8 +230,11 @@ class Indicators:
             logger.error(f"Error calculating spread: {e}")
             return None
     
-    def calculate_depth(self, orderbook: dict) -> Optional[float]:
-        """Calculate depth as minimum of bid/ask depth for top 10 levels"""
+    def calculate_depth(self, orderbook: dict, max_levels: int = 50) -> Optional[float]:
+        """
+        Calculate depth as minimum of bid/ask depth for top N levels
+        UPGRADED: Now uses up to 50 levels (books50) for institutional-grade visibility
+        """
         try:
             bids = orderbook.get('bids', [])
             asks = orderbook.get('asks', [])
@@ -239,9 +242,13 @@ class Indicators:
             if not bids or not asks:
                 return None
             
-            # Calculate price * size for top 10 levels
-            bid_depth = sum(float(bid[0]) * float(bid[1]) for bid in bids[:10])
-            ask_depth = sum(float(ask[0]) * float(ask[1]) for ask in asks[:10])
+            # Use up to max_levels (50 for books50)
+            bids = bids[:max_levels]
+            asks = asks[:max_levels]
+            
+            # Calculate price * size for all available levels
+            bid_depth = sum(float(bid[0]) * float(bid[1]) for bid in bids)
+            ask_depth = sum(float(ask[0]) * float(ask[1]) for ask in asks)
             
             depth = min(bid_depth, ask_depth)
             
