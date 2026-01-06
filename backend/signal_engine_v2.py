@@ -81,6 +81,11 @@ class SignalEngine:
         # Signal state
         self.signal_state = SignalState()
         
+        # REFACTOR: Cache detector results for get_status()
+        self.last_long_result = None
+        self.last_short_result = None
+        self.last_regime = None
+        
         # Warmup tracking
         self.is_warmed_up = False
         self.warmup_threshold = 50  # Require 50x 1m candles before signals
