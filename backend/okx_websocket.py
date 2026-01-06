@@ -51,7 +51,7 @@ class OKXWebSocketClient:
                         {"op": "subscribe", "args": [{"channel": "candle5m", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "candle15m", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "tickers", "instId": self.symbol}]},
-                        {"op": "subscribe", "args": [{"channel": "books5", "instId": self.symbol}]},
+                        {"op": "subscribe", "args": [{"channel": "books50-l2-tbc", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "trades", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "funding-rate", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "mark-price", "instId": self.symbol}]}
@@ -117,7 +117,7 @@ class OKXWebSocketClient:
                     logger.debug(f"Ticker data: {data['data'][0]}")
                     await self.on_ticker(data['data'][0])
                     
-            elif channel == 'books5':
+            elif channel == 'books50-l2-tbc':
                 self.last_data_time['orderbook'] = time.time()
                 if self.on_orderbook and data.get('data'):
                     logger.debug(f"Orderbook bids: {len(data['data'][0].get('bids', []))}, asks: {len(data['data'][0].get('asks', []))}")
