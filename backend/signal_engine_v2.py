@@ -1040,7 +1040,10 @@ class SignalEngine:
                 'forming_remaining': 0,  # No FORMING state anymore (zero-latency)
                 'active_remaining': max(0, 60 - (time.time() - self.signal_state.entry_time)) if self.signal_state.status == 'ACTIVE' and self.signal_state.entry_time else 0,
                 'entry_min': self.signal_state.entry_price,
-                'entry_max': self.signal_state.entry_price
+                'entry_max': self.signal_state.entry_price,
+                'tp1': self.signal_state.tp1,
+                'tp2': self.signal_state.tp2,
+                'stop_loss': self.signal_state.stop_loss
             }
             
             return {
