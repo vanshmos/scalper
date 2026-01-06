@@ -1301,6 +1301,63 @@ class SignalEngine:
             logger.error(f"Error getting status: {e}")
             return {'error': str(e)}
     
+
+    def _map_detector_to_hard_gates(self, detector_result: Dict, direction: str, indicators: Dict) -> Dict:
+        """Map SignalDetector results to frontend's expected hard_gates format"""
+        try:
+            alpha_checks = detector_result.get('alpha_checks', {})
+            breakdown = detector_result.get('breakdown', {})
+            
+            # Extract regime from breakdown
+            regime_detail = breakdown.get('regime', {}).get('detail', 'RANGING')
+            regime_pass = breakdown.get('regime', {}).get('points', 0) > 0
+            
+            # Extract RSI info
+            rsi_val = indicators.get('rsi', 50)
+            rsi_pass = 30 <= rsi_val <= 70 if rsi_val is not None else False
+            rsi_detail = f"{rsi_val:.0f}" if rsi_val else "N/A"
+            if not rsi_pass:
+                rsi_detail += " (need 30-70)"
+            
+            # Extract CVD/OBI alignment
+            cvd_val = indicators.get('cvd', {}).get('5m', 0)
+            obi_val = indicators.get('obi', 0)
+            cvd_pass = (cvd_val > 0.08) if direction == 'LONG' else (cvd_val < -0.08)
+            obi_pass = (obi_val > 0.1) if direction == 'LONG' else (obi_val < -0.1)
+            alignment_pass = cvd_pass and obi_pass
+            
+            # Extract spread check
+            spread_val = indicators.get('spread', 0)
+            spread_pass = spread_val < 5 if spread_val is not None else False
+            
+            # Build hard_gates structure
+            return {
+                'regime_filter': {
+                    'pass': regime_pass,
+                    'detail': regime_detail
+                },
+                'rsi_filter': {
+                    'pass': rsi_pass,
+                    'detail': rsi_detail
+                },
+                'ema_proximity': {
+                    'pass': True,  # Detector handles this internally
+                    'detail': breakdown.get('trends', {}).get('detail', 'N/A')
+                },
+                'spread': {
+                    'pass': spread_pass,
+                    'detail': f"{spread_val:.2f} bps" if spread_val is not None else "N/A"
+                },
+                'cvd/obi_alignment': {
+                    'pass': alignment_pass,
+                    'detail': f"CVD {cvd_val:.3f}, OBI {obi_val:.3f}"
+                },
+                'all_pass': detector_result.get('signal_ready', False)
+            }
+        except Exception as e:
+            logger.error(f"Error mapping detector to hard gates: {e}")
+            return {}
+
     def _calculate_signal_score(self, direction: str, indicators: Dict, checklist: Dict) -> int:
         """Calculate gradient score 0-100 for a signal direction"""
         score = 0
