@@ -138,8 +138,8 @@ function App() {
         ))}
       </div>
 
-      {/* Active Signal Banner */}
-      {signalStatus.state === 'ACTIVE' && (
+      {/* Active Signal Banner - Only show if score >= 70 */}
+      {signalStatus.state === 'ACTIVE' && signals[signalStatus.direction?.toLowerCase()]?.score >= 70 && (
         <div className={`signal-banner ${signalStatus.direction?.toLowerCase()}`}>
           <div className="signal-banner-content">
             <div className="signal-banner-left">
@@ -151,21 +151,25 @@ function App() {
                     {signals[signalStatus.direction?.toLowerCase()]?.quality || 'LOW'}
                   </span>
                 </div>
-                <span className="signal-label">ACTIVE SIGNAL</span>
+                <span className="signal-label">ACTIVE • {Math.floor(signalStatus.active_remaining || 0)}s</span>
               </div>
             </div>
             <div className="signal-banner-details">
               <div className="signal-detail">
-                <span className="label">Score:</span>
-                <span className="value">{signals[signalStatus.direction?.toLowerCase()]?.score || 0}/100</span>
-              </div>
-              <div className="signal-detail">
-                <span className="label">Entry:</span>
+                <span className="label">Entry</span>
                 <span className="value">{formatPrice(signalStatus.entry_min)}</span>
               </div>
               <div className="signal-detail">
-                <span className="label">Time:</span>
-                <span className="value countdown">{Math.floor(signalStatus.active_remaining || 0)}s</span>
+                <span className="label">TP1</span>
+                <span className="value tp">{formatPrice(signalStatus.tp1)}</span>
+              </div>
+              <div className="signal-detail">
+                <span className="label">TP2</span>
+                <span className="value tp">{formatPrice(signalStatus.tp2)}</span>
+              </div>
+              <div className="signal-detail">
+                <span className="label">Stop Loss</span>
+                <span className="value sl">{formatPrice(signalStatus.stop_loss)}</span>
               </div>
             </div>
           </div>
