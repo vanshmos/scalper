@@ -145,11 +145,20 @@ function App() {
             <div className="signal-banner-left">
               <div className="signal-indicator">●</div>
               <div className="signal-info">
-                <span className="signal-type">{signalStatus.direction} {getDisplayName(activeSymbol)}</span>
-                <span className="signal-label">ACTIVE</span>
+                <div className="signal-type-row">
+                  <span className="signal-type">{signalStatus.direction} {getDisplayName(activeSymbol)}</span>
+                  <span className={`signal-confidence confidence-${(signals[signalStatus.direction?.toLowerCase()]?.quality || 'low').toLowerCase()}`}>
+                    {signals[signalStatus.direction?.toLowerCase()]?.quality || 'LOW'}
+                  </span>
+                </div>
+                <span className="signal-label">ACTIVE SIGNAL</span>
               </div>
             </div>
             <div className="signal-banner-details">
+              <div className="signal-detail">
+                <span className="label">Score:</span>
+                <span className="value">{signals[signalStatus.direction?.toLowerCase()]?.score || 0}/100</span>
+              </div>
               <div className="signal-detail">
                 <span className="label">Entry:</span>
                 <span className="value">{formatPrice(signalStatus.entry_min)}</span>
