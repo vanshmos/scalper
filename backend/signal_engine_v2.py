@@ -1195,28 +1195,74 @@ class SignalEngine:
         try:
             indicators = self._calculate_indicators()
             
-            # DEBUG: Log cache status
-            has_cache = bool(self.last_long_result and self.last_short_result and self.last_regime)
+            # Always calculate fresh detector results for get_status()
+            # The cached results are primarily for the signal state machine
+            candles_5m_list = list(self.candles_5m)
+            candles_15m_list = list(self.candles_15m)
             
-            # REFACTOR: Use cached detector results if available
-            if has_cache:
-                long_score = self.last_long_result['score']
-                short_score = self.last_short_result['score']
-                
-                # Map detector results to hard_gates format for frontend compatibility
-                long_gates = self._map_detector_to_hard_gates(self.last_long_result, 'LONG', indicators)
-                short_gates = self._map_detector_to_hard_gates(self.last_short_result, 'SHORT', indicators)
-                
-                regime = str(self.last_regime.value) if self.last_regime else 'RANGING'
-            else:
-                # Fallback: Use old checklist logic (for compatibility during warmup)
-                logger.warning(f"{self.display_name}: Using fallback checklist (cache not ready)")
-                checklist = self._build_checklist(indicators)
-                long_score = self._calculate_signal_score('LONG', indicators, checklist)
-                short_score = self._calculate_signal_score('SHORT', indicators, checklist)
-                long_gates = self._build_hard_gates('LONG', indicators, checklist)
-                short_gates = self._build_hard_gates('SHORT', indicators, checklist)
-                regime = checklist.get('regime_direction', 'RANGING')
+            # Detect regime
+            regime = self.regime_detector.detect_regime(
+                candles_5m_list,
+                candles_15m_list,
+                indicators.get('ema20_5m'),
+                indicators.get('ema50_5m'),
+                indicators.get('ema20_15m'),
+                indicators.get('ema50_15m'),
+                indicators.get('atr')
+            )
+            
+            # Calculate signals using detector
+            long_result = self.detector.detect_signal_with_alpha(
+                direction=SignalDirection.LONG,
+                regime=regime,
+                ema20_1m=indicators.get('ema20_1m'),
+                ema50_1m=indicators.get('ema50_1m'),
+                ema20_5m=indicators.get('ema20_5m'),
+                ema50_5m=indicators.get('ema50_5m'),
+                ema20_15m=indicators.get('ema20_15m'),
+                ema50_15m=indicators.get('ema50_15m'),
+                cvd_5m=indicators.get('cvd', {}).get('5m'),
+                obi=indicators.get('obi'),
+                current_price=indicators.get('price'),
+                rsi_5m=indicators.get('rsi'),
+                spread=indicators.get('spread'),
+                atr=indicators.get('atr'),
+                obi_velocity=indicators.get('obi_velocity'),
+                cvd_velocity=indicators.get('cvd_velocity'),
+                bollinger=indicators.get('bollinger'),
+                vwap=indicators.get('vwap'),
+                trend_strength=indicators.get('trend_strength'),
+                hurst=None
+            )
+            
+            short_result = self.detector.detect_signal_with_alpha(
+                direction=SignalDirection.SHORT,
+                regime=regime,
+                ema20_1m=indicators.get('ema20_1m'),
+                ema50_1m=indicators.get('ema50_1m'),
+                ema20_5m=indicators.get('ema20_5m'),
+                ema50_5m=indicators.get('ema50_5m'),
+                ema20_15m=indicators.get('ema20_15m'),
+                ema50_15m=indicators.get('ema50_15m'),
+                cvd_5m=indicators.get('cvd', {}).get('5m'),
+                obi=indicators.get('obi'),
+                current_price=indicators.get('price'),
+                rsi_5m=indicators.get('rsi'),
+                spread=indicators.get('spread'),
+                atr=indicators.get('atr'),
+                obi_velocity=indicators.get('obi_velocity'),
+                cvd_velocity=indicators.get('cvd_velocity'),
+                bollinger=indicators.get('bollinger'),
+                vwap=indicators.get('vwap'),
+                trend_strength=indicators.get('trend_strength'),
+                hurst=None
+            )
+            
+            long_score = long_result['score']
+            short_score = short_result['score']
+            long_gates = self._map_detector_to_hard_gates(long_result, 'LONG', indicators)
+            short_gates = self._map_detector_to_hard_gates(short_result, 'SHORT', indicators)
+            regime_str = str(regime.value) if regime else 'RANGING'
             
             # Format indicators to match frontend expectations
             formatted_indicators = {
