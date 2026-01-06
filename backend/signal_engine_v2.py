@@ -13,6 +13,7 @@ from candle_builder import Candle  # Use existing Candle class
 from indicators import Indicators
 from alerts import AlertManager
 from rolling_stats import RollingStats
+from signal_detector_alpha import SignalDetector, SignalDirection  # CRITICAL: Use institutional detector
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,9 @@ class SignalEngine:
         self.ws_client = OKXWebSocketClient(symbol)
         self.indicators = Indicators()
         self.alert_manager = AlertManager()
+        
+        # CRITICAL: Initialize institutional-grade signal detector
+        self.detector = SignalDetector()
         
         # Candle storage (using deque for efficient operations)
         self.candles_1m = deque(maxlen=200)  # Keep last 200 1m candles
