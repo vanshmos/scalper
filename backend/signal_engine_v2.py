@@ -1195,8 +1195,11 @@ class SignalEngine:
         try:
             indicators = self._calculate_indicators()
             
+            # DEBUG: Log cache status
+            has_cache = bool(self.last_long_result and self.last_short_result and self.last_regime)
+            
             # REFACTOR: Use cached detector results if available
-            if self.last_long_result and self.last_short_result and self.last_regime:
+            if has_cache:
                 long_score = self.last_long_result['score']
                 short_score = self.last_short_result['score']
                 
@@ -1207,6 +1210,7 @@ class SignalEngine:
                 regime = str(self.last_regime.value) if self.last_regime else 'RANGING'
             else:
                 # Fallback: Use old checklist logic (for compatibility during warmup)
+                logger.warning(f"{self.display_name}: Using fallback checklist (cache not ready)")
                 checklist = self._build_checklist(indicators)
                 long_score = self._calculate_signal_score('LONG', indicators, checklist)
                 short_score = self._calculate_signal_score('SHORT', indicators, checklist)
