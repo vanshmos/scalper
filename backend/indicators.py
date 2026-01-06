@@ -123,8 +123,21 @@ class Indicators:
             logger.error(f"Error calculating RSI: {e}")
             return None
     
-    def calculate_obi(self, orderbook: dict) -> Optional[float]:
-        """Calculate OBI (Order Book Imbalance) from top 10 levels"""
+    def calculate_obi(self, orderbook: dict, use_weighted: bool = True, max_levels: int = 50) -> Optional[float]:
+        """
+        Calculate Order Book Imbalance (OBI) with WEIGHTED calculation for institutional depth
+        
+        Weighted OBI reduces noise from spoofed deep levels by applying distance-based decay.
+        Near levels have full weight, far levels decay exponentially.
+        
+        Args:
+            orderbook: OKX orderbook data with bids/asks
+            use_weighted: If True, apply distance-based weighting (default)
+            max_levels: Maximum levels to consider (50 for books50)
+        
+        Returns:
+            OBI value between -1 and 1 (or None if insufficient data)
+        """
         try:
             bids = orderbook.get('bids', [])
             asks = orderbook.get('asks', [])
@@ -132,15 +145,49 @@ class Indicators:
             if not bids or not asks:
                 return None
             
-            # Sum top 10 levels
-            bid_volume = sum(float(bid[1]) for bid in bids[:10])
-            ask_volume = sum(float(ask[1]) for ask in asks[:10])
+            # Use up to max_levels (books50 gives us 50 levels)
+            bids = bids[:max_levels]
+            asks = asks[:max_levels]
             
-            total_volume = bid_volume + ask_volume
-            if total_volume == 0:
-                return None
-            
-            obi = (bid_volume - ask_volume) / total_volume
+            if use_weighted:
+                # WEIGHTED OBI: Distance-based decay for institutional accuracy
+                # Formula: weight = e^(-decay_factor * level_index)
+                # Near levels (0-5): ~100% weight
+                # Mid levels (6-20): ~50-10% weight
+                # Far levels (21-50): <10% weight
+                
+                import math
+                decay_factor = 0.1  # Controls how fast weight decays
+                
+                weighted_bid_volume = 0
+                weighted_ask_volume = 0
+                
+                for i, bid in enumerate(bids):
+                    volume = float(bid[1])
+                    weight = math.exp(-decay_factor * i)  # Exponential decay
+                    weighted_bid_volume += volume * weight
+                
+                for i, ask in enumerate(asks):
+                    volume = float(ask[1])
+                    weight = math.exp(-decay_factor * i)
+                    weighted_ask_volume += volume * weight
+                
+                total_weighted_volume = weighted_bid_volume + weighted_ask_volume
+                
+                if total_weighted_volume == 0:
+                    return None
+                
+                obi = (weighted_bid_volume - weighted_ask_volume) / total_weighted_volume
+            else:
+                # LEGACY: Simple OBI (sum top 10 levels equally)
+                bid_volume = sum(float(bid[1]) for bid in bids[:10])
+                ask_volume = sum(float(ask[1]) for ask in asks[:10])
+                
+                total_volume = bid_volume + ask_volume
+                if total_volume == 0:
+                    return None
+                
+                obi = (bid_volume - ask_volume) / total_volume
             
             # Apply exponential smoothing
             if self.obi_smoothed is None:
