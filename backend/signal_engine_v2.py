@@ -823,10 +823,10 @@ class SignalEngine:
                     await self._send_signal_alert(indicators)
                     
             elif self.signal_state.status == "ACTIVE":
-                # Active signals expire after 5 minutes
+                # Active signals expire after 1 minute (scalping)
                 elapsed = current_time - self.signal_state.entry_time
-                if elapsed >= 300:
-                    logger.info("Signal EXPIRED after 5 minutes")
+                if elapsed >= 60:
+                    logger.info("Signal EXPIRED after 1 minute")
                     self.signal_state.reset()
                     
         except Exception as e:
@@ -1006,7 +1006,7 @@ class SignalEngine:
                 'state': self.signal_state.status,
                 'direction': self.signal_state.direction,
                 'forming_remaining': 0,  # No FORMING state anymore (zero-latency)
-                'active_remaining': max(0, 300 - (time.time() - self.signal_state.entry_time)) if self.signal_state.status == 'ACTIVE' and self.signal_state.entry_time else 0,
+                'active_remaining': max(0, 60 - (time.time() - self.signal_state.entry_time)) if self.signal_state.status == 'ACTIVE' and self.signal_state.entry_time else 0,
                 'entry_min': self.signal_state.entry_price,
                 'entry_max': self.signal_state.entry_price
             }
