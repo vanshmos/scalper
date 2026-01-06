@@ -364,7 +364,126 @@ class SignalEngine:
         except Exception as e:
             logger.error(f"Error in event-driven signal check: {e}")
     
+    def _calculate_indicators_live(self) -> Dict:
+        """
+        Calculate indicators with LIVE data (including forming candles)
+        This eliminates 1-minute lag by using current market state
+        """
+        try:
+            # Get candle lists
+            candles_1m_list = list(self.candles_1m)
+            candles_5m_list = list(self.candles_5m)
+            candles_15m_list = list(self.candles_15m)
+            
+            # LIVE INDICATORS: Inject forming candle if current price available
+            # This gives real-time EMA/RSI instead of 1-minute stale data
+            if self.current_price and len(candles_1m_list) > 0:
+                # Create forming candle from current market state
+                last_confirmed = candles_1m_list[-1]
+                current_timestamp = int(time.time())
+                
+                forming_candle = Candle(current_timestamp, '1m')
+                forming_candle.open = last_confirmed.close  # Assume opens at last close
+                forming_candle.high = max(last_confirmed.close, self.current_price)
+                forming_candle.low = min(last_confirmed.close, self.current_price)
+                forming_candle.close = self.current_price
+                forming_candle.volume = 0  # Don't have forming volume yet
+                
+                # Prepend forming candle to lists for calculation
+                candles_1m_live = candles_1m_list + [forming_candle]
+            else:
+                candles_1m_live = candles_1m_list
+            
+            # EMAs on 1m (LIVE)
+            ema20_1m = self.indicators.calculate_ema(candles_1m_live, 20)
+            ema50_1m = self.indicators.calculate_ema(candles_1m_live, 50)
+            
+            # EMAs on 5m (confirmed only - less critical for 5m lag)
+            ema20_5m = self.indicators.calculate_ema(candles_5m_list, 20)
+            ema50_5m = self.indicators.calculate_ema(candles_5m_list, 50)
+            
+            # EMAs on 15m
+            ema20_15m = self.indicators.calculate_ema(candles_15m_list, 20)
+            ema50_15m = self.indicators.calculate_ema(candles_15m_list, 50)
+            
+            # ATR on 5m
+            atr = self.indicators.calculate_atr(candles_5m_list, 14)
+            
+            # RSI on 5m (could use live 1m for faster response)
+            rsi = self.indicators.calculate_rsi(candles_5m_list, 14)
+            
+            # Orderbook indicators (already real-time)
+            obi = None
+            spread = None
+            depth = None
+            if self.last_orderbook:
+                obi = self.indicators.calculate_obi(self.last_orderbook)
+                spread = self.indicators.calculate_spread(self.last_orderbook)
+                depth = self.indicators.calculate_depth(self.last_orderbook)
+            
+            # CRITICAL: Calculate CVD explicitly to populate cvd_history for velocity
+            # Convert deque to list once
+            trades_list = list(self.recent_trades)
+            
+            # Calculate CVDs (This side-effect populates self.indicators.cvd_history)
+            cvd_1m = self.indicators.calculate_cvd(trades_list, window_seconds=60)
+            cvd_5m = self.indicators.calculate_cvd(trades_list, window_seconds=300)
+            
+            # ALPHA ENHANCEMENTS: New indicators
+            
+            # 1. Velocity signals (anti-spoofing) - NOW PROPERLY POPULATED
+            obi_velocity = self.indicators.get_obi_velocity()
+            cvd_velocity = self.indicators.get_cvd_velocity()
+            
+            # 2. Bollinger Bands (liquidity sweep detection)
+            bollinger = self.indicators.calculate_bollinger_bands(candles_5m_list, period=20, std_dev=2.0)
+            
+            # 3. VWAP (slippage protection)
+            vwap = self.indicators.calculate_vwap(candles_5m_list)
+            
+            # 4. Trend Strength (adaptive targets)
+            trend_strength = self.indicators.calculate_trend_strength(candles_5m_list, period=20)
+            
+            # Use mark price for distance calculation (more stable)
+            price_for_distance = self.mark_price if self.mark_price else self.current_price
+            
+            return {
+                'ema20_1m': ema20_1m,
+                'ema50_1m': ema50_1m,
+                'ema20_5m': ema20_5m,
+                'ema50_5m': ema50_5m,
+                'ema20_15m': ema20_15m,
+                'ema50_15m': ema50_15m,
+                'atr': atr if atr and atr > 0 else 100,  # Default to 100 if ATR is 0
+                'rsi': rsi,
+                'obi': obi,
+                'spread': spread,
+                'depth': depth,
+                'price': price_for_distance,
+                'taker_buy_ratio': self.taker_buy_ratio,
+                # CVD values (calculated from trades)
+                'cvd': {
+                    '1m': cvd_1m,
+                    '5m': cvd_5m
+                },
+                # ALPHA indicators
+                'obi_velocity': obi_velocity,
+                'cvd_velocity': cvd_velocity,
+                'bollinger': bollinger,
+                'vwap': vwap,
+                'trend_strength': trend_strength
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating live indicators: {e}")
+            return {}
+    
     def _calculate_indicators(self) -> Dict:
+        """
+        LEGACY: Calculate indicators (kept for get_status compatibility)
+        Use _calculate_indicators_live() for signal processing
+        """
+        return self._calculate_indicators_live()
         """Calculate all indicators including ALPHA enhancements"""
         try:
             # Get candle lists
