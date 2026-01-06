@@ -371,6 +371,17 @@ class SignalEngine:
             # Calculate indicators with LIVE data (forming candles)
             indicators = self._calculate_indicators_live()
             
+            # Update gate states with current market data
+            spread = indicators.get('spread')
+            depth = indicators.get('depth')
+            orderbook_timestamp = time.time() if self.last_orderbook else None
+            
+            # This updates the internal gate states in regime_detector
+            self.regime_detector.check_spread_gate(spread)
+            self.regime_detector.check_depth_gate(depth)
+            if orderbook_timestamp:
+                self.regime_detector.check_data_staleness(orderbook_timestamp)
+            
             # Detect regime
             candles_5m_list = list(self.candles_5m)
             candles_15m_list = list(self.candles_15m)
