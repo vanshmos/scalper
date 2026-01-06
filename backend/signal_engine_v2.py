@@ -244,7 +244,7 @@ class SignalEngine:
             logger.error(f"Error handling ticker: {e}")
     
     async def _on_orderbook(self, data: dict):
-        """Handle orderbook updates"""
+        """Handle orderbook updates - EVENT-DRIVEN signal check"""
         try:
             self.last_orderbook = data
             
@@ -257,12 +257,15 @@ class SignalEngine:
                     self.spread_stats.add(spread)
                 if depth is not None:
                     self.depth_stats.add(depth)
+            
+            # EVENT-DRIVEN: Trigger signal check on orderbook update
+            await self._check_signals_event_driven()
                     
         except Exception as e:
             logger.error(f"Error handling orderbook: {e}")
     
     async def _on_trade(self, data: dict):
-        """Handle trade updates - track for CVD and taker buy/sell ratio"""
+        """Handle trade updates - track for CVD and taker buy/sell ratio + EVENT-DRIVEN check"""
         try:
             # OKX trade format: {side: 'buy'/'sell', sz: size, px: price, ts: timestamp}
             side = data.get('side')
@@ -290,6 +293,9 @@ class SignalEngine:
                 buy_volume = sum(t['size'] for t in self.taker_buy_ratio_buffer if t['side'] == 'buy')
                 total_volume = sum(t['size'] for t in self.taker_buy_ratio_buffer)
                 self.taker_buy_ratio = buy_volume / total_volume if total_volume > 0 else 0.5
+            
+            # EVENT-DRIVEN: Trigger signal check on trade (throttled to 100ms)
+            await self._check_signals_event_driven()
                 
         except Exception as e:
             logger.error(f"Error handling trade: {e}")
