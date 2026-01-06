@@ -312,44 +312,57 @@ class SignalEngine:
             logger.error(f"Error handling mark price: {e}")
     
     async def _signal_processing_loop(self):
-        """Main signal processing loop - non-blocking"""
+        """
+        DEPRECATED POLLING LOOP - Kept for graceful shutdown only
+        Real signal processing now happens via event-driven callbacks
+        """
         while True:
             try:
-                await asyncio.sleep(1)  # Process every second
-                
-                # STRICT WARMUP: Block all signals until sufficient data
-                if len(self.candles_5m) < 50:
-                    await asyncio.sleep(0)  # Yield control
-                    continue
-                
-                # STALENESS CIRCUIT BREAKER: Block signals if ticker data is stale
-                if self.last_ticker_time is None:
-                    await asyncio.sleep(0)
-                    continue
-                
-                ticker_age_ms = (time.time() - self.last_ticker_time) * 1000
-                if ticker_age_ms > 2000:  # 2 seconds
-                    logger.warning(f"⚠️  CIRCUIT BREAKER: Ticker data stale ({ticker_age_ms:.0f}ms old) - blocking signals")
-                    await asyncio.sleep(0)
-                    continue
-                
-                # Calculate indicators (offload heavy computation)
-                await asyncio.sleep(0)  # Non-blocking: yield before heavy calculation
-                indicators = self._calculate_indicators()
-                
-                # Check signal conditions
-                await asyncio.sleep(0)  # Yield control
-                checklist = self._build_checklist(indicators)
-                
-                # Calculate scores for signal strengthening check
-                long_score = self._calculate_signal_score('LONG', indicators, checklist)
-                short_score = self._calculate_signal_score('SHORT', indicators, checklist)
-                
-                # Process signal state machine (pass scores for strengthening verification)
-                await self._process_signal_state(checklist, indicators, long_score, short_score)
-                
+                await asyncio.sleep(10)  # Just keep alive, real work done in callbacks
             except Exception as e:
-                logger.error(f"Error in signal processing loop: {e}")
+                logger.error(f"Error in keepalive loop: {e}")
+    
+    async def _check_signals_event_driven(self):
+        """
+        EVENT-DRIVEN signal check - called from orderbook/trade callbacks
+        Implements 100ms throttle to prevent CPU overload
+        """
+        try:
+            current_time = time.time()
+            
+            # Throttle: only check every 100ms
+            if current_time - self.last_signal_check_time < self.signal_check_throttle:
+                return
+            
+            self.last_signal_check_time = current_time
+            
+            # STRICT WARMUP: Block all signals until sufficient data
+            if len(self.candles_5m) < 50:
+                return
+            
+            # STALENESS CIRCUIT BREAKER: Block signals if ticker data is stale
+            if self.last_ticker_time is None:
+                return
+            
+            ticker_age_ms = (current_time - self.last_ticker_time) * 1000
+            if ticker_age_ms > 2000:  # 2 seconds
+                return
+            
+            # Calculate indicators with LIVE data (forming candles)
+            indicators = self._calculate_indicators_live()
+            
+            # Check signal conditions
+            checklist = self._build_checklist(indicators)
+            
+            # Calculate scores for signal strengthening check
+            long_score = self._calculate_signal_score('LONG', indicators, checklist)
+            short_score = self._calculate_signal_score('SHORT', indicators, checklist)
+            
+            # Process signal state machine (pass scores for strengthening verification)
+            await self._process_signal_state(checklist, indicators, long_score, short_score)
+            
+        except Exception as e:
+            logger.error(f"Error in event-driven signal check: {e}")
     
     def _calculate_indicators(self) -> Dict:
         """Calculate all indicators including ALPHA enhancements"""
