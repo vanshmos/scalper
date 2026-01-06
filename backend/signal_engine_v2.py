@@ -811,12 +811,38 @@ class SignalEngine:
                     extreme_obi = abs(obi_velocity) > 0.05 if obi_velocity is not None else False
                     extreme_cvd = abs(cvd_velocity) > 0.05 if cvd_velocity is not None else False
                     
+                    # Calculate TP/SL levels
+                    atr = indicators.get('atr', 100)
+                    entry = indicators.get('price')
+                    trend_strength = indicators.get('trend_strength')
+                    
+                    # Get adaptive targets
+                    from signal_detector_alpha import SignalDetector
+                    alpha_detector = SignalDetector()
+                    adaptive_targets = alpha_detector.calculate_adaptive_targets(atr, trend_strength=trend_strength)
+                    
+                    tp1_mult = adaptive_targets['tp1_multiplier']
+                    tp2_mult = adaptive_targets['tp2_multiplier']
+                    sl_mult = adaptive_targets['sl_multiplier']
+                    
+                    if active_direction == "LONG":
+                        sl = entry - (sl_mult * atr)
+                        tp1 = entry + (tp1_mult * atr)
+                        tp2 = entry + (tp2_mult * atr)
+                    else:  # SHORT
+                        sl = entry + (sl_mult * atr)
+                        tp1 = entry - (tp1_mult * atr)
+                        tp2 = entry - (tp2_mult * atr)
+                    
                     # Activate signal
                     self.signal_state.status = "ACTIVE"
                     self.signal_state.direction = active_direction
-                    self.signal_state.entry_price = indicators.get('price')
+                    self.signal_state.entry_price = entry
                     self.signal_state.entry_time = current_time
-                    self.signal_state.atr_at_entry = indicators.get('atr')
+                    self.signal_state.atr_at_entry = atr
+                    self.signal_state.tp1 = tp1
+                    self.signal_state.tp2 = tp2
+                    self.signal_state.stop_loss = sl
                     
                     if extreme_obi or extreme_cvd:
                         logger.warning(f"⚡ EXTREME VOLATILITY DETECTED ⚡")
