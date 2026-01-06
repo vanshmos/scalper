@@ -373,6 +373,162 @@ class SignalEngine:
     def _calculate_indicators_live(self) -> Dict:
         """
         Calculate indicators with LIVE data (including forming candles)
+        INSTITUTIONAL UPGRADE: Synthesizes forming 5m and 15m candles to eliminate trend latency
+        """
+        try:
+            # Get candle lists
+            candles_1m_list = list(self.candles_1m)
+            candles_5m_list = list(self.candles_5m)
+            candles_15m_list = list(self.candles_15m)
+            
+            # LIVE INDICATORS: Inject forming candle if current price available
+            # This gives real-time EMA/RSI instead of stale data
+            if self.current_price and len(candles_1m_list) > 0:
+                # Create forming 1m candle from current market state
+                last_confirmed_1m = candles_1m_list[-1]
+                current_timestamp = int(time.time())
+                
+                forming_candle_1m = Candle(current_timestamp, '1m')
+                forming_candle_1m.open = last_confirmed_1m.close
+                forming_candle_1m.high = max(last_confirmed_1m.close, self.current_price)
+                forming_candle_1m.low = min(last_confirmed_1m.close, self.current_price)
+                forming_candle_1m.close = self.current_price
+                forming_candle_1m.volume = 0
+                
+                candles_1m_live = candles_1m_list + [forming_candle_1m]
+            else:
+                candles_1m_live = candles_1m_list
+            
+            # INSTITUTIONAL UPGRADE: Synthesize forming 5m and 15m candles
+            # This eliminates 5-minute trend detection latency
+            if self.current_price and len(candles_5m_list) > 0:
+                last_confirmed_5m = candles_5m_list[-1]
+                
+                # Aggregate recent 1m candles since last 5m close
+                # Get 1m candles after the last 5m candle timestamp
+                recent_1m = [c for c in candles_1m_list if c.timestamp > last_confirmed_5m.timestamp]
+                
+                forming_candle_5m = Candle(int(time.time()), '5m')
+                forming_candle_5m.open = last_confirmed_5m.close
+                
+                # Aggregate high/low/volume from recent 1m candles + current price
+                if recent_1m:
+                    highs = [c.high for c in recent_1m if c.high] + [self.current_price]
+                    lows = [c.low for c in recent_1m if c.low] + [self.current_price]
+                    forming_candle_5m.high = max(highs)
+                    forming_candle_5m.low = min(lows)
+                    forming_candle_5m.volume = sum(c.volume for c in recent_1m if c.volume)
+                else:
+                    forming_candle_5m.high = max(last_confirmed_5m.close, self.current_price)
+                    forming_candle_5m.low = min(last_confirmed_5m.close, self.current_price)
+                    forming_candle_5m.volume = 0
+                
+                forming_candle_5m.close = self.current_price
+                
+                candles_5m_live = candles_5m_list + [forming_candle_5m]
+            else:
+                candles_5m_live = candles_5m_list
+            
+            # Synthesize forming 15m candle
+            if self.current_price and len(candles_15m_list) > 0:
+                last_confirmed_15m = candles_15m_list[-1]
+                
+                # Aggregate recent 5m candles since last 15m close
+                recent_5m = [c for c in candles_5m_list if c.timestamp > last_confirmed_15m.timestamp]
+                
+                forming_candle_15m = Candle(int(time.time()), '15m')
+                forming_candle_15m.open = last_confirmed_15m.close
+                
+                if recent_5m:
+                    highs = [c.high for c in recent_5m if c.high] + [self.current_price]
+                    lows = [c.low for c in recent_5m if c.low] + [self.current_price]
+                    forming_candle_15m.high = max(highs)
+                    forming_candle_15m.low = min(lows)
+                    forming_candle_15m.volume = sum(c.volume for c in recent_5m if c.volume)
+                else:
+                    forming_candle_15m.high = max(last_confirmed_15m.close, self.current_price)
+                    forming_candle_15m.low = min(last_confirmed_15m.close, self.current_price)
+                    forming_candle_15m.volume = 0
+                
+                forming_candle_15m.close = self.current_price
+                
+                candles_15m_live = candles_15m_list + [forming_candle_15m]
+            else:
+                candles_15m_live = candles_15m_list
+            
+            # EMAs on 1m (LIVE)
+            ema20_1m = self.indicators.calculate_ema(candles_1m_live, 20)
+            ema50_1m = self.indicators.calculate_ema(candles_1m_live, 50)
+            
+            # EMAs on 5m (LIVE - now updates every second, not every 5 minutes!)
+            ema20_5m = self.indicators.calculate_ema(candles_5m_live, 20)
+            ema50_5m = self.indicators.calculate_ema(candles_5m_live, 50)
+            
+            # EMAs on 15m (LIVE - now updates every second, not every 15 minutes!)
+            ema20_15m = self.indicators.calculate_ema(candles_15m_live, 20)
+            ema50_15m = self.indicators.calculate_ema(candles_15m_live, 50)
+            
+            # ATR on 5m (use live for better responsiveness)
+            atr = self.indicators.calculate_atr(candles_5m_live, 14)
+            
+            # RSI on 5m (use live for faster momentum detection)
+            rsi = self.indicators.calculate_rsi(candles_5m_live, 14)
+            
+            # Orderbook indicators (already real-time with books50)
+            obi = None
+            spread = None
+            depth = None
+            if self.last_orderbook:
+                obi = self.indicators.calculate_obi(self.last_orderbook)  # Weighted OBI with 50 levels
+                spread = self.indicators.calculate_spread(self.last_orderbook)
+                depth = self.indicators.calculate_depth(self.last_orderbook)  # 50 levels
+            
+            # CRITICAL: Calculate CVD explicitly to populate cvd_history for velocity
+            trades_list = list(self.recent_trades)
+            
+            cvd_1m = self.indicators.calculate_cvd(trades_list, window_seconds=60)
+            cvd_5m = self.indicators.calculate_cvd(trades_list, window_seconds=300)
+            
+            # ALPHA ENHANCEMENTS
+            obi_velocity = self.indicators.get_obi_velocity()
+            cvd_velocity = self.indicators.get_cvd_velocity()
+            
+            bollinger = self.indicators.calculate_bollinger_bands(candles_5m_live, period=20, std_dev=2.0)
+            vwap = self.indicators.calculate_vwap(candles_5m_live)
+            trend_strength = self.indicators.calculate_trend_strength(candles_5m_live, period=20)
+            
+            price_for_distance = self.mark_price if self.mark_price else self.current_price
+            
+            return {
+                'ema20_1m': ema20_1m,
+                'ema50_1m': ema50_1m,
+                'ema20_5m': ema20_5m,
+                'ema50_5m': ema50_5m,
+                'ema20_15m': ema20_15m,
+                'ema50_15m': ema50_15m,
+                'atr': atr if atr and atr > 0 else 100,
+                'rsi': rsi,
+                'obi': obi,
+                'spread': spread,
+                'depth': depth,
+                'price': price_for_distance,
+                'taker_buy_ratio': self.taker_buy_ratio,
+                'cvd': {
+                    '1m': cvd_1m,
+                    '5m': cvd_5m
+                },
+                'obi_velocity': obi_velocity,
+                'cvd_velocity': cvd_velocity,
+                'bollinger': bollinger,
+                'vwap': vwap,
+                'trend_strength': trend_strength
+            }
+            
+        except Exception as e:
+            logger.error(f"Error calculating live indicators: {e}")
+            return {}
+        """
+        Calculate indicators with LIVE data (including forming candles)
         This eliminates 1-minute lag by using current market state
         """
         try:
