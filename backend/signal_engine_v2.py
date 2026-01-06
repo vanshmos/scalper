@@ -805,7 +805,7 @@ class SignalEngine:
             return {}
     
     async def _process_signal_state(self, checklist: Dict, indicators: Dict, long_score: int, short_score: int):
-        """Process signal state machine with ZERO-LATENCY activation"""
+        """Process signal state machine with ZERO-LATENCY for extreme volatility"""
         try:
             # Check if all PRO SCALPER checklist items pass
             all_pass = all([
@@ -845,24 +845,46 @@ class SignalEngine:
                             self.signal_state.reset()
                             return
             
-            # ZERO-LATENCY STATE MACHINE
+            # ZERO-LATENCY STATE MACHINE with EXTREME VOLATILITY bypass
             if self.signal_state.status == "IDLE":
                 if all_pass:
-                    # INSTANT ACTIVATION: No FORMING delay
                     direction = checklist.get('trend_direction')
                     current_score = long_score if direction == 'LONG' else short_score
                     
-                    # Activate signal immediately
-                    self.signal_state.status = "ACTIVE"
-                    self.signal_state.direction = direction
-                    self.signal_state.entry_price = indicators.get('price')
-                    self.signal_state.entry_time = current_time
-                    self.signal_state.atr_at_entry = indicators.get('atr')
+                    # ZERO-LATENCY EXTREME VOLATILITY: Check if velocity is > 90th percentile
+                    obi_velocity = indicators.get('obi_velocity')
+                    cvd_velocity = indicators.get('cvd_velocity')
                     
-                    logger.info(f"🚀 {self.display_name} Signal ACTIVE IMMEDIATELY: {direction} at ${self.signal_state.entry_price:.2f} (score: {current_score}/100)")
+                    # Extreme velocity thresholds (90th percentile approximation)
+                    extreme_obi = abs(obi_velocity) > 0.05 if obi_velocity is not None else False
+                    extreme_cvd = abs(cvd_velocity) > 0.05 if cvd_velocity is not None else False
                     
-                    # Send Telegram alert
-                    await self._send_signal_alert(indicators)
+                    # If EXTREME volatility, bypass FORMING and go straight to ACTIVE
+                    if extreme_obi or extreme_cvd:
+                        self.signal_state.status = "ACTIVE"
+                        self.signal_state.direction = direction
+                        self.signal_state.entry_price = indicators.get('price')
+                        self.signal_state.entry_time = current_time
+                        self.signal_state.atr_at_entry = indicators.get('atr')
+                        
+                        logger.warning(f"⚡ EXTREME VOLATILITY DETECTED ⚡")
+                        logger.warning(f"   OBI Velocity: {obi_velocity:.6f}, CVD Velocity: {cvd_velocity:.6f}")
+                        logger.info(f"🚀🚀🚀 {self.display_name} ZERO-LATENCY SIGNAL: {direction} at ${self.signal_state.entry_price:.2f} (score: {current_score}/100)")
+                        
+                        # Send Telegram alert
+                        await self._send_signal_alert(indicators)
+                    else:
+                        # Normal path: Instant activation (already zero-latency)
+                        self.signal_state.status = "ACTIVE"
+                        self.signal_state.direction = direction
+                        self.signal_state.entry_price = indicators.get('price')
+                        self.signal_state.entry_time = current_time
+                        self.signal_state.atr_at_entry = indicators.get('atr')
+                        
+                        logger.info(f"🚀 {self.display_name} Signal ACTIVE: {direction} at ${self.signal_state.entry_price:.2f} (score: {current_score}/100)")
+                        
+                        # Send Telegram alert
+                        await self._send_signal_alert(indicators)
                         
             elif self.signal_state.status == "ACTIVE":
                 # Active signals expire after 5 minutes
