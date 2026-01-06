@@ -372,6 +372,8 @@ class SignalEngine:
                 candles_5m_list,
                 indicators.get('ema20_5m'),
                 indicators.get('ema50_5m'),
+                indicators.get('ema50_15m'),  # FIXED: Missing parameter
+                indicators.get('atr'),  # FIXED: Missing parameter
                 indicators.get('rsi'),
                 indicators.get('cvd', {}).get('5m')
             )
