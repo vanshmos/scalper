@@ -1425,3 +1425,76 @@ class SignalEngine:
             logger.error(f"Error mapping detector to hard gates: {e}")
             return {}
 
+    def _calculate_signal_score(self, direction: str, indicators: Dict, checklist: Dict) -> int:
+        """Calculate gradient score 0-100 for a signal direction"""
+        score = 0
+        
+        # 1. Regime alignment (20 points) - must match direction
+        regime = checklist.get('regime_direction', 'RANGING')
+        if direction == 'LONG' and regime == 'BULL':
+            score += 20
+        elif direction == 'SHORT' and regime == 'BEAR':
+            score += 20
+        elif checklist.get('regime', False):
+            score += 10  # Trending but wrong direction
+        
+        # 2. Multi-TF alignment (20 points)
+        if checklist.get('trend_align', False):
+            if checklist.get('trend_direction') == ('BULL' if direction == 'LONG' else 'BEAR'):
+                score += 20
+            else:
+                score += 5  # Aligned but wrong direction
+        
+        # 3. CVD/Taker buy ratio (15 points)
+        taker_ratio = indicators.get('taker_buy_ratio') or 0.5
+        if direction == 'LONG':
+            if taker_ratio > 0.65:
+                score += 15
+            elif taker_ratio > 0.60:
+                score += 10
+            elif taker_ratio > 0.50:
+                score += 5
+        else:  # SHORT
+            if taker_ratio < 0.35:
+                score += 15
+            elif taker_ratio < 0.40:
+                score += 10
+            elif taker_ratio < 0.50:
+                score += 5
+        
+        # 4. OBI (15 points)
+        obi = indicators.get('obi') or 0
+        if direction == 'LONG':
+            if obi > 0.20:
+                score += 15
+            elif obi > 0.15:
+                score += 10
+            elif obi > 0:
+                score += 5
+        else:  # SHORT
+            if obi < -0.20:
+                score += 15
+            elif obi < -0.15:
+                score += 10
+            elif obi < 0:
+                score += 5
+        
+        # 5. EMA distance (10 points)
+        if checklist.get('ema_dist', False):
+            score += 10
+        
+        # 6. RSI position (10 points)
+        rsi = indicators.get('rsi') or 50
+        if 40 <= rsi <= 60:
+            score += 10
+        elif 35 <= rsi <= 65:
+            score += 7
+        elif 30 <= rsi <= 70:
+            score += 5
+        
+        # 7. Gates (10 points)
+        if checklist.get('gates', False):
+            score += 10
+        
+        return min(100, score)
+    
