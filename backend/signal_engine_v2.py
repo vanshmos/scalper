@@ -1185,11 +1185,14 @@ class SignalEngine:
             indicators = self._calculate_indicators()
             
             # REFACTOR: Use cached detector results if available
-            if self.last_long_result and self.last_short_result:
+            if self.last_long_result and self.last_short_result and self.last_regime:
                 long_score = self.last_long_result['score']
                 short_score = self.last_short_result['score']
-                long_gates = self.last_long_result.get('hard_gates', {})
-                short_gates = self.last_short_result.get('hard_gates', {})
+                
+                # Map detector results to hard_gates format for frontend compatibility
+                long_gates = self._map_detector_to_hard_gates(self.last_long_result, 'LONG', indicators)
+                short_gates = self._map_detector_to_hard_gates(self.last_short_result, 'SHORT', indicators)
+                
                 regime = str(self.last_regime.value) if self.last_regime else 'RANGING'
             else:
                 # Fallback: Use old checklist logic (for compatibility during warmup)
