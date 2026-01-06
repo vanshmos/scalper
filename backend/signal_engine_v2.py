@@ -368,14 +368,15 @@ class SignalEngine:
             
             # Detect regime
             candles_5m_list = list(self.candles_5m)
+            candles_15m_list = list(self.candles_15m)
             regime = self.regime_detector.detect_regime(
                 candles_5m_list,
+                candles_15m_list,
                 indicators.get('ema20_5m'),
                 indicators.get('ema50_5m'),
-                indicators.get('ema50_15m'),  # FIXED: Missing parameter
-                indicators.get('atr'),  # FIXED: Missing parameter
-                indicators.get('rsi'),
-                indicators.get('cvd', {}).get('5m')
+                indicators.get('ema20_15m'),
+                indicators.get('ema50_15m'),
+                indicators.get('atr')
             )
             
             # CRITICAL: Use institutional SignalDetector for LONG signals
