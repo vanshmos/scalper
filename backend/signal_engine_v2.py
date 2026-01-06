@@ -1180,20 +1180,25 @@ class SignalEngine:
             logger.error(f"Error sending signal alert: {e}")
     
     def get_status(self) -> Dict:
-        """Get current engine status for WebSocket broadcast"""
+        """Get current engine status for WebSocket broadcast - REFACTORED to use SignalDetector"""
         try:
             indicators = self._calculate_indicators()
-            checklist = self._build_checklist(indicators)
             
-            # Calculate proper gradient scores for LONG and SHORT independently
-            long_score = self._calculate_signal_score('LONG', indicators, checklist)
-            short_score = self._calculate_signal_score('SHORT', indicators, checklist)
-            
-            # Build LONG hard gates (bullish requirements)
-            long_gates = self._build_hard_gates('LONG', indicators, checklist)
-            
-            # Build SHORT hard gates (bearish requirements)
-            short_gates = self._build_hard_gates('SHORT', indicators, checklist)
+            # REFACTOR: Use cached detector results if available
+            if self.last_long_result and self.last_short_result:
+                long_score = self.last_long_result['score']
+                short_score = self.last_short_result['score']
+                long_gates = self.last_long_result.get('hard_gates', {})
+                short_gates = self.last_short_result.get('hard_gates', {})
+                regime = str(self.last_regime.value) if self.last_regime else 'RANGING'
+            else:
+                # Fallback: Use old checklist logic (for compatibility during warmup)
+                checklist = self._build_checklist(indicators)
+                long_score = self._calculate_signal_score('LONG', indicators, checklist)
+                short_score = self._calculate_signal_score('SHORT', indicators, checklist)
+                long_gates = self._build_hard_gates('LONG', indicators, checklist)
+                short_gates = self._build_hard_gates('SHORT', indicators, checklist)
+                regime = checklist.get('regime_direction', 'RANGING')
             
             # Format indicators to match frontend expectations
             formatted_indicators = {
