@@ -1327,7 +1327,7 @@ class SignalEngine:
             return {
                 'symbol': self.symbol,
                 'connected': True,
-                'regime': regime,
+                'regime': regime_str,
                 'current_price': self.current_price,
                 'candle_counts': {
                     '1m': len(self.candles_1m),
