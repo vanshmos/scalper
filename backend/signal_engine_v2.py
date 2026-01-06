@@ -1043,7 +1043,79 @@ class SignalEngine:
             logger.error(f"Error building checklist: {e}")
             return {}
     
-    async def _process_signal_state(self, checklist: Dict, indicators: Dict, long_score: int, short_score: int):
+    async def _process_signal_state_with_detector(
+        self, 
+        active_result: Optional[Dict], 
+        active_direction: Optional[str],
+        indicators: Dict,
+        long_result: Dict,
+        short_result: Dict
+    ):
+        """
+        Process signal state machine using SignalDetector results
+        REFACTORED: Works with institutional detector output
+        """
+        try:
+            current_time = time.time()
+            
+            # Signal invalidation (cancel if price moves 1 ATR adverse)
+            if self.signal_state.status == "ACTIVE":
+                atr = indicators.get('atr', 100)
+                price = indicators.get('price')
+                entry = self.signal_state.entry_price
+                
+                if price and entry:
+                    if self.signal_state.direction == "LONG":
+                        if price < entry - atr:
+                            logger.warning(f"Signal INVALIDATED: LONG price moved 1 ATR adverse")
+                            self.signal_state.reset()
+                            return
+                    elif self.signal_state.direction == "SHORT":
+                        if price > entry + atr:
+                            logger.warning(f"Signal INVALIDATED: SHORT price moved 1 ATR adverse")
+                            self.signal_state.reset()
+                            return
+            
+            # INSTITUTIONAL SIGNAL STATE MACHINE
+            if self.signal_state.status == "IDLE":
+                if active_result and active_result['signal_ready']:
+                    # Get alpha checks
+                    alpha_checks = active_result.get('alpha_checks', {})
+                    velocity_check = alpha_checks.get('velocity', {})
+                    
+                    # Check for EXTREME volatility (zero-latency trigger)
+                    obi_velocity = indicators.get('obi_velocity')
+                    cvd_velocity = indicators.get('cvd_velocity')
+                    
+                    extreme_obi = abs(obi_velocity) > 0.05 if obi_velocity is not None else False
+                    extreme_cvd = abs(cvd_velocity) > 0.05 if cvd_velocity is not None else False
+                    
+                    # Activate signal
+                    self.signal_state.status = "ACTIVE"
+                    self.signal_state.direction = active_direction
+                    self.signal_state.entry_price = indicators.get('price')
+                    self.signal_state.entry_time = current_time
+                    self.signal_state.atr_at_entry = indicators.get('atr')
+                    
+                    if extreme_obi or extreme_cvd:
+                        logger.warning(f"⚡ EXTREME VOLATILITY DETECTED ⚡")
+                        logger.info(f"🚀🚀🚀 {self.display_name} ZERO-LATENCY: {active_direction} at ${self.signal_state.entry_price:.2f} (score: {active_result['score']}/100)")
+                    else:
+                        logger.info(f"🚀 {self.display_name} Signal ACTIVE: {active_direction} at ${self.signal_state.entry_price:.2f} (score: {active_result['score']}/100)")
+                        logger.info(f"   Base: {active_result['base_score']}, Alpha Boost: +{active_result['alpha_boost']}")
+                    
+                    # Send Telegram alert
+                    await self._send_signal_alert(indicators)
+                    
+            elif self.signal_state.status == "ACTIVE":
+                # Active signals expire after 5 minutes
+                elapsed = current_time - self.signal_state.entry_time
+                if elapsed >= 300:
+                    logger.info("Signal EXPIRED after 5 minutes")
+                    self.signal_state.reset()
+                    
+        except Exception as e:
+            logger.error(f"Error processing signal state with detector: {e}")
         """Process signal state machine with ZERO-LATENCY for extreme volatility"""
         try:
             # Check if all PRO SCALPER checklist items pass
