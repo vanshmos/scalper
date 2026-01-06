@@ -1263,7 +1263,7 @@ class SignalEngine:
             return {
                 'symbol': self.symbol,
                 'connected': True,
-                'regime': checklist.get('regime_direction', 'RANGING'),
+                'regime': regime,
                 'current_price': self.current_price,
                 'candle_counts': {
                     '1m': len(self.candles_1m),
@@ -1272,18 +1272,18 @@ class SignalEngine:
                 },
                 'indicators': formatted_indicators,
                 'gates': {
-                    'all_pass': checklist.get('gates', False),
+                    'all_pass': self.regime_detector.spread_gate.current_state and self.regime_detector.depth_gate.current_state,
                     'spread': {
-                        'pass': (indicators.get('spread', 999) < checklist.get('spread_threshold', 1.5)) if indicators.get('spread') is not None else False,
+                        'pass': self.regime_detector.spread_gate.current_state,
                         'value': indicators.get('spread', 0),
-                        'threshold': checklist.get('spread_threshold', 1.5),
-                        'mode': 'dynamic' if self.spread_stats.count() >= 10 else 'static'
+                        'threshold': 2.5,  # V1.5 pass threshold
+                        'mode': 'dynamic'
                     },
                     'depth': {
-                        'pass': (indicators.get('depth', 0) > checklist.get('depth_threshold', 500000)) if indicators.get('depth') is not None else False,
+                        'pass': self.regime_detector.depth_gate.current_state,
                         'value': indicators.get('depth', 0),
-                        'threshold': checklist.get('depth_threshold', 500000),
-                        'mode': 'dynamic' if self.depth_stats.count() >= 10 else 'static'
+                        'threshold': 30000,  # V1.5 pass threshold
+                        'mode': 'dynamic'
                     },
                     'ticker_staleness': {
                         'age_ms': (time.time() - self.last_ticker_time) * 1000 if self.last_ticker_time else None,
