@@ -278,17 +278,21 @@ body {
 .signal-banner-details {
   display: flex;
   gap: 2rem;
+  align-items: center;
 }
 
 .signal-detail {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  align-items: center;
 }
 
 .signal-detail .label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #8892a6;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .signal-detail .value {
