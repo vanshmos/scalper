@@ -57,7 +57,6 @@ function App() {
         ws.onclose = () => {
           console.log('WebSocket disconnected');
           setWsConnected(false);
-          // Reconnect after 5 seconds
           reconnectTimer = setTimeout(connect, 5000);
         };
       } catch (e) {
@@ -88,420 +87,258 @@ function App() {
     return num.toFixed(decimals);
   };
 
-  const getIndicatorColor = (value, bullishThreshold, bearishThreshold) => {
-    if (value === null || value === undefined) return '';
-    if (value > bullishThreshold) return 'text-green';
-    if (value < bearishThreshold) return 'text-red';
-    return '';
-  };
-
   // Get data for active symbol
   const symbolData = status[activeSymbol] || {};
   const indicators = symbolData.indicators || {};
-  const regime = symbolData.regime || 'RANGING';
   const gates = symbolData.gates || {};
   const signals = symbolData.signals || {};
-  const approximating = symbolData.approximating || {};
   const signalStatus = symbolData.signal_status || {};
 
-  const getRegimeColor = (regime) => {
-    switch(regime) {
-      case 'TRENDING_BULL': return 'regime-bull';
-      case 'TRENDING_BEAR': return 'regime-bear';
-      case 'CHAOTIC': return 'regime-chaotic';
-      default: return 'regime-ranging';
-    }
-  };
-
-  const getRegimeLabel = (regime) => {
-    return regime.replace('_', ' ');
+  // Format symbol display name (remove -USDT-SWAP)
+  const getDisplayName = (symbol) => {
+    return symbol.toUpperCase();
   };
 
   return (
-    <div className="app-container" data-testid="crypto-dashboard">
-      {/* Hidden audio element for alert sound */}
-      <audio ref={audioRef} src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBCuC0PLNfC0GI3vJ8dybRgsXZLnp6aVMEgxMouHyvWklBCl/zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dybRgsWYbfm66hVFApFneDxvmwjBCl+zvLLfCsGJX3N8dyb" />
-      
-      <div className="header">
-        <h1 className="title" data-testid="dashboard-title">SCALPING ENGINE</h1>
-        <div className="header-status">
-          <div className={`status-indicator ${wsConnected ? 'connected' : 'disconnected'}`} data-testid="connection-indicator">
-            <div className="status-dot"></div>
-            <span>{wsConnected ? 'OKX CONNECTED (3 symbols)' : 'DISCONNECTED'}</span>
+    <div className="app">
+      {/* Audio element for alerts */}
+      <audio ref={audioRef} src="/alert.mp3" preload="auto" />
+
+      {/* Header */}
+      <header className="header">
+        <div className="header-content">
+          <h1 className="title">SCALPING ENGINE</h1>
+          <div className="header-right">
+            <div className="connection-status">
+              <div className={`status-dot ${wsConnected ? 'connected' : 'disconnected'}`}></div>
+              <span className="status-text">{wsConnected ? 'LIVE' : 'OFFLINE'}</span>
+            </div>
+            {lastUpdate && <span className="last-update">{lastUpdate}</span>}
+            <button 
+              className={`audio-toggle ${audioMuted ? 'muted' : ''}`}
+              onClick={() => setAudioMuted(!audioMuted)}
+              title={audioMuted ? "Unmute alerts" : "Mute alerts"}
+            >
+              {audioMuted ? '🔇' : '🔊'}
+            </button>
           </div>
-          <button 
-            className={`mute-button ${audioMuted ? 'muted' : ''}`}
-            onClick={() => setAudioMuted(!audioMuted)}
-            data-testid="mute-button"
-            title={audioMuted ? 'Unmute alerts' : 'Mute alerts'}
-          >
-            {audioMuted ? '🔇' : '🔊'}
-          </button>
-          {lastUpdate && (
-            <div className="last-update" data-testid="last-update">Updated: {lastUpdate}</div>
-          )}
         </div>
-      </div>
+      </header>
 
       {/* Symbol Tabs */}
       <div className="symbol-tabs">
-        <button 
-          className={`symbol-tab ${activeSymbol === 'btc' ? 'active' : ''}`}
-          onClick={() => setActiveSymbol('btc')}
-          data-testid="tab-btc"
-        >
-          BTC
-        </button>
-        <button 
-          className={`symbol-tab ${activeSymbol === 'eth' ? 'active' : ''}`}
-          onClick={() => setActiveSymbol('eth')}
-          data-testid="tab-eth"
-        >
-          ETH
-        </button>
-        <button 
-          className={`symbol-tab ${activeSymbol === 'sol' ? 'active' : ''}`}
-          onClick={() => setActiveSymbol('sol')}
-          data-testid="tab-sol"
-        >
-          SOL
-        </button>
+        {['btc', 'eth', 'sol'].map(symbol => (
+          <button
+            key={symbol}
+            className={`symbol-tab ${activeSymbol === symbol ? 'active' : ''}`}
+            onClick={() => setActiveSymbol(symbol)}
+          >
+            {getDisplayName(symbol)}
+          </button>
+        ))}
       </div>
 
-      {/* Active Signal Card - Only show when FORMING or ACTIVE */}
-      {(signalStatus.state === 'FORMING' || signalStatus.state === 'ACTIVE') && (
-        <div className="active-signal-card" data-testid="active-signal-card">
-          <div className="signal-card-header">
-            <div className={`signal-direction ${signalStatus.direction?.toLowerCase()}`}>
-              {signalStatus.direction === 'SHORT' ? '🔴' : '🟢'} {signalStatus.direction} {activeSymbol.toUpperCase()}
+      {/* Active Signal Banner */}
+      {signalStatus.state === 'ACTIVE' && (
+        <div className={`signal-banner ${signalStatus.direction?.toLowerCase()}`}>
+          <div className="signal-banner-content">
+            <div className="signal-banner-left">
+              <div className="signal-indicator">●</div>
+              <div className="signal-info">
+                <span className="signal-type">{signalStatus.direction} {getDisplayName(activeSymbol)}</span>
+                <span className="signal-label">ACTIVE</span>
+              </div>
             </div>
-            <div className={`signal-state ${signalStatus.state.toLowerCase()}`}>
-              {signalStatus.state}
+            <div className="signal-banner-details">
+              <div className="signal-detail">
+                <span className="label">Entry:</span>
+                <span className="value">{formatPrice(signalStatus.entry_min)}</span>
+              </div>
+              <div className="signal-detail">
+                <span className="label">Time:</span>
+                <span className="value countdown">{Math.floor(signalStatus.active_remaining || 0)}s</span>
+              </div>
             </div>
           </div>
-          
-          {signalStatus.state === 'FORMING' && (
-            <div className="signal-card-content">
-              <div className="countdown">
-                <div className="countdown-label">Forming Timer</div>
-                <div className="countdown-value" data-testid="forming-countdown">
-                  {Math.ceil(signalStatus.forming_remaining || 0)}s
-                </div>
-                <div className="countdown-bar">
-                  <div 
-                    className="countdown-progress"
-                    style={{width: `${((signalStatus.forming_elapsed || 0) / 20) * 100}%`}}
-                  ></div>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          {signalStatus.state === 'ACTIVE' && (
-            <div className="signal-card-content">
-              <div className="signal-levels">
-                <div className="level-row">
-                  <span>Entry:</span>
-                  <span className="level-value" data-testid="signal-entry">${signalStatus.entry?.toFixed(2)}</span>
-                </div>
-                <div className="level-row">
-                  <span>Stop Loss:</span>
-                  <span className="level-value text-red" data-testid="signal-sl">${signalStatus.stop_loss?.toFixed(2)}</span>
-                </div>
-                <div className="level-row">
-                  <span>TP1:</span>
-                  <span className="level-value text-green" data-testid="signal-tp1">${signalStatus.tp1?.toFixed(2)}</span>
-                </div>
-                <div className="level-row">
-                  <span>TP2:</span>
-                  <span className="level-value text-green" data-testid="signal-tp2">${signalStatus.tp2?.toFixed(2)}</span>
-                </div>
-                <div className="level-row">
-                  <span>Confidence:</span>
-                  <span className="level-value" data-testid="signal-confidence-active">{signalStatus.confidence}/100</span>
-                </div>
-              </div>
-              
-              <div className="countdown">
-                <div className="countdown-label">Time Remaining</div>
-                <div className="countdown-value" data-testid="active-countdown">
-                  {Math.floor((signalStatus.active_remaining || 0) / 60)}:{String(Math.floor((signalStatus.active_remaining || 0) % 60)).padStart(2, '0')}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
-      <div className="content">
-        {/* Price Display */}
+      <div className="main-content">
+        {/* Price & Regime */}
         <div className="price-section">
-          <div className="section-row">
-            <div className="price-container">
-              <div className="section-label">{activeSymbol.toUpperCase()} PRICE</div>
-              <div className="price-display" data-testid="current-price">
-                {symbolData.current_price ? formatPrice(symbolData.current_price) : '—'}
-              </div>
-            </div>
-            <div className="regime-container">
-              <div className="section-label">MARKET REGIME</div>
-              <div className={`regime-badge ${getRegimeColor(regime)}`} data-testid="regime-badge">
-                {getRegimeLabel(regime)}
-              </div>
-            </div>
+          <div className="price-display">
+            <span className="price-label">{getDisplayName(activeSymbol)} PRICE</span>
+            <span className="price-value">{formatPrice(symbolData.current_price)}</span>
+          </div>
+          <div className="regime-badge">
+            <span className="regime-label">REGIME</span>
+            <span className={`regime-value regime-${symbolData.regime?.toLowerCase()}`}>
+              {symbolData.regime || 'UNKNOWN'}
+            </span>
           </div>
         </div>
 
-        {/* Connection Status */}
-        <div className="info-card">
-          <div className="card-header">CONNECTION</div>
-          <div className="card-content">
-            <div className="info-row">
-              <span className="info-label">Symbol:</span>
-              <span className="info-value text-green" data-testid="symbol-name">
-                {activeSymbol.toUpperCase()}-USDT-SWAP
-              </span>
+        {/* Market Health Cards */}
+        <div className="health-grid">
+          <div className="health-card">
+            <div className="health-header">
+              <span>CANDLES</span>
             </div>
-            <div className="info-row">
-              <span className="info-label">Status:</span>
-              <span className={`info-value ${symbolData.connected ? 'text-green' : 'text-red'}`} data-testid="symbol-status">
-                {symbolData.connected ? 'CONNECTED' : 'DISCONNECTED'}
-              </span>
-            </div>
-            <div className="info-row">
-              <span className="info-label">Last Update:</span>
-              <span className="info-value" data-testid="last-symbol-update">
-                {symbolData.last_update ? new Date(symbolData.last_update).toLocaleTimeString() : '—'}
-              </span>
+            <div className="health-stats">
+              <div className="stat">
+                <span className="stat-value">{symbolData.candle_counts?.['1m'] || 0}</span>
+                <span className="stat-label">1m</span>
+              </div>
+              <div className="stat">
+                <span className="stat-value">{symbolData.candle_counts?.['5m'] || 0}</span>
+                <span className="stat-label">5m</span>
+              </div>
+              <div className="stat">
+                <span className="stat-value">{symbolData.candle_counts?.['15m'] || 0}</span>
+                <span className="stat-label">15m</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Candle Counts */}
-        <div className="info-card">
-          <div className="card-header">CANDLE DATA</div>
-          <div className="card-content">
-            <div className="info-row">
-              <span className="info-label">1m Candles:</span>
-              <span className="info-value text-green" data-testid="candles-1m">
-                {symbolData.candle_counts?.['1m'] ?? '—'}
+          <div className="health-card">
+            <div className="health-header">
+              <span>GATES</span>
+              <span className={`gate-status ${gates.all_pass ? 'pass' : 'fail'}`}>
+                {gates.all_pass ? '✓ PASS' : '✗ FAIL'}
               </span>
             </div>
-            <div className="info-row">
-              <span className="info-label">5m Candles:</span>
-              <span className="info-value text-green" data-testid="candles-5m">
-                {symbolData.candle_counts?.['5m'] ?? '—'}
-              </span>
-            </div>
-            <div className="info-row">
-              <span className="info-label">15m Candles:</span>
-              <span className="info-value text-green" data-testid="candles-15m">
-                {symbolData.candle_counts?.['15m'] ?? '—'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Gates Status */}
-        <div className="info-card">
-          <div className="card-header">PHASE 3: GATES</div>
-          <div className="card-content">
-            <div className="info-row">
-              <span className="info-label">Spread Gate:</span>
-              <span className={`info-value ${gates.spread?.pass ? 'text-green' : 'text-red'}`} data-testid="gate-spread">
-                {gates.spread?.pass ? 'PASS' : 'FAIL'}
-              </span>
-            </div>
-            <div className="info-row">
-              <span className="info-label">Spread Value:</span>
-              <span className="info-value">{formatNumber(gates.spread?.value, 2)} bps</span>
-            </div>
-            <div className="info-row">
-              <span className="info-label">Depth Gate:</span>
-              <span className={`info-value ${gates.depth?.pass ? 'text-green' : 'text-red'}`} data-testid="gate-depth">
-                {gates.depth?.pass ? 'PASS' : 'FAIL'}
-              </span>
-            </div>
-            <div className="info-row">
-              <span className="info-label">Depth Value:</span>
-              <span className="info-value">${formatNumber(gates.depth?.value, 0)}</span>
-            </div>
-            <div className="info-row">
-              <span className="info-label">All Gates:</span>
-              <span className={`info-value ${gates.all_pass ? 'text-green' : 'text-red'}`} data-testid="gate-all">
-                {gates.all_pass ? 'PASS' : 'FAIL'}
-                {gates.data_stale && <span className="stale-warning" title="Data may be stale"> ⚠️</span>}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Phase Status */}
-        <div className="info-card">
-          <div className="card-header">PHASE 2: INDICATORS</div>
-          <div className="card-content">
-            <div className="indicator-section">
-              <div className="indicator-title">
-                EMA (1m)
-                {approximating['1m'] && <span className="approx-warning" title="Approximating - warming up"> ⚠️</span>}
-              </div>
-              <div className="indicator-row">
-                <span>EMA20:</span>
-                <span data-testid="ema20-1m">{formatPrice(indicators.ema?.['1m']?.ema20)}</span>
-              </div>
-              <div className="indicator-row">
-                <span>EMA50:</span>
-                <span data-testid="ema50-1m">{formatPrice(indicators.ema?.['1m']?.ema50)}</span>
-              </div>
-            </div>
-            
-            <div className="indicator-section">
-              <div className="indicator-title">
-                EMA (5m)
-                {approximating['5m'] && <span className="approx-warning" title="Approximating - warming up"> ⚠️</span>}
-              </div>
-              <div className="indicator-row">
-                <span>EMA20:</span>
-                <span data-testid="ema20-5m">{formatPrice(indicators.ema?.['5m']?.ema20)}</span>
-              </div>
-              <div className="indicator-row">
-                <span>EMA50:</span>
-                <span data-testid="ema50-5m">{formatPrice(indicators.ema?.['5m']?.ema50)}</span>
-              </div>
-            </div>
-            
-            <div className="indicator-section">
-              <div className="indicator-title">
-                EMA (15m)
-                {approximating['15m'] && <span className="approx-warning" title="Approximating - warming up"> ⚠️</span>}
-              </div>
-              <div className="indicator-row">
-                <span>EMA20:</span>
-                <span data-testid="ema20-15m">{formatPrice(indicators.ema?.['15m']?.ema20)}</span>
-              </div>
-              <div className="indicator-row">
-                <span>EMA50:</span>
-                <span data-testid="ema50-15m">{formatPrice(indicators.ema?.['15m']?.ema50)}</span>
-              </div>
-            </div>
-            
-            <div className="indicator-section">
-              <div className="indicator-title">5m Indicators</div>
-              <div className="indicator-row">
-                <span>ATR 14:</span>
-                <span data-testid="atr-5m">{formatNumber(indicators.atr_5m)}</span>
-              </div>
-              <div className="indicator-row">
-                <span>RSI 14:</span>
-                <span data-testid="rsi-5m" className={getIndicatorColor(indicators.rsi_5m, 75, 25)}>
-                  {formatNumber(indicators.rsi_5m)}
+            <div className="health-stats">
+              <div className="stat">
+                <span className="stat-label">Spread</span>
+                <span className={`stat-value ${gates.spread?.pass ? 'text-green' : 'text-red'}`}>
+                  {formatNumber(gates.spread?.value, 2)} bps
                 </span>
               </div>
-            </div>
-            
-            <div className="indicator-section">
-              <div className="indicator-title">Orderbook</div>
-              <div className="indicator-row">
-                <span>OBI:</span>
-                <span data-testid="obi" className={getIndicatorColor(indicators.obi, 0.12, -0.12)}>
-                  {formatNumber(indicators.obi, 3)}
-                </span>
-              </div>
-              <div className="indicator-row">
-                <span>Spread (bps):</span>
-                <span data-testid="spread">{formatNumber(indicators.spread, 2)}</span>
-              </div>
-              <div className="indicator-row">
-                <span>Depth:</span>
-                <span data-testid="depth">${formatNumber(indicators.depth, 0)}</span>
-              </div>
-            </div>
-            
-            <div className="indicator-section">
-              <div className="indicator-title">CVD</div>
-              <div className="indicator-row">
-                <span>CVD 1m:</span>
-                <span data-testid="cvd-1m" className={getIndicatorColor(indicators.cvd?.['1m'], 0.15, -0.15)}>
-                  {formatNumber(indicators.cvd?.['1m'], 3)}
-                </span>
-              </div>
-              <div className="indicator-row">
-                <span>CVD 5m:</span>
-                <span data-testid="cvd-5m" className={getIndicatorColor(indicators.cvd?.['5m'], 0.15, -0.15)}>
-                  {formatNumber(indicators.cvd?.['5m'], 3)}
+              <div className="stat">
+                <span className="stat-label">Depth</span>
+                <span className={`stat-value ${gates.depth?.pass ? 'text-green' : 'text-red'}`}>
+                  ${(gates.depth?.value / 1000000).toFixed(1)}M
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Signal Checklist - SHORT */}
-        <div className="info-card signal-card">
-          <div className="card-header">SHORT SIGNAL (V1.5)</div>
-          <div className="card-content">
-            <div className="confidence-row">
-              <span>Score:</span>
-              <span className={`confidence-value quality-${signals.short?.quality?.toLowerCase()}`} data-testid="short-score">
-                {signals.short?.score || 0}/100 ({signals.short?.quality || 'LOW'})
-              </span>
+        {/* Indicators Grid */}
+        <div className="indicators-grid">
+          <div className="indicator-card">
+            <span className="indicator-label">EMA 20/50 (5m)</span>
+            <span className="indicator-value">
+              {formatNumber(indicators.ema?.['5m']?.ema20, 2)} / {formatNumber(indicators.ema?.['5m']?.ema50, 2)}
+            </span>
+          </div>
+          <div className="indicator-card">
+            <span className="indicator-label">RSI (5m)</span>
+            <span className={`indicator-value ${indicators.rsi_5m < 30 ? 'text-red' : indicators.rsi_5m > 70 ? 'text-green' : ''}`}>
+              {formatNumber(indicators.rsi_5m, 0)}
+            </span>
+          </div>
+          <div className="indicator-card">
+            <span className="indicator-label">ATR (5m)</span>
+            <span className="indicator-value">{formatNumber(indicators.atr_5m, 2)}</span>
+          </div>
+          <div className="indicator-card">
+            <span className="indicator-label">CVD (5m)</span>
+            <span className={`indicator-value ${indicators.cvd?.['5m'] > 0 ? 'text-green' : 'text-red'}`}>
+              {formatNumber(indicators.cvd?.['5m'], 3)}
+            </span>
+          </div>
+          <div className="indicator-card">
+            <span className="indicator-label">OBI</span>
+            <span className={`indicator-value ${indicators.obi > 0 ? 'text-green' : 'text-red'}`}>
+              {formatNumber(indicators.obi, 3)}
+            </span>
+          </div>
+          <div className="indicator-card">
+            <span className="indicator-label">VWAP</span>
+            <span className="indicator-value">{formatPrice(indicators.vwap)}</span>
+          </div>
+        </div>
+
+        {/* Signal Scores - Side by Side */}
+        <div className="signals-section">
+          <div className="signals-header">SIGNAL SCORES</div>
+          <div className="signals-scores">
+            <div className="score-card short">
+              <div className="score-header">SHORT</div>
+              <div className="score-display">
+                <span className="score-value">{signals.short?.score || 0}</span>
+                <span className="score-max">/100</span>
+              </div>
+              <div className={`score-quality quality-${signals.short?.quality?.toLowerCase()}`}>
+                {signals.short?.quality || 'LOW'}
+              </div>
             </div>
-            
-            <div className="hard-gates-section">
-              <div className="gates-title">Direction Filters:</div>
+            <div className="score-card long">
+              <div className="score-header">LONG</div>
+              <div className="score-display">
+                <span className="score-value">{signals.long?.score || 0}</span>
+                <span className="score-max">/100</span>
+              </div>
+              <div className={`score-quality quality-${signals.long?.quality?.toLowerCase()}`}>
+                {signals.long?.quality || 'LOW'}
+              </div>
+            </div>
+          </div>
+
+          {/* Common Criteria */}
+          <div className="criteria-section">
+            <div className="criteria-header">MARKET CONDITIONS</div>
+            <div className="criteria-grid">
+              {signals.long?.hard_gates && (
+                <>
+                  <div className={`criteria-item ${signals.long.hard_gates.rsi_filter?.pass ? 'pass' : 'fail'}`}>
+                    <span className="criteria-icon">{signals.long.hard_gates.rsi_filter?.pass ? '✓' : '✗'}</span>
+                    <span className="criteria-label">RSI Range</span>
+                    <span className="criteria-value">{signals.long.hard_gates.rsi_filter?.detail}</span>
+                  </div>
+                  <div className={`criteria-item ${signals.long.hard_gates.spread?.pass ? 'pass' : 'fail'}`}>
+                    <span className="criteria-icon">{signals.long.hard_gates.spread?.pass ? '✓' : '✗'}</span>
+                    <span className="criteria-label">Spread</span>
+                    <span className="criteria-value">{signals.long.hard_gates.spread?.detail}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Direction-Specific Filters */}
+          <div className="direction-filters">
+            <div className="filter-column">
+              <div className="filter-header">SHORT FILTERS</div>
               {signals.short?.hard_gates && (
                 <>
-                  <div className={`gate-item ${signals.short.hard_gates.regime_filter?.pass ? 'pass' : 'fail'}`}>
-                    <span className="gate-icon">{signals.short.hard_gates.regime_filter?.pass ? '✓' : '✗'}</span>
-                    <span>Regime: {signals.short.hard_gates.regime_filter?.detail || 'N/A'} (need BEAR)</span>
+                  <div className={`criteria-item ${signals.short.hard_gates.regime_filter?.pass ? 'pass' : 'fail'}`}>
+                    <span className="criteria-icon">{signals.short.hard_gates.regime_filter?.pass ? '✓' : '✗'}</span>
+                    <span className="criteria-label">Regime</span>
+                    <span className="criteria-value">{signals.short.hard_gates.regime_filter?.detail}</span>
                   </div>
-                  <div className={`gate-item ${signals.short.hard_gates['cvd/obi_alignment']?.pass ? 'pass' : 'fail'}`}>
-                    <span className="gate-icon">{signals.short.hard_gates['cvd/obi_alignment']?.pass ? '✓' : '✗'}</span>
-                    <span>{signals.short.hard_gates['cvd/obi_alignment']?.detail || 'N/A'}</span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Signal Checklist - LONG */}
-        <div className="info-card signal-card">
-          <div className="card-header">LONG SIGNAL (V1.5)</div>
-          <div className="card-content">
-            <div className="confidence-row">
-              <span>Score:</span>
-              <span className={`confidence-value quality-${signals.long?.quality?.toLowerCase()}`} data-testid="long-score">
-                {signals.long?.score || 0}/100 ({signals.long?.quality || 'LOW'})
-              </span>
-            </div>
-            
-            <div className="hard-gates-section">
-              <div className="gates-title">Direction Filters:</div>
-              {signals.long?.hard_gates && (
-                <>
-                  <div className={`gate-item ${signals.long.hard_gates.regime_filter?.pass ? 'pass' : 'fail'}`}>
-                    <span className="gate-icon">{signals.long.hard_gates.regime_filter?.pass ? '✓' : '✗'}</span>
-                    <span>Regime: {signals.long.hard_gates.regime_filter?.detail || 'N/A'} (need BULL)</span>
-                  </div>
-                  <div className={`gate-item ${signals.long.hard_gates['cvd/obi_alignment']?.pass ? 'pass' : 'fail'}`}>
-                    <span className="gate-icon">{signals.long.hard_gates['cvd/obi_alignment']?.pass ? '✓' : '✗'}</span>
-                    <span>{signals.long.hard_gates['cvd/obi_alignment']?.detail || 'N/A'}</span>
+                  <div className={`criteria-item ${signals.short.hard_gates['cvd/obi_alignment']?.pass ? 'pass' : 'fail'}`}>
+                    <span className="criteria-icon">{signals.short.hard_gates['cvd/obi_alignment']?.pass ? '✓' : '✗'}</span>
+                    <span className="criteria-label">Flow</span>
+                    <span className="criteria-value">{signals.short.hard_gates['cvd/obi_alignment']?.detail}</span>
                   </div>
                 </>
               )}
             </div>
-            
-            <div className="hard-gates-section" style={{marginTop: '15px'}}>
-              <div className="gates-title">Common Filters (Both Sides):</div>
+            <div className="filter-column">
+              <div className="filter-header">LONG FILTERS</div>
               {signals.long?.hard_gates && (
                 <>
-                  <div className={`gate-item ${signals.long.hard_gates.rsi_filter?.pass ? 'pass' : 'fail'}`}>
-                    <span className="gate-icon">{signals.long.hard_gates.rsi_filter?.pass ? '✓' : '✗'}</span>
-                    <span>RSI (30-70): {signals.long.hard_gates.rsi_filter?.detail || 'N/A'}</span>
+                  <div className={`criteria-item ${signals.long.hard_gates.regime_filter?.pass ? 'pass' : 'fail'}`}>
+                    <span className="criteria-icon">{signals.long.hard_gates.regime_filter?.pass ? '✓' : '✗'}</span>
+                    <span className="criteria-label">Regime</span>
+                    <span className="criteria-value">{signals.long.hard_gates.regime_filter?.detail}</span>
                   </div>
-                  <div className={`gate-item ${signals.long.hard_gates.spread?.pass ? 'pass' : 'fail'}`}>
-                    <span className="gate-icon">{signals.long.hard_gates.spread?.pass ? '✓' : '✗'}</span>
-                    <span>Spread (&lt;5 bps): {signals.long.hard_gates.spread?.detail || 'N/A'}</span>
+                  <div className={`criteria-item ${signals.long.hard_gates['cvd/obi_alignment']?.pass ? 'pass' : 'fail'}`}>
+                    <span className="criteria-icon">{signals.long.hard_gates['cvd/obi_alignment']?.pass ? '✓' : '✗'}</span>
+                    <span className="criteria-label">Flow</span>
+                    <span className="criteria-value">{signals.long.hard_gates['cvd/obi_alignment']?.detail}</span>
                   </div>
                 </>
               )}
