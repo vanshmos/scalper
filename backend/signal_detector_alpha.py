@@ -33,7 +33,7 @@ class SignalDetector:
         self.min_atr = 100               # Minimum ATR for sufficient volatility ($100)
         
         # ALPHA ENHANCEMENTS
-        self.vwap_distance_threshold = 0.003  # 0.3% max distance from VWAP
+        self.vwap_distance_threshold = 0.02  # 2% max distance from VWAP (adjusted for crypto volatility)
         self.min_velocity_threshold = 0.001   # Minimum positive velocity for LONG
     
     def check_velocity_signal(
