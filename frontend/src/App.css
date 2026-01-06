@@ -302,6 +302,14 @@ body {
   font-family: 'JetBrains Mono', monospace;
 }
 
+.signal-detail .value.tp {
+  color: #00ff88;
+}
+
+.signal-detail .value.sl {
+  color: #ff4444;
+}
+
 .countdown {
   color: #00ff88;
 }
