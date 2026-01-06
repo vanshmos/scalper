@@ -336,6 +336,7 @@ class SignalEngine:
         """
         EVENT-DRIVEN signal check - called from orderbook/trade callbacks
         Implements 100ms throttle to prevent CPU overload
+        REFACTORED: Delegates to institutional SignalDetector
         """
         try:
             current_time = time.time()
@@ -361,15 +362,93 @@ class SignalEngine:
             # Calculate indicators with LIVE data (forming candles)
             indicators = self._calculate_indicators_live()
             
-            # Check signal conditions
-            checklist = self._build_checklist(indicators)
+            # Detect regime
+            candles_5m_list = list(self.candles_5m)
+            regime = self.regime_detector.detect_regime(
+                candles_5m_list,
+                indicators.get('ema20_5m'),
+                indicators.get('ema50_5m'),
+                indicators.get('rsi'),
+                indicators.get('cvd', {}).get('5m')
+            )
             
-            # Calculate scores for signal strengthening check
-            long_score = self._calculate_signal_score('LONG', indicators, checklist)
-            short_score = self._calculate_signal_score('SHORT', indicators, checklist)
+            # CRITICAL: Use institutional SignalDetector for LONG signals
+            long_result = self.detector.detect_signal_with_alpha(
+                direction=SignalDirection.LONG,
+                regime=regime,
+                ema20_1m=indicators.get('ema20_1m'),
+                ema50_1m=indicators.get('ema50_1m'),
+                ema20_5m=indicators.get('ema20_5m'),
+                ema50_5m=indicators.get('ema50_5m'),
+                ema20_15m=indicators.get('ema20_15m'),
+                ema50_15m=indicators.get('ema50_15m'),
+                cvd_5m=indicators.get('cvd', {}).get('5m'),
+                obi=indicators.get('obi'),
+                current_price=indicators.get('price'),
+                rsi_5m=indicators.get('rsi'),
+                spread=indicators.get('spread'),
+                atr=indicators.get('atr'),
+                # ALPHA inputs
+                obi_velocity=indicators.get('obi_velocity'),
+                cvd_velocity=indicators.get('cvd_velocity'),
+                bollinger=indicators.get('bollinger'),
+                vwap=indicators.get('vwap'),
+                trend_strength=indicators.get('trend_strength'),
+                hurst=None  # Using trend_strength instead
+            )
             
-            # Process signal state machine (pass scores for strengthening verification)
-            await self._process_signal_state(checklist, indicators, long_score, short_score)
+            # CRITICAL: Use institutional SignalDetector for SHORT signals
+            short_result = self.detector.detect_signal_with_alpha(
+                direction=SignalDirection.SHORT,
+                regime=regime,
+                ema20_1m=indicators.get('ema20_1m'),
+                ema50_1m=indicators.get('ema50_1m'),
+                ema20_5m=indicators.get('ema20_5m'),
+                ema50_5m=indicators.get('ema50_5m'),
+                ema20_15m=indicators.get('ema20_15m'),
+                ema50_15m=indicators.get('ema50_15m'),
+                cvd_5m=indicators.get('cvd', {}).get('5m'),
+                obi=indicators.get('obi'),
+                current_price=indicators.get('price'),
+                rsi_5m=indicators.get('rsi'),
+                spread=indicators.get('spread'),
+                atr=indicators.get('atr'),
+                # ALPHA inputs
+                obi_velocity=indicators.get('obi_velocity'),
+                cvd_velocity=indicators.get('cvd_velocity'),
+                bollinger=indicators.get('bollinger'),
+                vwap=indicators.get('vwap'),
+                trend_strength=indicators.get('trend_strength'),
+                hurst=None
+            )
+            
+            # Determine which signal is stronger
+            if long_result['signal_ready'] and short_result['signal_ready']:
+                # Both ready, choose higher score
+                if long_result['score'] >= short_result['score']:
+                    active_result = long_result
+                    active_direction = 'LONG'
+                else:
+                    active_result = short_result
+                    active_direction = 'SHORT'
+            elif long_result['signal_ready']:
+                active_result = long_result
+                active_direction = 'LONG'
+            elif short_result['signal_ready']:
+                active_result = short_result
+                active_direction = 'SHORT'
+            else:
+                active_result = None
+                active_direction = None
+            
+            # Process signal state machine
+            await self._process_signal_state_with_detector(
+                active_result, 
+                active_direction, 
+                indicators,
+                long_result,
+                short_result
+            )
             
         except Exception as e:
             logger.error(f"Error in event-driven signal check: {e}")
