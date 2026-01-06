@@ -58,6 +58,10 @@ class SignalEngine:
         self.indicators = Indicators()
         self.alert_manager = AlertManager()
         
+        # Regime detector
+        from regime import RegimeDetector
+        self.regime_detector = RegimeDetector()
+        
         # CRITICAL: Initialize institutional-grade signal detector
         self.detector = SignalDetector()
         
