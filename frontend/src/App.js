@@ -446,44 +446,17 @@ function App() {
               </span>
             </div>
             
-            <div className="scoring-breakdown">
-              <div className="breakdown-title">Scoring Breakdown:</div>
-              {signals.short?.breakdown && Object.entries(signals.short.breakdown).map(([key, value]) => (
-                <div key={key} className="breakdown-item">
-                  <span className="breakdown-label">{key}:</span>
-                  <span className="breakdown-detail">{value.detail}</span>
-                  <span className="breakdown-points">+{value.points}</span>
-                </div>
-              ))}
-              <div className="breakdown-total">
-                <span>Total:</span>
-                <span className="total-score">{signals.short?.score || 0}</span>
-              </div>
-            </div>
-            
             <div className="hard-gates-section">
-              <div className="gates-title">Hard Gates:</div>
+              <div className="gates-title">Direction Filters:</div>
               {signals.short?.hard_gates && (
                 <>
                   <div className={`gate-item ${signals.short.hard_gates.regime_filter?.pass ? 'pass' : 'fail'}`}>
                     <span className="gate-icon">{signals.short.hard_gates.regime_filter?.pass ? '✓' : '✗'}</span>
-                    <span>Regime Filter: {signals.short.hard_gates.regime_filter?.detail || 'N/A'}</span>
+                    <span>Regime: {signals.short.hard_gates.regime_filter?.detail || 'N/A'} (need BEAR)</span>
                   </div>
-                  <div className={`gate-item ${signals.short.hard_gates.rsi_filter?.pass ? 'pass' : 'fail'}`}>
-                    <span className="gate-icon">{signals.short.hard_gates.rsi_filter?.pass ? '✓' : '✗'}</span>
-                    <span>RSI (30-70): {signals.short.hard_gates.rsi_filter?.detail || 'N/A'}</span>
-                  </div>
-                  <div className={`gate-item ${signals.short.hard_gates.ema_proximity?.pass ? 'pass' : 'fail'}`}>
-                    <span className="gate-icon">{signals.short.hard_gates.ema_proximity?.pass ? '✓' : '✗'}</span>
-                    <span>EMA Proximity (&lt;1%): {signals.short.hard_gates.ema_proximity?.detail || 'N/A'}</span>
-                  </div>
-                  <div className={`gate-item ${signals.short.hard_gates.spread?.pass ? 'pass' : 'fail'}`}>
-                    <span className="gate-icon">{signals.short.hard_gates.spread?.pass ? '✓' : '✗'}</span>
-                    <span>Spread (&lt;5 bps): {signals.short.hard_gates.spread?.detail || 'N/A'}</span>
-                  </div>
-                  <div className={`gate-item ${signals.short.hard_gates.directional_alignment?.pass ? 'pass' : 'fail'}`}>
-                    <span className="gate-icon">{signals.short.hard_gates.directional_alignment?.pass ? '✓' : '✗'}</span>
-                    <span>CVD/OBI Alignment: {signals.short.hard_gates.directional_alignment?.detail || 'N/A'}</span>
+                  <div className={`gate-item ${signals.short.hard_gates['cvd/obi_alignment']?.pass ? 'pass' : 'fail'}`}>
+                    <span className="gate-icon">{signals.short.hard_gates['cvd/obi_alignment']?.pass ? '✓' : '✗'}</span>
+                    <span>{signals.short.hard_gates['cvd/obi_alignment']?.detail || 'N/A'}</span>
                   </div>
                 </>
               )}
@@ -502,44 +475,33 @@ function App() {
               </span>
             </div>
             
-            <div className="scoring-breakdown">
-              <div className="breakdown-title">Scoring Breakdown:</div>
-              {signals.long?.breakdown && Object.entries(signals.long.breakdown).map(([key, value]) => (
-                <div key={key} className="breakdown-item">
-                  <span className="breakdown-label">{key}:</span>
-                  <span className="breakdown-detail">{value.detail}</span>
-                  <span className="breakdown-points">+{value.points}</span>
-                </div>
-              ))}
-              <div className="breakdown-total">
-                <span>Total:</span>
-                <span className="total-score">{signals.long?.score || 0}</span>
-              </div>
-            </div>
-            
             <div className="hard-gates-section">
-              <div className="gates-title">Hard Gates:</div>
+              <div className="gates-title">Direction Filters:</div>
               {signals.long?.hard_gates && (
                 <>
                   <div className={`gate-item ${signals.long.hard_gates.regime_filter?.pass ? 'pass' : 'fail'}`}>
                     <span className="gate-icon">{signals.long.hard_gates.regime_filter?.pass ? '✓' : '✗'}</span>
-                    <span>Regime Filter: {signals.long.hard_gates.regime_filter?.detail || 'N/A'}</span>
+                    <span>Regime: {signals.long.hard_gates.regime_filter?.detail || 'N/A'} (need BULL)</span>
                   </div>
+                  <div className={`gate-item ${signals.long.hard_gates['cvd/obi_alignment']?.pass ? 'pass' : 'fail'}`}>
+                    <span className="gate-icon">{signals.long.hard_gates['cvd/obi_alignment']?.pass ? '✓' : '✗'}</span>
+                    <span>{signals.long.hard_gates['cvd/obi_alignment']?.detail || 'N/A'}</span>
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <div className="hard-gates-section" style={{marginTop: '15px'}}>
+              <div className="gates-title">Common Filters (Both Sides):</div>
+              {signals.long?.hard_gates && (
+                <>
                   <div className={`gate-item ${signals.long.hard_gates.rsi_filter?.pass ? 'pass' : 'fail'}`}>
                     <span className="gate-icon">{signals.long.hard_gates.rsi_filter?.pass ? '✓' : '✗'}</span>
                     <span>RSI (30-70): {signals.long.hard_gates.rsi_filter?.detail || 'N/A'}</span>
                   </div>
-                  <div className={`gate-item ${signals.long.hard_gates.ema_proximity?.pass ? 'pass' : 'fail'}`}>
-                    <span className="gate-icon">{signals.long.hard_gates.ema_proximity?.pass ? '✓' : '✗'}</span>
-                    <span>EMA Proximity (&lt;1%): {signals.long.hard_gates.ema_proximity?.detail || 'N/A'}</span>
-                  </div>
                   <div className={`gate-item ${signals.long.hard_gates.spread?.pass ? 'pass' : 'fail'}`}>
                     <span className="gate-icon">{signals.long.hard_gates.spread?.pass ? '✓' : '✗'}</span>
                     <span>Spread (&lt;5 bps): {signals.long.hard_gates.spread?.detail || 'N/A'}</span>
-                  </div>
-                  <div className={`gate-item ${signals.long.hard_gates.directional_alignment?.pass ? 'pass' : 'fail'}`}>
-                    <span className="gate-icon">{signals.long.hard_gates.directional_alignment?.pass ? '✓' : '✗'}</span>
-                    <span>CVD/OBI Alignment: {signals.long.hard_gates.directional_alignment?.detail || 'N/A'}</span>
                   </div>
                 </>
               )}
