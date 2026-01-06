@@ -82,7 +82,7 @@ class SignalEngine:
         self.cache_file.parent.mkdir(parents=True, exist_ok=True)
         
         # Performance tracking
-        self.recent_trades = deque(maxlen=2000)  # Track trades for CVD calculation (5m window needs ~300s of data)
+        self.recent_trades = deque(maxlen=50000)  # CRITICAL FIX: 50k trades = ~17min buffer for high volatility
         self.taker_buy_ratio_buffer = deque(maxlen=60)  # Separate buffer for quick buy/sell ratio
         
         # Statistical tracking for dynamic gates
@@ -92,6 +92,10 @@ class SignalEngine:
         
         # Staleness tracking
         self.last_ticker_time = None
+        
+        # EVENT-DRIVEN ARCHITECTURE: Throttle mechanism
+        self.last_signal_check_time = 0
+        self.signal_check_throttle = 0.1  # Check max every 100ms (10x faster than 1s polling)
         
     async def start(self):
         """Start the signal engine"""
