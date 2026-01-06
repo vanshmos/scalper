@@ -453,6 +453,11 @@ class SignalEngine:
                 active_result = None
                 active_direction = None
             
+            # REFACTOR: Cache detector results for get_status()
+            self.last_long_result = long_result
+            self.last_short_result = short_result
+            self.last_regime = regime
+            
             # Process signal state machine
             await self._process_signal_state_with_detector(
                 active_result, 
