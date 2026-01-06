@@ -1330,11 +1330,17 @@ class SignalEngine:
             if not rsi_pass:
                 rsi_detail += " (need 30-70)"
             
-            # Extract CVD/OBI alignment
-            cvd_val = indicators.get('cvd', {}).get('5m', 0)
-            obi_val = indicators.get('obi', 0)
-            cvd_pass = (cvd_val > 0.08) if direction == 'LONG' else (cvd_val < -0.08)
-            obi_pass = (obi_val > 0.1) if direction == 'LONG' else (obi_val < -0.1)
+            # Extract CVD/OBI alignment with None checks
+            cvd_val = indicators.get('cvd', {}).get('5m', 0) or 0
+            obi_val = indicators.get('obi', 0) or 0
+            
+            if direction == 'LONG':
+                cvd_pass = cvd_val > 0.08
+                obi_pass = obi_val > 0.1
+            else:  # SHORT
+                cvd_pass = cvd_val < -0.08
+                obi_pass = obi_val < -0.1
+            
             alignment_pass = cvd_pass and obi_pass
             
             # Extract spread check
