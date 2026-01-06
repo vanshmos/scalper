@@ -418,14 +418,24 @@ class SignalDetector:
             base_score = 0
             
             # 1. Regime (20 points)
+            # TREND-FOLLOWING: Aligned regime gets full points
+            # MEAN-REVERSION: RANGING with RSI extremes gets partial points (contrarian)
             if direction == SignalDirection.LONG:
                 if regime == RegimeType.TRENDING_BULL:
                     base_score += 20
                     result['breakdown']['regime'] = {'points': 20, 'detail': 'TRENDING_BULL'}
+                elif regime == RegimeType.RANGING and rsi_5m is not None and rsi_5m < 35:
+                    # Mean reversion: Oversold in ranging market
+                    base_score += 12
+                    result['breakdown']['regime'] = {'points': 12, 'detail': f'RANGING+OVERSOLD (RSI {rsi_5m:.0f})'}
             else:
                 if regime == RegimeType.TRENDING_BEAR:
                     base_score += 20
                     result['breakdown']['regime'] = {'points': 20, 'detail': 'TRENDING_BEAR'}
+                elif regime == RegimeType.RANGING and rsi_5m is not None and rsi_5m > 65:
+                    # Mean reversion: Overbought in ranging market
+                    base_score += 12
+                    result['breakdown']['regime'] = {'points': 12, 'detail': f'RANGING+OVERBOUGHT (RSI {rsi_5m:.0f})'}
             
             # 2. Trend Alignment (15 points)
             aligned = 0
