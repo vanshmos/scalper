@@ -214,10 +214,59 @@ body {
   gap: 0.25rem;
 }
 
+.signal-type-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .signal-type {
   font-size: 1.5rem;
   font-weight: 800;
   color: #fff;
+}
+
+.signal-confidence {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.confidence-very.high,
+.confidence-very_high {
+  background: rgba(0, 255, 136, 0.25);
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 136, 0.5);
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+.confidence-high {
+  background: rgba(0, 255, 136, 0.2);
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 136, 0.4);
+}
+
+.confidence-medium {
+  background: rgba(255, 179, 0, 0.2);
+  color: #ffb300;
+  border: 1px solid rgba(255, 179, 0, 0.4);
+}
+
+.confidence-low {
+  background: rgba(128, 128, 128, 0.2);
+  color: #888;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(0, 255, 136, 0.6);
+  }
 }
 
 .signal-label {
