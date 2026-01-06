@@ -117,11 +117,15 @@ class OKXWebSocketClient:
                     logger.debug(f"Ticker data: {data['data'][0]}")
                     await self.on_ticker(data['data'][0])
                     
-            elif channel == 'books50-l2-tbc':
+            elif channel == 'books':
+                # Full depth orderbook (OKX provides 400 levels by default)
                 self.last_data_time['orderbook'] = time.time()
                 if self.on_orderbook and data.get('data'):
-                    logger.debug(f"Orderbook bids: {len(data['data'][0].get('bids', []))}, asks: {len(data['data'][0].get('asks', []))}")
-                    await self.on_orderbook(data['data'][0])
+                    orderbook_data = data['data'][0]
+                    bids = orderbook_data.get('bids', [])
+                    asks = orderbook_data.get('asks', [])
+                    logger.debug(f"Orderbook received - bids: {len(bids)}, asks: {len(asks)}")
+                    await self.on_orderbook(orderbook_data)
                     
             elif channel == 'trades':
                 if self.on_trade and data.get('data'):
