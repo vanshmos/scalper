@@ -38,6 +38,9 @@ class SignalState:
         self.entry_time = None
         self.forming_start = None
         self.atr_at_entry = None
+        self.tp1 = None
+        self.tp2 = None
+        self.stop_loss = None
         
     def reset(self):
         self.status = "IDLE"
@@ -46,6 +49,9 @@ class SignalState:
         self.entry_time = None
         self.forming_start = None
         self.atr_at_entry = None
+        self.tp1 = None
+        self.tp2 = None
+        self.stop_loss = None
 
 class SignalEngine:
     """Multi-symbol signal engine using OKX candle channels"""
