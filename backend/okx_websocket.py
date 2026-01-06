@@ -51,7 +51,7 @@ class OKXWebSocketClient:
                         {"op": "subscribe", "args": [{"channel": "candle5m", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "candle15m", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "tickers", "instId": self.symbol}]},
-                        {"op": "subscribe", "args": [{"channel": "books50-l2-tbc", "instId": self.symbol}]},
+                        {"op": "subscribe", "args": [{"channel": "books", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "trades", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "funding-rate", "instId": self.symbol}]},
                         {"op": "subscribe", "args": [{"channel": "mark-price", "instId": self.symbol}]}
