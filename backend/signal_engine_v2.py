@@ -531,7 +531,7 @@ class SignalEngine:
                 forming_candle_1m.high = max(last_confirmed_1m.close, self.current_price)
                 forming_candle_1m.low = min(last_confirmed_1m.close, self.current_price)
                 forming_candle_1m.close = self.current_price
-                forming_candle_1m.volume = 0
+                forming_candle_1m.volume = self.forming_1m_volume  # FIXED: Use real-time volume instead of 0
                 
                 candles_1m_live = candles_1m_list + [forming_candle_1m]
             else:
