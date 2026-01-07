@@ -78,3 +78,21 @@ class RollingStats:
         """Get number of data points in window"""
         self._cleanup()
         return len(self.data)
+    
+    def percentile(self, pct: float) -> Optional[float]:
+        """
+        Get percentile value from the data
+        
+        Args:
+            pct: Percentile to calculate (0-100)
+            
+        Returns:
+            Percentile value or None if insufficient data
+        """
+        if len(self.data) < 10:
+            return None
+        
+        values = sorted([v for _, v in self.data])
+        index = int((pct / 100) * len(values))
+        index = max(0, min(index, len(values) - 1))
+        return values[index]
