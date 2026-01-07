@@ -837,10 +837,8 @@ class SignalEngine:
                     entry = indicators.get('price')
                     trend_strength = indicators.get('trend_strength')
                     
-                    # Get adaptive targets
-                    from signal_detector_alpha import SignalDetector
-                    alpha_detector = SignalDetector()
-                    adaptive_targets = alpha_detector.calculate_adaptive_targets(atr, trend_strength=trend_strength)
+                    # Get adaptive targets (SignalDetector already imported at top)
+                    adaptive_targets = self.detector.calculate_adaptive_targets(atr, trend_strength=trend_strength)
                     
                     tp1_mult = adaptive_targets['tp1_multiplier']
                     tp2_mult = adaptive_targets['tp2_multiplier']
