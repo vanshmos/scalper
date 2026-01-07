@@ -377,14 +377,18 @@ class SignalEngine:
             # Calculate indicators with LIVE data (forming candles)
             indicators = self._calculate_indicators_live()
             
-            # Update gate states with current market data
+            # Update gate states with current market data and DYNAMIC thresholds
             spread = indicators.get('spread')
             depth = indicators.get('depth')
             orderbook_timestamp = time.time() if self.last_orderbook else None
             
-            # This updates the internal gate states in regime_detector
-            self.regime_detector.check_spread_gate(spread)
-            self.regime_detector.check_depth_gate(depth)
+            # Calculate dynamic thresholds from rolling stats
+            spread_threshold = self.spread_stats.get_percentile(90) if self.spread_stats.count() >= 10 else 2.5
+            depth_threshold = self.depth_stats.get_percentile(10) if self.depth_stats.count() >= 10 else 30000
+            
+            # Update gates with dynamic thresholds
+            self.regime_detector.check_spread_gate(spread, threshold=spread_threshold)
+            self.regime_detector.check_depth_gate(depth, threshold=depth_threshold)
             if orderbook_timestamp:
                 self.regime_detector.check_data_staleness(orderbook_timestamp)
             
@@ -1062,14 +1066,14 @@ class SignalEngine:
                     'spread': {
                         'pass': self.regime_detector.spread_gate.current_state,
                         'value': indicators.get('spread', 0),
-                        'threshold': 2.5,  # V1.5 pass threshold
-                        'mode': 'dynamic'
+                        'threshold': self.spread_stats.get_percentile(90) if self.spread_stats.count() >= 10 else 2.5,
+                        'mode': 'dynamic' if self.spread_stats.count() >= 10 else 'static'
                     },
                     'depth': {
                         'pass': self.regime_detector.depth_gate.current_state,
                         'value': indicators.get('depth', 0),
-                        'threshold': 30000,  # V1.5 pass threshold
-                        'mode': 'dynamic'
+                        'threshold': self.depth_stats.get_percentile(10) if self.depth_stats.count() >= 10 else 30000,
+                        'mode': 'dynamic' if self.depth_stats.count() >= 10 else 'static'
                     },
                     'ticker_staleness': {
                         'age_ms': (time.time() - self.last_ticker_time) * 1000 if self.last_ticker_time else None,
