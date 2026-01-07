@@ -400,8 +400,8 @@ class SignalEngine:
             orderbook_timestamp = time.time() if self.last_orderbook else None
             
             # Calculate dynamic thresholds from rolling stats
-            spread_threshold = self.spread_stats.get_percentile(90) if self.spread_stats.count() >= 10 else 2.5
-            depth_threshold = self.depth_stats.get_percentile(10) if self.depth_stats.count() >= 10 else 30000
+            spread_threshold = self.spread_stats.percentile(90) if self.spread_stats.count() >= 10 else 2.5
+            depth_threshold = self.depth_stats.percentile(10) if self.depth_stats.count() >= 10 else 30000
             
             # Update gates with dynamic thresholds
             self.regime_detector.check_spread_gate(spread, threshold=spread_threshold)
@@ -1083,13 +1083,13 @@ class SignalEngine:
                     'spread': {
                         'pass': self.regime_detector.spread_gate.current_state,
                         'value': indicators.get('spread', 0),
-                        'threshold': self.spread_stats.get_percentile(90) if self.spread_stats.count() >= 10 else 2.5,
+                        'threshold': self.spread_stats.percentile(90) if self.spread_stats.count() >= 10 else 2.5,
                         'mode': 'dynamic' if self.spread_stats.count() >= 10 else 'static'
                     },
                     'depth': {
                         'pass': self.regime_detector.depth_gate.current_state,
                         'value': indicators.get('depth', 0),
-                        'threshold': self.depth_stats.get_percentile(10) if self.depth_stats.count() >= 10 else 30000,
+                        'threshold': self.depth_stats.percentile(10) if self.depth_stats.count() >= 10 else 30000,
                         'mode': 'dynamic' if self.depth_stats.count() >= 10 else 'static'
                     },
                     'ticker_staleness': {
