@@ -285,8 +285,8 @@ class SignalEngine:
                 if depth is not None:
                     self.depth_stats.add(depth)
             
-            # EVENT-DRIVEN: Trigger signal check on orderbook update
-            await self._check_signals_event_driven()
+            # EVENT-DRIVEN: Trigger signal check (async, non-blocking)
+            asyncio.create_task(self._check_signals_event_driven())
                     
         except Exception as e:
             logger.error(f"Error handling orderbook: {e}")
@@ -309,6 +309,15 @@ class SignalEngine:
             # Add to recent trades for CVD calculation
             self.recent_trades.append(trade)
             
+            # CRITICAL: Accumulate volume for forming 1m candle
+            if size:
+                self.forming_1m_volume += size
+            
+            # Update current price from trade
+            price = data.get('px')
+            if price:
+                self.current_price = float(price)
+            
             # Also track for quick taker buy ratio (last 60 trades)
             self.taker_buy_ratio_buffer.append({
                 'side': side,
@@ -321,8 +330,8 @@ class SignalEngine:
                 total_volume = sum(t['size'] for t in self.taker_buy_ratio_buffer)
                 self.taker_buy_ratio = buy_volume / total_volume if total_volume > 0 else 0.5
             
-            # EVENT-DRIVEN: Trigger signal check on trade (throttled to 100ms)
-            await self._check_signals_event_driven()
+            # EVENT-DRIVEN: Trigger signal check (async, non-blocking)
+            asyncio.create_task(self._check_signals_event_driven())
                 
         except Exception as e:
             logger.error(f"Error handling trade: {e}")
