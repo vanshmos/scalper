@@ -109,6 +109,10 @@ class SignalEngine:
         self.depth_stats = RollingStats(window_seconds=3600)
         self.volume_stats = RollingStats(window_seconds=3600)
         
+        # CRITICAL: Track real-time forming candle volume
+        self.forming_1m_volume = 0
+        self.forming_1m_start_time = None
+        
         # Staleness tracking
         self.last_ticker_time = None
         
