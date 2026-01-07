@@ -213,6 +213,10 @@ class SignalEngine:
                     self.candles_1m.append(candle)
                     logger.debug(f"Added confirmed 1m candle: {candle.timestamp}")
                     
+                    # CRITICAL: Reset forming volume when 1m candle confirms
+                    self.forming_1m_volume = 0
+                    self.forming_1m_start_time = candle.timestamp
+                    
                     # Update warmup status
                     if not self.is_warmed_up and len(self.candles_1m) >= self.warmup_threshold:
                         self.is_warmed_up = True
