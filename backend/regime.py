@@ -148,16 +148,22 @@ class RegimeDetector:
             self.current_regime = RegimeType.RANGING
             return self.current_regime
     
-    def check_spread_gate(self, spread: Optional[float]) -> bool:
-        """Check if spread is below threshold with stabilization"""
+    def check_spread_gate(self, spread: Optional[float], threshold: Optional[float] = None) -> bool:
+        """
+        Check if spread is below threshold with stabilization
+        
+        Args:
+            spread: Current spread in basis points
+            threshold: Optional dynamic threshold (defaults to 2.5 bps)
+        """
         try:
             if spread is None:
                 # Maintain current state on missing data
                 return self.spread_gate.current_state
             
-            # V1.5 Thresholds: 2.5 bps pass, 4.0 bps fail
-            pass_threshold = 2.5
-            fail_threshold = 4.0
+            # Use dynamic threshold if provided, otherwise use default
+            pass_threshold = threshold if threshold is not None else 2.5
+            fail_threshold = pass_threshold * 1.6  # Hysteresis: 60% above pass
             
             # Determine raw reading based on hysteresis
             if spread < pass_threshold:
@@ -174,16 +180,22 @@ class RegimeDetector:
             logger.error(f"Error checking spread gate: {e}")
             return self.spread_gate.current_state
     
-    def check_depth_gate(self, depth: Optional[float]) -> bool:
-        """Check depth gate with hysteresis and stabilization"""
+    def check_depth_gate(self, depth: Optional[float], threshold: Optional[float] = None) -> bool:
+        """
+        Check depth gate with hysteresis and stabilization
+        
+        Args:
+            depth: Current orderbook depth in USD
+            threshold: Optional dynamic threshold (defaults to $30k)
+        """
         try:
             if depth is None:
                 # Maintain current state on missing data
                 return self.depth_gate.current_state
             
-            # V1.5 Hysteresis thresholds: $30k pass, $20k fail
-            pass_threshold = 30000  # $30k
-            fail_threshold = 20000  # $20k
+            # Use dynamic threshold if provided, otherwise use default
+            pass_threshold = threshold if threshold is not None else 30000
+            fail_threshold = pass_threshold * 0.67  # Hysteresis: 33% below pass
             
             # Determine raw reading based on hysteresis
             if depth > pass_threshold:
