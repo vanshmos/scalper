@@ -263,6 +263,10 @@ class SignalEngine:
         # 5. Start signal processing loop
         asyncio.create_task(self._signal_processing_loop())
         
+        # 6. Start periodic state saving (anti-amnesia)
+        self._periodic_save_task = asyncio.create_task(self._periodic_save())
+        logger.info(f"{self.display_name}: Periodic state save task started (every 60s)")
+        
         logger.info(f"{self.display_name} signal engine started successfully")
     
     async def _backfill_candles(self):
