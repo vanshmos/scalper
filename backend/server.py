@@ -169,6 +169,19 @@ async def get_trades_by_symbol(symbol: str, limit: int = 50):
         logger.error(f"Error getting trades for {symbol}: {e}")
         return {"trades": [], "stats": {}, "error": str(e)}
 
+@app.post("/api/trades/migrate")
+async def migrate_trades():
+    """
+    Migrate existing trades to capital-based P&L calculations.
+    Recalculates all P&L and MFE/MAE values based on $100,000 capital.
+    """
+    try:
+        result = migrate_trades_to_capital_based()
+        return result
+    except Exception as e:
+        logger.error(f"Error migrating trades: {e}")
+        return {"status": "error", "message": str(e)}
+
 @app.websocket("/api/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time updates"""
