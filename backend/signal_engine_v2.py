@@ -621,7 +621,7 @@ class SignalEngine:
             await self._process_signal_state_with_detector(
                 active_result, 
                 active_direction, 
-                indicators_live,  # Use LIVE for state machine
+                indicators,  # Use LIVE indicators for state machine
                 long_result,
                 short_result
             )
