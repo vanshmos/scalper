@@ -638,7 +638,9 @@ def migrate_trades_to_capital_based(db_path: str = "/app/data/trades.db", capita
         return {
             'status': 'success',
             'trades_updated': updated_count,
-            'capital': capital
+            'capital': capital,
+            'leverage': leverage,
+            'position_size': position_size
         }
         
     except Exception as e:
