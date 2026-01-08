@@ -484,7 +484,7 @@ def get_all_recent_trades(db_path: str = "/app/data/trades.db", limit: int = 50)
             SELECT 
                 id, symbol, direction, entry_time, entry_price,
                 exit_time, exit_price, tp1, sl, outcome,
-                pnl_absolute, pnl_percent, max_favorable, max_adverse,
+                pnl_absolute, pnl_percent, roi_percent, max_favorable, max_adverse,
                 price_snapshots_json, created_at
             FROM trades
             ORDER BY entry_time DESC
@@ -525,7 +525,8 @@ def get_aggregate_stats(db_path: str = "/app/data/trades.db") -> Dict:
                 SUM(CASE WHEN outcome = 'WIN' THEN 1 ELSE 0 END) as wins,
                 SUM(CASE WHEN outcome = 'LOSS' THEN 1 ELSE 0 END) as losses,
                 SUM(pnl_absolute) as total_pnl,
-                AVG(pnl_absolute) as avg_pnl
+                AVG(pnl_absolute) as avg_pnl,
+                SUM(roi_percent) as total_roi
             FROM trades
         """)
         
