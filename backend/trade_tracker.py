@@ -38,7 +38,11 @@ class TradeTracker:
     """
     Tracks active trades in memory and persists completed trades to SQLite.
     Non-blocking: Only writes to DB when a trade closes.
+    P&L calculated based on $100,000 capital.
     """
+    
+    # Capital for P&L calculation
+    CAPITAL = 100000.0
     
     def __init__(self, symbol: str, db_path: str = "/app/data/trades.db"):
         self.symbol = symbol
