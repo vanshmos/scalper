@@ -935,12 +935,13 @@ class SignalEngine:
                     # Send Telegram alert
                     await self._send_signal_alert(indicators)
                     
-                    # TRADE ACCOUNTABILITY: Start tracking this trade
+                    # TRADE ACCOUNTABILITY: Start tracking this trade (only if score >= 80)
                     self.tracker.start_trade({
                         'direction': active_direction,
                         'entry_price': entry,
                         'tp1': tp1,
-                        'sl': sl
+                        'sl': sl,
+                        'confidence_score': active_result['score']  # Must be >= 80 to be tracked
                     })
                     
             elif self.signal_state.status == "ACTIVE":
