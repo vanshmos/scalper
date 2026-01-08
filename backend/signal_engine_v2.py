@@ -512,12 +512,15 @@ class SignalEngine:
             if ticker_age_ms > 2000:  # 2 seconds
                 return
             
-            # Calculate indicators with LIVE data (forming candles)
-            indicators = self._calculate_indicators_live()
+            # Calculate indicators with HYBRID data (live + confirmed)
+            hybrid_indicators = self._calculate_indicators_live()
+            live_ind = hybrid_indicators.get('live', {})
+            conf_ind = hybrid_indicators.get('confirmed', {})
             
             # Update gate states with current market data and DYNAMIC thresholds
-            spread = indicators.get('spread')
-            depth = indicators.get('depth')
+            # Use LIVE indicators for gate checks (real-time responsiveness)
+            spread = live_ind.get('spread')
+            depth = live_ind.get('depth')
             orderbook_timestamp = time.time() if self.last_orderbook else None
             
             # Calculate dynamic thresholds from rolling stats
@@ -530,41 +533,42 @@ class SignalEngine:
             if orderbook_timestamp:
                 self.regime_detector.check_data_staleness(orderbook_timestamp)
             
-            # Detect regime
+            # Detect regime using CONFIRMED indicators (prevents repainting)
             candles_5m_list = list(self.candles_5m)
             candles_15m_list = list(self.candles_15m)
             regime = self.regime_detector.detect_regime(
                 candles_5m_list,
                 candles_15m_list,
-                indicators.get('ema20_5m'),
-                indicators.get('ema50_5m'),
-                indicators.get('ema20_15m'),
-                indicators.get('ema50_15m'),
-                indicators.get('atr')
+                conf_ind.get('ema20_5m'),
+                conf_ind.get('ema50_5m'),
+                conf_ind.get('ema20_15m'),
+                conf_ind.get('ema50_15m'),
+                conf_ind.get('atr')
             )
             
             # CRITICAL: Use institutional SignalDetector for LONG signals
+            # Use LIVE indicators for low-latency entry triggers
             long_result = self.detector.detect_signal_with_alpha(
                 direction=SignalDirection.LONG,
                 regime=regime,
-                ema20_1m=indicators.get('ema20_1m'),
-                ema50_1m=indicators.get('ema50_1m'),
-                ema20_5m=indicators.get('ema20_5m'),
-                ema50_5m=indicators.get('ema50_5m'),
-                ema20_15m=indicators.get('ema20_15m'),
-                ema50_15m=indicators.get('ema50_15m'),
-                cvd_5m=indicators.get('cvd', {}).get('5m'),
-                obi=indicators.get('obi'),
-                current_price=indicators.get('price'),
-                rsi_5m=indicators.get('rsi'),
-                spread=indicators.get('spread'),
-                atr=indicators.get('atr'),
+                ema20_1m=live_ind.get('ema20_1m'),
+                ema50_1m=live_ind.get('ema50_1m'),
+                ema20_5m=live_ind.get('ema20_5m'),
+                ema50_5m=live_ind.get('ema50_5m'),
+                ema20_15m=live_ind.get('ema20_15m'),
+                ema50_15m=live_ind.get('ema50_15m'),
+                cvd_5m=live_ind.get('cvd', {}).get('5m'),
+                obi=live_ind.get('obi'),
+                current_price=live_ind.get('price'),
+                rsi_5m=live_ind.get('rsi'),
+                spread=live_ind.get('spread'),
+                atr=live_ind.get('atr'),
                 # ALPHA inputs
-                obi_velocity=indicators.get('obi_velocity'),
-                cvd_velocity=indicators.get('cvd_velocity'),
-                bollinger=indicators.get('bollinger'),
-                vwap=indicators.get('vwap'),
-                trend_strength=indicators.get('trend_strength'),
+                obi_velocity=live_ind.get('obi_velocity'),
+                cvd_velocity=live_ind.get('cvd_velocity'),
+                bollinger=live_ind.get('bollinger'),
+                vwap=live_ind.get('vwap'),
+                trend_strength=live_ind.get('trend_strength'),
                 hurst=None  # Using trend_strength instead
             )
             
@@ -572,24 +576,24 @@ class SignalEngine:
             short_result = self.detector.detect_signal_with_alpha(
                 direction=SignalDirection.SHORT,
                 regime=regime,
-                ema20_1m=indicators.get('ema20_1m'),
-                ema50_1m=indicators.get('ema50_1m'),
-                ema20_5m=indicators.get('ema20_5m'),
-                ema50_5m=indicators.get('ema50_5m'),
-                ema20_15m=indicators.get('ema20_15m'),
-                ema50_15m=indicators.get('ema50_15m'),
-                cvd_5m=indicators.get('cvd', {}).get('5m'),
-                obi=indicators.get('obi'),
-                current_price=indicators.get('price'),
-                rsi_5m=indicators.get('rsi'),
-                spread=indicators.get('spread'),
-                atr=indicators.get('atr'),
+                ema20_1m=live_ind.get('ema20_1m'),
+                ema50_1m=live_ind.get('ema50_1m'),
+                ema20_5m=live_ind.get('ema20_5m'),
+                ema50_5m=live_ind.get('ema50_5m'),
+                ema20_15m=live_ind.get('ema20_15m'),
+                ema50_15m=live_ind.get('ema50_15m'),
+                cvd_5m=live_ind.get('cvd', {}).get('5m'),
+                obi=live_ind.get('obi'),
+                current_price=live_ind.get('price'),
+                rsi_5m=live_ind.get('rsi'),
+                spread=live_ind.get('spread'),
+                atr=live_ind.get('atr'),
                 # ALPHA inputs
-                obi_velocity=indicators.get('obi_velocity'),
-                cvd_velocity=indicators.get('cvd_velocity'),
-                bollinger=indicators.get('bollinger'),
-                vwap=indicators.get('vwap'),
-                trend_strength=indicators.get('trend_strength'),
+                obi_velocity=live_ind.get('obi_velocity'),
+                cvd_velocity=live_ind.get('cvd_velocity'),
+                bollinger=live_ind.get('bollinger'),
+                vwap=live_ind.get('vwap'),
+                trend_strength=live_ind.get('trend_strength'),
                 hurst=None
             )
             
@@ -621,7 +625,7 @@ class SignalEngine:
             await self._process_signal_state_with_detector(
                 active_result, 
                 active_direction, 
-                indicators,  # Use LIVE indicators for state machine
+                live_ind,  # Use LIVE indicators for state machine
                 long_result,
                 short_result
             )
