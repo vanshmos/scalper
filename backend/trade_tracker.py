@@ -335,10 +335,10 @@ class TradeTracker:
             cursor.execute("""
                 INSERT INTO trades (
                     id, symbol, direction, entry_time, entry_price,
-                    exit_time, exit_price, tp1, sl, outcome,
+                    exit_time, exit_price, tp1, sl, confidence_score, outcome,
                     pnl_absolute, pnl_percent, roi_percent, max_favorable, max_adverse,
                     price_snapshots_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 trade_data['id'],
                 trade_data['symbol'],
@@ -349,6 +349,7 @@ class TradeTracker:
                 trade_data['exit_price'],
                 trade_data['tp1'],
                 trade_data['sl'],
+                trade_data.get('confidence_score', 0),
                 trade_data['outcome'],
                 trade_data['pnl_absolute'],
                 trade_data['pnl_percent'],
