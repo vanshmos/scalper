@@ -1080,109 +1080,112 @@ class SignalEngine:
     def get_status(self) -> Dict:
         """Get current engine status for WebSocket broadcast - REFACTORED to use SignalDetector"""
         try:
-            indicators = self._calculate_indicators()
+            # Unpack hybrid indicators (live + confirmed)
+            hybrid_indicators = self._calculate_indicators()
+            live_ind = hybrid_indicators.get('live', {})
+            conf_ind = hybrid_indicators.get('confirmed', {})
             
             # Always calculate fresh detector results for get_status()
             # The cached results are primarily for the signal state machine
             candles_5m_list = list(self.candles_5m)
             candles_15m_list = list(self.candles_15m)
             
-            # Detect regime
+            # Detect regime using CONFIRMED indicators (prevents repainting)
             regime = self.regime_detector.detect_regime(
                 candles_5m_list,
                 candles_15m_list,
-                indicators.get('ema20_5m'),
-                indicators.get('ema50_5m'),
-                indicators.get('ema20_15m'),
-                indicators.get('ema50_15m'),
-                indicators.get('atr')
+                conf_ind.get('ema20_5m'),
+                conf_ind.get('ema50_5m'),
+                conf_ind.get('ema20_15m'),
+                conf_ind.get('ema50_15m'),
+                conf_ind.get('atr')
             )
             
-            # Calculate signals using detector
+            # Calculate signals using detector with LIVE indicators
             long_result = self.detector.detect_signal_with_alpha(
                 direction=SignalDirection.LONG,
                 regime=regime,
-                ema20_1m=indicators.get('ema20_1m'),
-                ema50_1m=indicators.get('ema50_1m'),
-                ema20_5m=indicators.get('ema20_5m'),
-                ema50_5m=indicators.get('ema50_5m'),
-                ema20_15m=indicators.get('ema20_15m'),
-                ema50_15m=indicators.get('ema50_15m'),
-                cvd_5m=indicators.get('cvd', {}).get('5m'),
-                obi=indicators.get('obi'),
-                current_price=indicators.get('price'),
-                rsi_5m=indicators.get('rsi'),
-                spread=indicators.get('spread'),
-                atr=indicators.get('atr'),
-                obi_velocity=indicators.get('obi_velocity'),
-                cvd_velocity=indicators.get('cvd_velocity'),
-                bollinger=indicators.get('bollinger'),
-                vwap=indicators.get('vwap'),
-                trend_strength=indicators.get('trend_strength'),
+                ema20_1m=live_ind.get('ema20_1m'),
+                ema50_1m=live_ind.get('ema50_1m'),
+                ema20_5m=live_ind.get('ema20_5m'),
+                ema50_5m=live_ind.get('ema50_5m'),
+                ema20_15m=live_ind.get('ema20_15m'),
+                ema50_15m=live_ind.get('ema50_15m'),
+                cvd_5m=live_ind.get('cvd', {}).get('5m'),
+                obi=live_ind.get('obi'),
+                current_price=live_ind.get('price'),
+                rsi_5m=live_ind.get('rsi'),
+                spread=live_ind.get('spread'),
+                atr=live_ind.get('atr'),
+                obi_velocity=live_ind.get('obi_velocity'),
+                cvd_velocity=live_ind.get('cvd_velocity'),
+                bollinger=live_ind.get('bollinger'),
+                vwap=live_ind.get('vwap'),
+                trend_strength=live_ind.get('trend_strength'),
                 hurst=None
             )
             
             short_result = self.detector.detect_signal_with_alpha(
                 direction=SignalDirection.SHORT,
                 regime=regime,
-                ema20_1m=indicators.get('ema20_1m'),
-                ema50_1m=indicators.get('ema50_1m'),
-                ema20_5m=indicators.get('ema20_5m'),
-                ema50_5m=indicators.get('ema50_5m'),
-                ema20_15m=indicators.get('ema20_15m'),
-                ema50_15m=indicators.get('ema50_15m'),
-                cvd_5m=indicators.get('cvd', {}).get('5m'),
-                obi=indicators.get('obi'),
-                current_price=indicators.get('price'),
-                rsi_5m=indicators.get('rsi'),
-                spread=indicators.get('spread'),
-                atr=indicators.get('atr'),
-                obi_velocity=indicators.get('obi_velocity'),
-                cvd_velocity=indicators.get('cvd_velocity'),
-                bollinger=indicators.get('bollinger'),
-                vwap=indicators.get('vwap'),
-                trend_strength=indicators.get('trend_strength'),
+                ema20_1m=live_ind.get('ema20_1m'),
+                ema50_1m=live_ind.get('ema50_1m'),
+                ema20_5m=live_ind.get('ema20_5m'),
+                ema50_5m=live_ind.get('ema50_5m'),
+                ema20_15m=live_ind.get('ema20_15m'),
+                ema50_15m=live_ind.get('ema50_15m'),
+                cvd_5m=live_ind.get('cvd', {}).get('5m'),
+                obi=live_ind.get('obi'),
+                current_price=live_ind.get('price'),
+                rsi_5m=live_ind.get('rsi'),
+                spread=live_ind.get('spread'),
+                atr=live_ind.get('atr'),
+                obi_velocity=live_ind.get('obi_velocity'),
+                cvd_velocity=live_ind.get('cvd_velocity'),
+                bollinger=live_ind.get('bollinger'),
+                vwap=live_ind.get('vwap'),
+                trend_strength=live_ind.get('trend_strength'),
                 hurst=None
             )
             
             long_score = long_result['score']
             short_score = short_result['score']
-            long_gates = self._map_detector_to_hard_gates(long_result, 'LONG', indicators)
-            short_gates = self._map_detector_to_hard_gates(short_result, 'SHORT', indicators)
+            long_gates = self._map_detector_to_hard_gates(long_result, 'LONG', live_ind)
+            short_gates = self._map_detector_to_hard_gates(short_result, 'SHORT', live_ind)
             regime_str = str(regime.value) if regime else 'RANGING'
             
-            # Format indicators to match frontend expectations
+            # Format indicators to match frontend expectations (use LIVE for real-time display)
             formatted_indicators = {
                 'ema': {
                     '1m': {
-                        'ema20': indicators.get('ema20_1m'),
-                        'ema50': indicators.get('ema50_1m')
+                        'ema20': live_ind.get('ema20_1m'),
+                        'ema50': live_ind.get('ema50_1m')
                     },
                     '5m': {
-                        'ema20': indicators.get('ema20_5m'),
-                        'ema50': indicators.get('ema50_5m')
+                        'ema20': live_ind.get('ema20_5m'),
+                        'ema50': live_ind.get('ema50_5m')
                     },
                     '15m': {
-                        'ema20': indicators.get('ema20_15m'),
-                        'ema50': indicators.get('ema50_15m')
+                        'ema20': live_ind.get('ema20_15m'),
+                        'ema50': live_ind.get('ema50_15m')
                     }
                 },
-                'atr_5m': indicators.get('atr'),
-                'rsi_5m': indicators.get('rsi'),
-                'cvd': indicators.get('cvd', {
+                'atr_5m': live_ind.get('atr'),
+                'rsi_5m': live_ind.get('rsi'),
+                'cvd': live_ind.get('cvd', {
                     '1m': None,
                     '5m': None
                 }),
-                'obi': indicators.get('obi'),
-                'spread': indicators.get('spread'),
-                'depth': indicators.get('depth'),
+                'obi': live_ind.get('obi'),
+                'spread': live_ind.get('spread'),
+                'depth': live_ind.get('depth'),
                 # ALPHA indicators
-                'vwap': indicators.get('vwap'),
-                'trend_strength': indicators.get('trend_strength'),
-                'obi_velocity': indicators.get('obi_velocity'),
-                'cvd_velocity': indicators.get('cvd_velocity'),
-                'bollinger': indicators.get('bollinger'),
-                'taker_buy_ratio': indicators.get('taker_buy_ratio')
+                'vwap': live_ind.get('vwap'),
+                'trend_strength': live_ind.get('trend_strength'),
+                'obi_velocity': live_ind.get('obi_velocity'),
+                'cvd_velocity': live_ind.get('cvd_velocity'),
+                'bollinger': live_ind.get('bollinger'),
+                'taker_buy_ratio': live_ind.get('taker_buy_ratio')
             }
             
             # Build signal structure
