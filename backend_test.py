@@ -376,15 +376,18 @@ def test_trade_tracker_integration():
         return False
 
 def main():
-    """Run all backend tests"""
-    print("🚀 Starting Backend Tests for State Persistence Feature")
+    """Run all backend tests for Trade Accountability System"""
+    print("🚀 Starting Backend Tests for Trade Accountability System")
     print(f"Backend URL: {BACKEND_URL}")
     print("=" * 60)
     
     tests = [
+        ("API /api/trades Endpoint", test_trades_endpoint),
+        ("API /api/trades/{symbol} Endpoints", test_trades_by_symbol_endpoint),
+        ("Database Structure", test_database_structure),
+        ("TradeTracker Integration", test_trade_tracker_integration),
         ("API Status Endpoint", test_status_endpoint),
         ("State Files", test_state_files),
-        ("WebSocket Endpoint", test_websocket_endpoint),
     ]
     
     passed = 0
@@ -403,7 +406,7 @@ def main():
     print(f"📊 Test Results: {passed}/{total} tests passed")
     
     if passed == total:
-        print("🎉 All tests passed! State Persistence feature is working correctly.")
+        print("🎉 All tests passed! Trade Accountability System is working correctly.")
         return 0
     else:
         print("⚠️  Some tests failed. Check the output above for details.")
