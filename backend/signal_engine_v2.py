@@ -502,11 +502,11 @@ class SignalEngine:
             self.last_short_result = short_result
             self.last_regime = regime
             
-            # Process signal state machine
+            # Process signal state machine (use LIVE indicators)
             await self._process_signal_state_with_detector(
                 active_result, 
                 active_direction, 
-                indicators,
+                indicators_live,  # Use LIVE for state machine
                 long_result,
                 short_result
             )
