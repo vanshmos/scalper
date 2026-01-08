@@ -167,32 +167,213 @@ def test_state_files():
     print("✅ State files test passed")
     return True
 
-def test_websocket_endpoint():
-    """Test that WebSocket endpoint is accessible (basic connectivity test)"""
-    print("\n🔍 Testing WebSocket endpoint accessibility...")
+def test_trades_endpoint():
+    """Test the /api/trades endpoint for Trade Accountability System"""
+    print("🔍 Testing /api/trades endpoint...")
     
     try:
-        # Test that the WebSocket endpoint returns a proper HTTP error (not a connection error)
-        # WebSocket endpoints typically return 400 or 426 when accessed via HTTP
-        response = requests.get(f"{API_BASE}/ws", timeout=5)
+        response = requests.get(f"{API_BASE}/trades", timeout=10)
         
-        # We expect this to fail with a specific HTTP status, not a connection error
-        if response.status_code in [400, 426, 405]:
-            print("✅ WebSocket endpoint is accessible (returns expected HTTP error)")
-            return True
-        else:
-            print(f"⚠️  WebSocket endpoint returned unexpected status: {response.status_code}")
-            return True  # Still consider this a pass as the endpoint is reachable
+        if response.status_code != 200:
+            print(f"❌ Trades endpoint failed with status code: {response.status_code}")
+            return False
             
-    except requests.exceptions.ConnectionError:
-        print("❌ WebSocket endpoint not accessible - connection failed")
+        data = response.json()
+        
+        # Check required structure
+        required_fields = ['trades', 'stats', 'count']
+        for field in required_fields:
+            if field not in data:
+                print(f"❌ Missing field '{field}' in trades response")
+                return False
+        
+        # Check trades is a list
+        if not isinstance(data['trades'], list):
+            print(f"❌ 'trades' field is not a list")
+            return False
+        
+        # Check stats structure
+        stats = data['stats']
+        required_stats = ['total_trades', 'wins', 'losses', 'win_rate', 'total_pnl', 'avg_pnl']
+        for stat in required_stats:
+            if stat not in stats:
+                print(f"❌ Missing stat '{stat}' in stats")
+                return False
+        
+        # Check count is a number
+        if not isinstance(data['count'], int):
+            print(f"❌ 'count' field is not an integer")
+            return False
+        
+        # Verify count matches trades length
+        if data['count'] != len(data['trades']):
+            print(f"❌ Count mismatch: count={data['count']}, trades length={len(data['trades'])}")
+            return False
+        
+        print(f"✅ /api/trades: {data['count']} trades, stats: {stats}")
+        return True
+        
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Request failed: {e}")
         return False
-    except requests.exceptions.Timeout:
-        print("❌ WebSocket endpoint timeout")
+    except json.JSONDecodeError as e:
+        print(f"❌ Invalid JSON response: {e}")
         return False
     except Exception as e:
-        print(f"⚠️  WebSocket test inconclusive: {e}")
-        return True  # Don't fail the test for WebSocket connectivity issues
+        print(f"❌ Unexpected error: {e}")
+        return False
+
+def test_trades_by_symbol_endpoint():
+    """Test the /api/trades/{symbol} endpoint"""
+    print("\n🔍 Testing /api/trades/{symbol} endpoints...")
+    
+    symbols = ['btc', 'eth', 'sol']
+    all_passed = True
+    
+    for symbol in symbols:
+        try:
+            response = requests.get(f"{API_BASE}/trades/{symbol}", timeout=10)
+            
+            if response.status_code != 200:
+                print(f"❌ Trades endpoint for {symbol} failed with status code: {response.status_code}")
+                all_passed = False
+                continue
+                
+            data = response.json()
+            
+            # Check required structure
+            required_fields = ['symbol', 'trades', 'stats', 'count']
+            for field in required_fields:
+                if field not in data:
+                    print(f"❌ Missing field '{field}' in {symbol} trades response")
+                    all_passed = False
+                    continue
+            
+            # Check symbol matches
+            if data['symbol'] != symbol.upper():
+                print(f"❌ Symbol mismatch for {symbol}: expected {symbol.upper()}, got {data['symbol']}")
+                all_passed = False
+                continue
+            
+            # Check trades is a list
+            if not isinstance(data['trades'], list):
+                print(f"❌ 'trades' field is not a list for {symbol}")
+                all_passed = False
+                continue
+            
+            # Check stats structure
+            stats = data['stats']
+            required_stats = ['total_trades', 'wins', 'losses', 'win_rate', 'total_pnl', 'avg_pnl']
+            for stat in required_stats:
+                if stat not in stats:
+                    print(f"❌ Missing stat '{stat}' in {symbol} stats")
+                    all_passed = False
+                    continue
+            
+            print(f"✅ /api/trades/{symbol}: {data['count']} trades, win_rate: {stats['win_rate']}%")
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Request failed for {symbol}: {e}")
+            all_passed = False
+        except json.JSONDecodeError as e:
+            print(f"❌ Invalid JSON response for {symbol}: {e}")
+            all_passed = False
+        except Exception as e:
+            print(f"❌ Unexpected error for {symbol}: {e}")
+            all_passed = False
+    
+    return all_passed
+
+def test_database_structure():
+    """Test that trades.db exists and has correct structure"""
+    print("\n🔍 Testing trades database structure...")
+    
+    db_path = Path("/app/data/trades.db")
+    if not db_path.exists():
+        print("❌ Database file /app/data/trades.db does not exist")
+        return False
+    
+    try:
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+        
+        # Check if trades table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='trades'")
+        if not cursor.fetchone():
+            print("❌ 'trades' table does not exist in database")
+            conn.close()
+            return False
+        
+        # Check table structure
+        cursor.execute("PRAGMA table_info(trades)")
+        columns = cursor.fetchall()
+        
+        required_columns = [
+            'id', 'symbol', 'direction', 'entry_time', 'entry_price',
+            'exit_time', 'exit_price', 'tp1', 'sl', 'outcome',
+            'pnl_absolute', 'pnl_percent', 'max_favorable', 'max_adverse',
+            'price_snapshots_json', 'created_at'
+        ]
+        
+        existing_columns = [col[1] for col in columns]
+        
+        for required_col in required_columns:
+            if required_col not in existing_columns:
+                print(f"❌ Missing column '{required_col}' in trades table")
+                conn.close()
+                return False
+        
+        # Check if index exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_trades_symbol_time'")
+        if not cursor.fetchone():
+            print("❌ Index 'idx_trades_symbol_time' does not exist")
+            conn.close()
+            return False
+        
+        # Get row count
+        cursor.execute("SELECT COUNT(*) FROM trades")
+        row_count = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        print(f"✅ Database structure valid: {len(existing_columns)} columns, {row_count} trades")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Database error: {e}")
+        return False
+
+def test_trade_tracker_integration():
+    """Test TradeTracker integration in signal engines"""
+    print("\n🔍 Testing TradeTracker integration...")
+    
+    try:
+        # Check backend logs for TradeTracker initialization
+        log_files = [
+            "/var/log/supervisor/backend.out.log",
+            "/var/log/supervisor/backend.err.log"
+        ]
+        
+        tracker_initialized = False
+        
+        for log_file in log_files:
+            if Path(log_file).exists():
+                with open(log_file, 'r') as f:
+                    content = f.read()
+                    if "TradeTracker initialized" in content:
+                        tracker_initialized = True
+                        break
+        
+        if not tracker_initialized:
+            print("❌ TradeTracker initialization not found in backend logs")
+            return False
+        
+        print("✅ TradeTracker integration confirmed in backend logs")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error checking TradeTracker integration: {e}")
+        return False
 
 def main():
     """Run all backend tests"""
