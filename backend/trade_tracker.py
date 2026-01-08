@@ -542,7 +542,8 @@ def get_aggregate_stats(db_path: str = "/app/data/trades.db") -> Dict:
                 'losses': row[2] or 0,
                 'win_rate': round((wins / total) * 100, 1) if total > 0 else 0,
                 'total_pnl': round(row[3] or 0, 2),
-                'avg_pnl': round(row[4] or 0, 2)
+                'avg_pnl': round(row[4] or 0, 2),
+                'total_roi': round(row[5] or 0, 2)  # Total ROI%
             }
         
         return {
@@ -551,7 +552,8 @@ def get_aggregate_stats(db_path: str = "/app/data/trades.db") -> Dict:
             'losses': 0,
             'win_rate': 0,
             'total_pnl': 0,
-            'avg_pnl': 0
+            'avg_pnl': 0,
+            'total_roi': 0
         }
         
     except Exception as e:
