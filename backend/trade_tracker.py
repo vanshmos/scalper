@@ -314,9 +314,9 @@ class TradeTracker:
                 INSERT INTO trades (
                     id, symbol, direction, entry_time, entry_price,
                     exit_time, exit_price, tp1, sl, outcome,
-                    pnl_absolute, pnl_percent, max_favorable, max_adverse,
+                    pnl_absolute, pnl_percent, roi_percent, max_favorable, max_adverse,
                     price_snapshots_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 trade_data['id'],
                 trade_data['symbol'],
@@ -330,6 +330,7 @@ class TradeTracker:
                 trade_data['outcome'],
                 trade_data['pnl_absolute'],
                 trade_data['pnl_percent'],
+                trade_data['roi_percent'],
                 trade_data['max_favorable'],
                 trade_data['max_adverse'],
                 json.dumps(trade_data['price_snapshots'])
