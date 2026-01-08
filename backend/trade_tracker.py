@@ -25,11 +25,12 @@ class ActiveTrade:
     entry_price: float
     tp1: float
     sl: float
+    confidence_score: int = 0  # Signal score when trade was opened (must be >= 80)
     max_favorable: float = 0.0
     max_adverse: float = 0.0
     price_snapshots: List[Dict] = field(default_factory=list)
     last_snapshot_time: float = 0.0
-    outcome: Optional[str] = None  # WIN, LOSS, EXPIRED
+    outcome: Optional[str] = None  # WIN (TP hit), LOSS (SL hit), EXPIRED (time limit)
     exit_price: Optional[float] = None
     exit_time: Optional[float] = None
 
