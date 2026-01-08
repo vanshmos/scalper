@@ -130,6 +130,45 @@ async def test_telegram():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@app.get("/api/trades")
+async def get_trades(limit: int = 50):
+    """
+    Get recent trades across all symbols for the Trade Accountability System.
+    Returns trade history with outcomes, P&L, and MFE/MAE metrics.
+    """
+    try:
+        trades = get_all_recent_trades(limit=limit)
+        stats = get_aggregate_stats()
+        
+        return {
+            "trades": trades,
+            "stats": stats,
+            "count": len(trades)
+        }
+    except Exception as e:
+        logger.error(f"Error getting trades: {e}")
+        return {"trades": [], "stats": {}, "count": 0, "error": str(e)}
+
+@app.get("/api/trades/{symbol}")
+async def get_trades_by_symbol(symbol: str, limit: int = 50):
+    """Get recent trades for a specific symbol"""
+    try:
+        symbol_key = symbol.lower()
+        if symbol_key in signal_engines:
+            trades = signal_engines[symbol_key].tracker.get_recent_trades(limit=limit)
+            stats = signal_engines[symbol_key].tracker.get_stats()
+            return {
+                "symbol": symbol.upper(),
+                "trades": trades,
+                "stats": stats,
+                "count": len(trades)
+            }
+        else:
+            return {"error": f"Symbol {symbol} not found", "trades": [], "stats": {}}
+    except Exception as e:
+        logger.error(f"Error getting trades for {symbol}: {e}")
+        return {"trades": [], "stats": {}, "error": str(e)}
+
 @app.websocket("/api/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time updates"""
