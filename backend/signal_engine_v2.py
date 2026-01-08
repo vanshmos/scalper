@@ -15,6 +15,7 @@ from alerts import AlertManager
 from rolling_stats import RollingStats
 from signal_detector_alpha import SignalDetector, SignalDirection  # CRITICAL: Use institutional detector
 from state_persistence import StatePersistence  # STATE PERSISTENCE: Anti-amnesia
+from trade_tracker import TradeTracker  # TRADE ACCOUNTABILITY: Track signal performance
 
 logger = logging.getLogger(__name__)
 
