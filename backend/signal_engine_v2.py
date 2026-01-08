@@ -14,6 +14,7 @@ from indicators import Indicators
 from alerts import AlertManager
 from rolling_stats import RollingStats
 from signal_detector_alpha import SignalDetector, SignalDirection  # CRITICAL: Use institutional detector
+from state_persistence import StatePersistence  # STATE PERSISTENCE: Anti-amnesia
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +133,109 @@ class SignalEngine:
         # EVENT-DRIVEN ARCHITECTURE: Throttle mechanism
         self.last_signal_check_time = 0
         self.signal_check_throttle = 0.1  # Check max every 100ms (10x faster than 1s polling)
+    
+    def _load_state(self):
+        """Load previous state from disk to restore context (anti-amnesia)"""
+        try:
+            state_data = self.state_persistence.load_state()
+            
+            if not state_data:
+                logger.info(f"{self.display_name}: No previous state found, starting fresh")
+                return
+            
+            # Restore recent_trades
+            if 'recent_trades' in state_data:
+                for trade in state_data['recent_trades']:
+                    self.recent_trades.append(trade)
+                logger.info(f"{self.display_name}: Restored {len(state_data['recent_trades'])} trades from state")
+            
+            # Restore CVD history (for indicators.py)
+            if 'cvd_history' in state_data:
+                cvd_history = state_data['cvd_history']
+                if hasattr(self.indicators, 'cvd_history'):
+                    for item in cvd_history:
+                        self.indicators.cvd_history.append(item)
+                    logger.info(f"{self.display_name}: Restored {len(cvd_history)} CVD history entries")
+            
+            # Restore OBI history (for indicators.py)
+            if 'obi_history' in state_data:
+                obi_history = state_data['obi_history']
+                if hasattr(self.indicators, 'obi_history'):
+                    for item in obi_history:
+                        self.indicators.obi_history.append(item)
+                    logger.info(f"{self.display_name}: Restored {len(obi_history)} OBI history entries")
+            
+            # Restore last signal time (for cooldown)
+            if 'last_signal_time' in state_data:
+                self.last_signal_time = state_data['last_signal_time']
+                logger.info(f"{self.display_name}: Restored signal cooldown timestamps")
+            
+            # Restore taker buy ratio buffer
+            if 'taker_buy_ratio_buffer' in state_data:
+                for item in state_data['taker_buy_ratio_buffer']:
+                    self.taker_buy_ratio_buffer.append(item)
+                logger.info(f"{self.display_name}: Restored {len(state_data['taker_buy_ratio_buffer'])} taker ratio entries")
+            
+            logger.info(f"{self.display_name}: State restoration complete")
+            
+        except Exception as e:
+            logger.error(f"{self.display_name}: Error loading state: {e}")
+    
+    def _get_state_to_save(self) -> Dict:
+        """Get current state for saving to disk"""
+        try:
+            state = {
+                'symbol': self.symbol,
+                'timestamp': time.time(),
+                # Recent trades (keep last 10000 for reasonable file size)
+                'recent_trades': list(self.recent_trades)[-10000:],
+                # Signal cooldown timestamps
+                'last_signal_time': self.last_signal_time,
+                # Taker ratio buffer
+                'taker_buy_ratio_buffer': list(self.taker_buy_ratio_buffer)
+            }
+            
+            # Save CVD history if available
+            if hasattr(self.indicators, 'cvd_history'):
+                state['cvd_history'] = list(self.indicators.cvd_history)
+            
+            # Save OBI history if available
+            if hasattr(self.indicators, 'obi_history'):
+                state['obi_history'] = list(self.indicators.obi_history)
+            
+            return state
+            
+        except Exception as e:
+            logger.error(f"{self.display_name}: Error building state: {e}")
+            return {}
+    
+    async def save_state(self):
+        """Save current state to disk (called periodically and on shutdown)"""
+        try:
+            state_data = self._get_state_to_save()
+            if state_data:
+                success = self.state_persistence.save_state(state_data)
+                if success:
+                    logger.debug(f"{self.display_name}: State saved successfully")
+                return success
+            return False
+        except Exception as e:
+            logger.error(f"{self.display_name}: Error saving state: {e}")
+            return False
+    
+    async def _periodic_save(self):
+        """Background task to save state every 60 seconds"""
+        while True:
+            try:
+                await asyncio.sleep(60)  # Save every 60 seconds
+                await self.save_state()
+            except asyncio.CancelledError:
+                # Final save on cancellation
+                logger.info(f"{self.display_name}: Periodic save task cancelled, performing final save")
+                await self.save_state()
+                break
+            except Exception as e:
+                logger.error(f"{self.display_name}: Error in periodic save: {e}")
         
     async def start(self):
         """Start the signal engine"""
