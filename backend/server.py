@@ -75,15 +75,28 @@ async def shutdown_event():
     
     logger.info("Stopping all signal engines...")
     
+    # CRITICAL: Save state for all engines before shutdown (anti-amnesia)
+    logger.info("Saving state for all engines before shutdown...")
+    for display_name, engine in signal_engines.items():
+        try:
+            await engine.save_state()
+            logger.info(f"{display_name}: State saved successfully on shutdown")
+        except Exception as e:
+            logger.error(f"{display_name}: Error saving state on shutdown: {e}")
+    
+    # Stop WebSocket connections
     for engine in signal_engines.values():
         await engine.ws_client.stop()
     
+    # Cancel periodic save tasks
     for task in engine_tasks:
         task.cancel()
         try:
             await task
         except asyncio.CancelledError:
             pass
+    
+    logger.info("All signal engines stopped and state saved")
 
 @app.get("/api/status")
 async def get_status():
