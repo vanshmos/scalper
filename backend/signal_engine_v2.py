@@ -758,16 +758,47 @@ class SignalEngine:
             # Use mark price for distance calculation (more stable)
             price_for_distance = self.mark_price if self.mark_price else self.current_price
             
-            return {
+            # HYBRID RETURN: Two sets of indicators
+            live_indicators = {
                 'ema20_1m': ema20_1m,
                 'ema50_1m': ema50_1m,
                 'ema20_5m': ema20_5m,
                 'ema50_5m': ema50_5m,
                 'ema20_15m': ema20_15m,
                 'ema50_15m': ema50_15m,
-                'atr': atr if atr and atr > 0 else 100,  # Default to 100 if ATR is 0
+                'atr': atr if atr and atr > 0 else 100,
                 'rsi': rsi,
                 'obi': obi,
+                'spread': spread,
+                'depth': depth,
+                'cvd': {'1m': cvd_1m, '5m': cvd_5m},
+                'obi_velocity': obi_velocity,
+                'cvd_velocity': cvd_velocity,
+                'bollinger': bollinger,
+                'vwap': vwap,
+                'trend_strength': trend_strength,
+                'price': self.current_price,
+                'mark_price': self.mark_price,
+                'funding_rate': self.funding_rate
+            }
+            
+            # Calculate CONFIRMED indicators (closed candles only)
+            # EMAs using only confirmed candles
+            ema20_5m_conf, ema50_5m_conf = self.indicators.calculate_emas(candles_5m_list, [20, 50])
+            ema20_15m_conf, ema50_15m_conf = self.indicators.calculate_emas(candles_15m_list, [20, 50])
+            
+            confirmed_indicators = {
+                'ema20_5m': ema20_5m_conf,
+                'ema50_5m': ema50_5m_conf,
+                'ema20_15m': ema20_15m_conf,
+                'ema50_15m': ema50_15m_conf,
+                'atr': atr if atr and atr > 0 else 100
+            }
+            
+            return {
+                'live': live_indicators,
+                'confirmed': confirmed_indicators
+            }
                 'spread': spread,
                 'depth': depth,
                 'price': price_for_distance,
