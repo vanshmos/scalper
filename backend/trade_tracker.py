@@ -257,6 +257,11 @@ class TradeTracker:
         Close the active trade and persist to SQLite.
         P&L calculated based on $100,000 capital @ 10x leverage.
         
+        Outcomes:
+        - WIN: TP1 was hit
+        - LOSS: SL was hit
+        - EXPIRED: 60s time limit reached (P&L determines if profitable or not)
+        
         Args:
             outcome: WIN, LOSS, or EXPIRED
             exit_price: Price at trade closure
@@ -292,6 +297,7 @@ class TradeTracker:
                 'exit_price': exit_price,
                 'tp1': trade.tp1,
                 'sl': trade.sl,
+                'confidence_score': trade.confidence_score,
                 'outcome': outcome,
                 'pnl_absolute': round(pnl_dollar, 2),      # Dollar P&L (with leverage)
                 'pnl_percent': round(pnl_percent, 4),      # Raw price change %
@@ -306,8 +312,9 @@ class TradeTracker:
             self._persist_trade(result)
             
             logger.info(f"{self.symbol}: Trade {trade.id} CLOSED - {outcome} | "
-                       f"PnL: ${pnl_dollar:.2f} (ROI: {roi_percent:.2f}%) | "
-                       f"MFE: ${trade.max_favorable:.2f} | MAE: ${trade.max_adverse:.2f}")
+                       f"Entry: ${trade.entry_price:.2f} → Exit: ${exit_price:.2f} | "
+                       f"TP1: ${trade.tp1:.2f}, SL: ${trade.sl:.2f} | "
+                       f"PnL: ${pnl_dollar:.2f} (ROI: {roi_percent:.2f}%)")
             
             # Clear active trade
             self.active_trade = None
