@@ -115,11 +115,14 @@ backend:
     file: "/app/backend/signal_engine_v2.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Implemented _load_state() method that loads recent_trades, CVD/OBI history, signal cooldowns from JSON files on startup. Logs confirm successful restoration."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: State restoration working correctly. Backend logs show: BTC restored 2191 trades + 10 CVD/OBI entries, ETH restored 2429 trades + 10 CVD/OBI entries, SOL restored 656 trades + 10 CVD/OBI entries. All engines show 'State restoration complete' messages."
 
   - task: "State Persistence - Periodic save (every 60s)"
     implemented: true
