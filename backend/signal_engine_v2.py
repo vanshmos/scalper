@@ -925,6 +925,14 @@ class SignalEngine:
                     # Send Telegram alert
                     await self._send_signal_alert(indicators)
                     
+                    # TRADE ACCOUNTABILITY: Start tracking this trade
+                    self.tracker.start_trade({
+                        'direction': active_direction,
+                        'entry_price': entry,
+                        'tp1': tp1,
+                        'sl': sl
+                    })
+                    
             elif self.signal_state.status == "ACTIVE":
                 # Active signals expire after 1 minute (scalping)
                 elapsed = current_time - self.signal_state.entry_time
