@@ -867,6 +867,16 @@ class SignalEngine:
             # INSTITUTIONAL SIGNAL STATE MACHINE
             if self.signal_state.status == "IDLE":
                 if active_result and active_result['signal_ready']:
+                    # COOLDOWN CHECK: Prevent signal spam
+                    last_same_dir_signal = self.last_signal_time.get(active_direction, 0)
+                    time_since_last = current_time - last_same_dir_signal
+                    
+                    if time_since_last < self.signal_cooldown:
+                        # Still in cooldown period - skip this signal
+                        remaining = self.signal_cooldown - time_since_last
+                        logger.debug(f"{self.display_name}: {active_direction} signal blocked by cooldown ({remaining:.0f}s remaining)")
+                        return
+                    
                     # Get alpha checks
                     alpha_checks = active_result.get('alpha_checks', {})
                     velocity_check = alpha_checks.get('velocity', {})
