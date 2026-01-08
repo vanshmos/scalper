@@ -9,6 +9,12 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const TradeHistory = () => {
   const [trades, setTrades] = useState([]);
@@ -39,7 +45,7 @@ const TradeHistory = () => {
 
   useEffect(() => {
     fetchTrades();
-    const interval = setInterval(fetchTrades, 5000); // Refresh every 5 seconds
+    const interval = setInterval(fetchTrades, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -67,6 +73,13 @@ const TradeHistory = () => {
     const value = parseFloat(pnl);
     const sign = value >= 0 ? '+' : '';
     return `${sign}$${value.toFixed(2)}`;
+  };
+
+  const formatROI = (roi) => {
+    if (roi === null || roi === undefined) return '-';
+    const value = parseFloat(roi);
+    const sign = value >= 0 ? '+' : '';
+    return `${sign}${value.toFixed(2)}%`;
   };
 
   const getOutcomeBadge = (outcome) => {
@@ -98,21 +111,42 @@ const TradeHistory = () => {
 
   const getSymbolDisplay = (symbol) => {
     if (!symbol) return '-';
-    // Convert "BTC-USDT-SWAP" to "BTC"
     return symbol.split('-')[0];
   };
 
   return (
     <Card className="bg-slate-800/50 border-slate-700 mt-6">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-            📊 Trade History
-          </CardTitle>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+              📊 Trade History
+            </CardTitle>
+            
+            {/* Info Tooltip */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help text-slate-400 hover:text-slate-300 text-sm">ℹ️</span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-slate-700 border-slate-600 text-white max-w-xs">
+                  <div className="text-sm">
+                    <p className="font-semibold mb-1">P&L Calculation:</p>
+                    <p className="text-slate-300">• Capital: $100,000</p>
+                    <p className="text-slate-300">• Leverage: 10x</p>
+                    <p className="text-slate-300">• Position Size: $1,000,000</p>
+                    <p className="text-slate-400 mt-2 text-xs">
+                      ROI% = P&L ÷ Capital × 100
+                    </p>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           
           {/* Stats Summary */}
           {stats.total_trades > 0 && (
-            <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-4 text-sm flex-wrap">
               <span className="text-slate-400">
                 Trades: <span className="text-white font-medium">{stats.total_trades}</span>
               </span>
@@ -122,8 +156,13 @@ const TradeHistory = () => {
                 </span>
               </span>
               <span className="text-slate-400">
-                Total P&L: <span className={`font-medium ${stats.total_pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                P&L: <span className={`font-medium ${stats.total_pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {stats.total_pnl >= 0 ? '+' : ''}${stats.total_pnl?.toFixed(2)}
+                </span>
+              </span>
+              <span className="text-slate-400">
+                ROI: <span className={`font-medium ${stats.total_roi >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {stats.total_roi >= 0 ? '+' : ''}{stats.total_roi?.toFixed(2)}%
                 </span>
               </span>
             </div>
@@ -156,6 +195,7 @@ const TradeHistory = () => {
                   <TableHead className="text-slate-400 font-medium text-right">Entry</TableHead>
                   <TableHead className="text-slate-400 font-medium text-center">Outcome</TableHead>
                   <TableHead className="text-slate-400 font-medium text-right">P&L</TableHead>
+                  <TableHead className="text-slate-400 font-medium text-right">ROI%</TableHead>
                   <TableHead className="text-slate-400 font-medium text-right">MFE</TableHead>
                 </TableRow>
               </TableHeader>
@@ -184,6 +224,11 @@ const TradeHistory = () => {
                       trade.pnl_absolute >= 0 ? 'text-green-400' : 'text-red-400'
                     }`}>
                       {formatPnL(trade.pnl_absolute)}
+                    </TableCell>
+                    <TableCell className={`text-right font-mono text-sm ${
+                      trade.roi_percent >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      {formatROI(trade.roi_percent)}
                     </TableCell>
                     <TableCell className="text-right text-green-400 font-mono text-sm">
                       {trade.max_favorable ? `+$${trade.max_favorable.toFixed(2)}` : '-'}
