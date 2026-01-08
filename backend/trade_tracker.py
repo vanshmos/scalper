@@ -403,6 +403,7 @@ class TradeTracker:
                     SUM(CASE WHEN outcome = 'LOSS' THEN 1 ELSE 0 END) as losses,
                     SUM(pnl_absolute) as total_pnl,
                     AVG(pnl_absolute) as avg_pnl,
+                    SUM(roi_percent) as total_roi,
                     AVG(max_favorable) as avg_mfe,
                     AVG(max_adverse) as avg_mae
                 FROM trades
@@ -422,8 +423,9 @@ class TradeTracker:
                     'win_rate': round((wins / total) * 100, 1) if total > 0 else 0,
                     'total_pnl': round(row[3] or 0, 2),
                     'avg_pnl': round(row[4] or 0, 2),
-                    'avg_mfe': round(row[5] or 0, 2),
-                    'avg_mae': round(row[6] or 0, 2)
+                    'total_roi': round(row[5] or 0, 2),  # Total ROI%
+                    'avg_mfe': round(row[6] or 0, 2),
+                    'avg_mae': round(row[7] or 0, 2)
                 }
             
             return {
@@ -433,6 +435,7 @@ class TradeTracker:
                 'win_rate': 0,
                 'total_pnl': 0,
                 'avg_pnl': 0,
+                'total_roi': 0,
                 'avg_mfe': 0,
                 'avg_mae': 0
             }
