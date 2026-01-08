@@ -24,7 +24,7 @@ class SignalDetector:
     def __init__(self):
         # V1.5 Thresholds
         self.forming_threshold = 65  # Start forming signal
-        self.active_threshold = 70   # Fire signal
+        self.active_threshold = 80   # Increased from 70: Fire signal only for high quality
         
         # Hard gate limits
         self.max_ema_distance_pct = 1.0  # Must be within 1% of EMA20
