@@ -516,8 +516,13 @@ class SignalEngine:
     
     def _calculate_indicators_live(self) -> Dict:
         """
-        Calculate indicators with LIVE data (including forming candles)
-        INSTITUTIONAL UPGRADE: Synthesizes forming 5m and 15m candles to eliminate trend latency
+        Calculate indicators with HYBRID DATA LOGIC (Institutional-Grade)
+        
+        Returns TWO sets of indicators to prevent repainting:
+        - CONFIRMED: Uses only closed candles for regime/structure (stable)
+        - LIVE: Uses forming candles for entry triggers (zero-latency)
+        
+        This prevents "ghost signals" caused by regime flickering on forming candles.
         """
         try:
             # Get candle lists
