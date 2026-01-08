@@ -492,7 +492,7 @@ class SignalDetector:
                 }
             
             result['alpha_boost'] = alpha_boost
-            result['score'] = base_score + alpha_boost
+            result['score'] = min(100, base_score + alpha_boost)  # Cap at 100
             
             # Signal ready if score high enough AND all alpha checks pass
             result['signal_ready'] = (
