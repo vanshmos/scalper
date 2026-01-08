@@ -540,3 +540,79 @@ def get_aggregate_stats(db_path: str = "/app/data/trades.db") -> Dict:
     except Exception as e:
         logger.error(f"Error getting aggregate stats: {e}")
         return {}
+
+
+def migrate_trades_to_capital_based(db_path: str = "/app/data/trades.db", capital: float = 100000.0) -> Dict:
+    """
+    Migrate existing trades to use capital-based P&L calculations.
+    Recalculates pnl_absolute and max_favorable/max_adverse based on $100k capital.
+    
+    Returns:
+        Dict with migration results
+    """
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # Get all trades
+        cursor.execute("""
+            SELECT id, entry_price, exit_price, direction, pnl_percent, max_favorable, max_adverse
+            FROM trades
+        """)
+        
+        rows = cursor.fetchall()
+        updated_count = 0
+        
+        for row in rows:
+            trade_id, entry_price, exit_price, direction, pnl_percent, old_mfe, old_mae = row
+            
+            if entry_price is None or entry_price == 0:
+                continue
+            
+            # Recalculate P&L based on capital
+            # pnl_absolute = (pnl_percent / 100) * capital
+            new_pnl = (pnl_percent / 100) * capital if pnl_percent else 0
+            
+            # Recalculate MFE/MAE based on capital
+            # Old values were absolute price differences, convert to dollar P&L
+            # If old_mfe was price difference, new_mfe = (old_mfe / entry_price) * capital
+            if old_mfe and entry_price:
+                # Check if old value looks like a price difference (small relative to entry)
+                if abs(old_mfe) < entry_price * 0.1:  # Less than 10% of entry = likely price diff
+                    new_mfe = (old_mfe / entry_price) * capital
+                else:
+                    new_mfe = old_mfe  # Already converted or very large move
+            else:
+                new_mfe = 0
+                
+            if old_mae and entry_price:
+                if abs(old_mae) < entry_price * 0.1:
+                    new_mae = (old_mae / entry_price) * capital
+                else:
+                    new_mae = old_mae
+            else:
+                new_mae = 0
+            
+            # Update the trade
+            cursor.execute("""
+                UPDATE trades 
+                SET pnl_absolute = ?, max_favorable = ?, max_adverse = ?
+                WHERE id = ?
+            """, (round(new_pnl, 2), round(new_mfe, 2), round(new_mae, 2), trade_id))
+            
+            updated_count += 1
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Migrated {updated_count} trades to capital-based P&L (${capital:,.0f})")
+        
+        return {
+            'status': 'success',
+            'trades_updated': updated_count,
+            'capital': capital
+        }
+        
+    except Exception as e:
+        logger.error(f"Error migrating trades: {e}")
+        return {'status': 'error', 'message': str(e)}
