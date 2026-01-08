@@ -142,7 +142,7 @@ class TradeTracker:
     def update(self, current_price: float) -> Optional[Dict]:
         """
         Update active trade with current price.
-        - Updates MFE/MAE
+        - Updates MFE/MAE (based on $100k capital)
         - Captures snapshots at 10s intervals
         - Checks TP/SL hits
         - Auto-closes after 60s
@@ -161,17 +161,23 @@ class TradeTracker:
             current_time = time.time()
             elapsed = current_time - trade.entry_time
             
-            # Calculate P&L
+            # Calculate price change (absolute)
             if trade.direction == 'LONG':
-                pnl = current_price - trade.entry_price
+                price_change = current_price - trade.entry_price
             else:  # SHORT
-                pnl = trade.entry_price - current_price
+                price_change = trade.entry_price - current_price
             
-            # Update max favorable (MFE) and max adverse (MAE)
-            if pnl > 0:
-                trade.max_favorable = max(trade.max_favorable, pnl)
+            # Calculate P&L based on $100k capital
+            # P&L = (price_change / entry_price) * CAPITAL
+            pnl_dollar = (price_change / trade.entry_price) * self.CAPITAL
+            
+            # Update max favorable (MFE) and max adverse (MAE) in dollar terms
+            if price_change > 0:
+                mfe_dollar = (price_change / trade.entry_price) * self.CAPITAL
+                trade.max_favorable = max(trade.max_favorable, mfe_dollar)
             else:
-                trade.max_adverse = max(trade.max_adverse, abs(pnl))
+                mae_dollar = (abs(price_change) / trade.entry_price) * self.CAPITAL
+                trade.max_adverse = max(trade.max_adverse, mae_dollar)
             
             # Capture price snapshots at 10s intervals
             time_since_last_snapshot = current_time - trade.last_snapshot_time
