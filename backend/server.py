@@ -182,6 +182,26 @@ async def migrate_trades():
         logger.error(f"Error migrating trades: {e}")
         return {"status": "error", "message": str(e)}
 
+@app.delete("/api/trades/clear")
+async def clear_trades():
+    """
+    Clear all trades from the database (for resetting test data).
+    Use with caution - this deletes all trade history.
+    """
+    try:
+        import sqlite3
+        conn = sqlite3.connect("/app/data/trades.db")
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM trades")
+        deleted = cursor.rowcount
+        conn.commit()
+        conn.close()
+        logger.info(f"Cleared {deleted} trades from database")
+        return {"status": "success", "trades_deleted": deleted}
+    except Exception as e:
+        logger.error(f"Error clearing trades: {e}")
+        return {"status": "error", "message": str(e)}
+
 @app.websocket("/api/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time updates"""
