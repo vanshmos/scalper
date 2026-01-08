@@ -442,6 +442,9 @@ class SignalEngine:
             price = data.get('px')
             if price:
                 self.current_price = float(price)
+                
+                # TRADE ACCOUNTABILITY: Update active trade with current price
+                self.tracker.update(self.current_price)
             
             # Also track for quick taker buy ratio (last 60 trades)
             self.taker_buy_ratio_buffer.append({
