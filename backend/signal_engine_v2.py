@@ -41,6 +41,7 @@ class SignalState:
         self.tp1 = None
         self.tp2 = None
         self.stop_loss = None
+        self.score = None  # Actual signal score
         
     def reset(self):
         self.status = "IDLE"
@@ -52,6 +53,7 @@ class SignalState:
         self.tp1 = None
         self.tp2 = None
         self.stop_loss = None
+        self.score = None
 
 class SignalEngine:
     """Multi-symbol signal engine using OKX candle channels"""
@@ -863,6 +865,9 @@ class SignalEngine:
                     self.signal_state.tp2 = tp2
                     self.signal_state.stop_loss = sl
                     
+                    # Store score for alert
+                    self.signal_state.score = active_result['score']
+                    
                     if extreme_obi or extreme_cvd:
                         logger.warning(f"⚡ EXTREME VOLATILITY DETECTED ⚡")
                         logger.info(f"🚀🚀🚀 {self.display_name} ZERO-LATENCY: {active_direction} at ${self.signal_state.entry_price:.2f} (score: {active_result['score']}/100)")
@@ -915,7 +920,7 @@ class SignalEngine:
             
             self.alert_manager.send_signal_alert(
                 direction=direction,
-                confidence=100,  # All checklist passed
+                confidence=self.signal_state.score,  # Use actual score, not hardcoded 100
                 entry=entry,
                 stop_loss=sl,
                 tp1=tp1,
