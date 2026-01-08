@@ -185,11 +185,11 @@ class TradeTracker:
                 snapshot = {
                     'time': round(elapsed, 1),
                     'price': current_price,
-                    'pnl': round(pnl, 2)
+                    'pnl': round(pnl_dollar, 2)  # P&L in dollars based on $100k capital
                 }
                 trade.price_snapshots.append(snapshot)
                 trade.last_snapshot_time = current_time
-                logger.debug(f"{self.symbol}: Snapshot @ {elapsed:.0f}s: ${current_price:.2f}, PnL: ${pnl:.2f}")
+                logger.debug(f"{self.symbol}: Snapshot @ {elapsed:.0f}s: ${current_price:.2f}, PnL: ${pnl_dollar:.2f}")
             
             # Check TP1 hit
             tp_hit = False
@@ -214,9 +214,9 @@ class TradeTracker:
             # Auto-close after 60 seconds
             if elapsed >= 60.0:
                 # Determine outcome based on final P&L
-                if pnl > 0:
+                if pnl_dollar > 0:
                     outcome = 'WIN'
-                elif pnl < 0:
+                elif pnl_dollar < 0:
                     outcome = 'LOSS'
                 else:
                     outcome = 'EXPIRED'
