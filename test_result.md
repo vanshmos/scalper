@@ -145,11 +145,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Modified shutdown_event() to call save_state() for all engines before stopping WebSocket connections. Logs confirm successful saves on shutdown."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Shutdown save working correctly. Backend logs show 'State saved successfully on shutdown' for all engines (btc, eth, sol) followed by 'All signal engines stopped and state saved'."
 
   - task: "API Endpoint /api/status"
     implemented: true
