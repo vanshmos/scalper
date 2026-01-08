@@ -229,40 +229,37 @@ agent_communication:
       - Verify /api/status returns correct data including CVD/OBI
       - Verify state files exist in /app/data/
       - Verify state is properly loaded on restart (CVD/OBI non-zero immediately)
-  - agent: "testing"
+  - agent: "main"
     message: |
-      ✅ COMPREHENSIVE STATE PERSISTENCE TESTING COMPLETED
+      ✅ TRADE ACCOUNTABILITY SYSTEM IMPLEMENTED
       
-      All backend tests PASSED:
+      Backend Changes:
+      1. Created /app/backend/trade_tracker.py with TradeTracker class
+         - SQLite database at /app/data/trades.db
+         - start_trade() to begin tracking when signal becomes ACTIVE
+         - update() to track MFE/MAE and check TP/SL hits
+         - Auto-closes trades after 60s
+         - Price snapshots every 10s
       
-      1. API Status Endpoint (/api/status):
-         - ✅ Returns 200 OK with valid JSON
-         - ✅ Data for all symbols: BTC ($90,215.10), ETH ($3,115.31), SOL ($135.11)
-         - ✅ All indicators present: CVD, OBI, RSI, ATR, VWAP
-         - ✅ CVD values non-zero (BTC: 0.454, ETH: 0.055, SOL: 0.129) - PROVES STATE LOADED
-         - ✅ OBI values non-zero (BTC: -0.538, ETH: -0.426, SOL: -0.039) - PROVES STATE LOADED
-         - ✅ Valid regime values: All showing "RANGING"
+      2. Updated /app/backend/signal_engine_v2.py
+         - Added TradeTracker import and initialization
+         - start_trade() called when signal becomes ACTIVE
+         - update() called on every trade tick in _on_trade()
       
-      2. State Files Verification:
-         - ✅ All 3 state files exist: BTC-USDT-SWAP_state.json, ETH-USDT-SWAP_state.json, SOL-USDT-SWAP_state.json
-         - ✅ Valid JSON structure with required fields: symbol, timestamp, recent_trades
-         - ✅ Rich trade data: BTC (3,215 trades), ETH (3,650 trades), SOL (1,406 trades)
-         - ✅ Recent timestamps confirm active state persistence
+      3. Updated /app/backend/server.py
+         - Added GET /api/trades endpoint
+         - Added GET /api/trades/{symbol} endpoint
       
-      3. State Restoration Verification (Backend Logs):
-         - ✅ BTC: Restored 2,191 trades + 10 CVD/OBI entries + cooldowns + 60 taker ratios
-         - ✅ ETH: Restored 2,429 trades + 10 CVD/OBI entries + cooldowns + 60 taker ratios  
-         - ✅ SOL: Restored 656 trades + 10 CVD/OBI entries + cooldowns + 60 taker ratios
-         - ✅ All engines show "State restoration complete" + "Periodic state save task started"
+      Frontend Changes:
+      1. Created /app/frontend/src/components/TradeHistory.jsx
+         - Fetches trades every 5 seconds
+         - Shows Time, Symbol, Direction, Entry, Outcome, P&L, MFE
+         - Stats summary with win rate and total P&L
       
-      4. WebSocket Endpoint:
-         - ✅ Endpoint accessible and properly configured
+      2. Updated /app/frontend/src/App.js
+         - Imported and added TradeHistory component
       
-      🎉 STATE PERSISTENCE FEATURE IS FULLY FUNCTIONAL
-      The engine successfully prevents "data amnesia" on restarts by:
-      - Loading historical trade data, indicator history, and signal cooldowns on startup
-      - Saving state every 60 seconds during operation  
-      - Saving state on clean shutdown
-      - Immediately having non-zero CVD/OBI values after restart (proving state was loaded)
-      
-      Created comprehensive test suite at /app/backend_test.py for future regression testing.
+      Testing needed:
+      - Verify /api/trades endpoint returns correct structure
+      - Verify trades are recorded when signals fire
+      - Verify frontend displays trade data correctly
