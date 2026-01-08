@@ -233,7 +233,7 @@ class TradeTracker:
     def _close_trade(self, outcome: str, exit_price: float, exit_time: float) -> Dict:
         """
         Close the active trade and persist to SQLite.
-        P&L calculated based on $100,000 capital.
+        P&L calculated based on $100,000 capital @ 10x leverage.
         
         Args:
             outcome: WIN, LOSS, or EXPIRED
@@ -252,10 +252,12 @@ class TradeTracker:
             else:  # SHORT
                 price_change = trade.entry_price - exit_price
             
-            # Calculate P&L based on $100k capital
-            # P&L = (price_change / entry_price) * CAPITAL
-            pnl_percent = (price_change / trade.entry_price) * 100
-            pnl_dollar = (price_change / trade.entry_price) * self.CAPITAL
+            # Calculate P&L based on $100k capital @ 10x leverage ($1M position)
+            pnl_percent = (price_change / trade.entry_price) * 100  # Raw price change %
+            pnl_dollar = (price_change / trade.entry_price) * self.POSITION_SIZE
+            
+            # ROI% = P&L / Capital (shows return on actual capital deployed)
+            roi_percent = (pnl_dollar / self.CAPITAL) * 100
             
             # Build result dict
             result = {
@@ -269,8 +271,9 @@ class TradeTracker:
                 'tp1': trade.tp1,
                 'sl': trade.sl,
                 'outcome': outcome,
-                'pnl_absolute': round(pnl_dollar, 2),  # Dollar P&L based on $100k capital
-                'pnl_percent': round(pnl_percent, 4),
+                'pnl_absolute': round(pnl_dollar, 2),      # Dollar P&L (with leverage)
+                'pnl_percent': round(pnl_percent, 4),      # Raw price change %
+                'roi_percent': round(roi_percent, 4),      # ROI on capital (leveraged)
                 'max_favorable': round(trade.max_favorable, 2),  # Already in dollars
                 'max_adverse': round(trade.max_adverse, 2),      # Already in dollars
                 'duration': round(exit_time - trade.entry_time, 1),
@@ -281,7 +284,7 @@ class TradeTracker:
             self._persist_trade(result)
             
             logger.info(f"{self.symbol}: Trade {trade.id} CLOSED - {outcome} | "
-                       f"PnL: ${pnl_dollar:.2f} ({pnl_percent:.2f}%) | "
+                       f"PnL: ${pnl_dollar:.2f} (ROI: {roi_percent:.2f}%) | "
                        f"MFE: ${trade.max_favorable:.2f} | MAE: ${trade.max_adverse:.2f}")
             
             # Clear active trade
