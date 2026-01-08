@@ -799,22 +799,6 @@ class SignalEngine:
                 'live': live_indicators,
                 'confirmed': confirmed_indicators
             }
-                'spread': spread,
-                'depth': depth,
-                'price': price_for_distance,
-                'taker_buy_ratio': self.taker_buy_ratio,
-                # CVD values (calculated from trades)
-                'cvd': {
-                    '1m': cvd_1m,
-                    '5m': cvd_5m
-                },
-                # ALPHA indicators
-                'obi_velocity': obi_velocity,
-                'cvd_velocity': cvd_velocity,
-                'bollinger': bollinger,
-                'vwap': vwap,
-                'trend_strength': trend_strength
-            }
             
         except Exception as e:
             logger.error(f"Error calculating live indicators: {e}")
