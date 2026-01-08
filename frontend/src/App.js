@@ -360,6 +360,9 @@ function App() {
           </div>
         </div>
       </div>
+      
+      {/* Trade History Section */}
+      <TradeHistory />
     </div>
   );
 }
