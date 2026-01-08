@@ -125,6 +125,9 @@ class SignalEngine:
         self.state_persistence = StatePersistence(self.symbol)
         self._periodic_save_task = None
         
+        # TRADE ACCOUNTABILITY: Track signal performance
+        self.tracker = TradeTracker(self.symbol)
+        
         # Load previous state to restore context
         self._load_state()
         
