@@ -77,6 +77,7 @@ class TradeTracker:
                     exit_price REAL,
                     tp1 REAL NOT NULL,
                     sl REAL NOT NULL,
+                    confidence_score INTEGER DEFAULT 0,
                     outcome TEXT,
                     pnl_absolute REAL,
                     pnl_percent REAL,
@@ -88,11 +89,15 @@ class TradeTracker:
                 )
             """)
             
-            # Add roi_percent column if it doesn't exist (migration for existing DBs)
+            # Add columns if they don't exist (migration for existing DBs)
             try:
                 cursor.execute("ALTER TABLE trades ADD COLUMN roi_percent REAL")
             except sqlite3.OperationalError:
-                pass  # Column already exists
+                pass
+            try:
+                cursor.execute("ALTER TABLE trades ADD COLUMN confidence_score INTEGER DEFAULT 0")
+            except sqlite3.OperationalError:
+                pass
             
             # Create index for faster queries
             cursor.execute("""
