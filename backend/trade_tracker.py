@@ -79,12 +79,19 @@ class TradeTracker:
                     outcome TEXT,
                     pnl_absolute REAL,
                     pnl_percent REAL,
+                    roi_percent REAL,
                     max_favorable REAL,
                     max_adverse REAL,
                     price_snapshots_json TEXT,
                     created_at TEXT DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # Add roi_percent column if it doesn't exist (migration for existing DBs)
+            try:
+                cursor.execute("ALTER TABLE trades ADD COLUMN roi_percent REAL")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
             
             # Create index for faster queries
             cursor.execute("""
