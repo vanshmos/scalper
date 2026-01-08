@@ -160,11 +160,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Returns complete status for all symbols (BTC, ETH, SOL) including price, indicators, regime, gates, and signals."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: API endpoint working perfectly. Returns valid JSON with data for all symbols (btc, eth, sol). All required indicators present: CVD (cvd.5m), OBI, RSI, ATR, VWAP. Current prices populated. Regime values valid (TRENDING/RANGING). CVD and OBI values are non-zero, proving state was successfully loaded."
 
   - task: "WebSocket endpoint /api/ws"
     implemented: true
