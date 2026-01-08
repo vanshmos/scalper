@@ -115,17 +115,24 @@ class TradeTracker:
     def start_trade(self, signal_data: Dict) -> Optional[str]:
         """
         Start tracking a new trade when a signal becomes ACTIVE.
+        Only tracks trades with confidence_score >= 80 (fully-formed signals).
         
         Args:
-            signal_data: Dict containing direction, entry_price, tp1, sl
+            signal_data: Dict containing direction, entry_price, tp1, sl, confidence_score
             
         Returns:
-            Trade ID if started, None if trade already active
+            Trade ID if started, None if trade already active or score too low
         """
         try:
             # Don't start a new trade if one is already active
             if self.active_trade is not None:
                 logger.warning(f"{self.symbol}: Cannot start trade - one already active")
+                return None
+            
+            # CRITICAL: Only track fully-formed signals (score >= 80)
+            confidence_score = signal_data.get('confidence_score', 0)
+            if confidence_score < 80:
+                logger.warning(f"{self.symbol}: Rejecting trade - confidence {confidence_score} < 80 threshold")
                 return None
             
             trade_id = str(uuid.uuid4())[:8]
@@ -139,6 +146,7 @@ class TradeTracker:
                 entry_price=signal_data.get('entry_price', 0),
                 tp1=signal_data.get('tp1', 0),
                 sl=signal_data.get('sl', 0),
+                confidence_score=confidence_score,
                 max_favorable=0.0,
                 max_adverse=0.0,
                 price_snapshots=[],
@@ -146,7 +154,8 @@ class TradeTracker:
             )
             
             logger.info(f"{self.symbol}: Started tracking trade {trade_id} - "
-                       f"{self.active_trade.direction} @ {self.active_trade.entry_price:.2f}")
+                       f"{self.active_trade.direction} @ {self.active_trade.entry_price:.2f} "
+                       f"(confidence: {confidence_score}/100, TP1: {self.active_trade.tp1:.2f}, SL: {self.active_trade.sl:.2f})")
             
             return trade_id
             
