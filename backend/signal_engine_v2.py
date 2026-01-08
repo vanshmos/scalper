@@ -119,6 +119,13 @@ class SignalEngine:
         self.last_signal_time = {}  # {direction: timestamp}
         self.signal_cooldown = 300  # 5 minutes between same-direction signals
         
+        # STATE PERSISTENCE: Anti-amnesia
+        self.state_persistence = StatePersistence(self.symbol)
+        self._periodic_save_task = None
+        
+        # Load previous state to restore context
+        self._load_state()
+        
         # Staleness tracking
         self.last_ticker_time = None
         
