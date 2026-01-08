@@ -91,9 +91,15 @@ const TradeHistory = () => {
       EXPIRED: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
     };
     
+    const labels = {
+      WIN: 'TP HIT',
+      LOSS: 'SL HIT',
+      EXPIRED: 'EXPIRED'
+    };
+    
     return (
-      <Badge className={`${variants[outcome] || 'bg-gray-500/20 text-gray-400'} border`}>
-        {outcome}
+      <Badge className={`${variants[outcome] || 'bg-gray-500/20 text-gray-400'} border text-xs`}>
+        {labels[outcome] || outcome}
       </Badge>
     );
   };
@@ -137,6 +143,9 @@ const TradeHistory = () => {
                     <p className="text-slate-300">• Position Size: $1,000,000</p>
                     <p className="text-slate-400 mt-2 text-xs">
                       ROI% = P&L ÷ Capital × 100
+                    </p>
+                    <p className="text-slate-400 mt-1 text-xs">
+                      Only signals with confidence ≥80 are tracked
                     </p>
                   </div>
                 </TooltipContent>
@@ -182,7 +191,7 @@ const TradeHistory = () => {
         ) : trades.length === 0 ? (
           <div className="text-center py-8 text-slate-400">
             <p className="text-lg mb-2">No trades recorded yet</p>
-            <p className="text-sm">Trades will appear here when signals are triggered and closed</p>
+            <p className="text-sm">Trades will appear here when signals with confidence ≥80 are triggered</p>
           </div>
         ) : (
           <div className="rounded-lg border border-slate-700 overflow-hidden">
@@ -191,12 +200,13 @@ const TradeHistory = () => {
                 <TableRow className="border-slate-700 hover:bg-slate-800/50">
                   <TableHead className="text-slate-400 font-medium">Time</TableHead>
                   <TableHead className="text-slate-400 font-medium">Symbol</TableHead>
-                  <TableHead className="text-slate-400 font-medium">Direction</TableHead>
+                  <TableHead className="text-slate-400 font-medium">Dir</TableHead>
                   <TableHead className="text-slate-400 font-medium text-right">Entry</TableHead>
+                  <TableHead className="text-slate-400 font-medium text-right">TP1</TableHead>
+                  <TableHead className="text-slate-400 font-medium text-center">Score</TableHead>
                   <TableHead className="text-slate-400 font-medium text-center">Outcome</TableHead>
                   <TableHead className="text-slate-400 font-medium text-right">P&L</TableHead>
                   <TableHead className="text-slate-400 font-medium text-right">ROI%</TableHead>
-                  <TableHead className="text-slate-400 font-medium text-right">MFE</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -214,8 +224,19 @@ const TradeHistory = () => {
                     <TableCell>
                       {getDirectionBadge(trade.direction)}
                     </TableCell>
-                    <TableCell className="text-right text-slate-300 font-mono">
+                    <TableCell className="text-right text-slate-300 font-mono text-sm">
                       {formatPrice(trade.entry_price)}
+                    </TableCell>
+                    <TableCell className="text-right text-cyan-400 font-mono text-sm">
+                      {formatPrice(trade.tp1)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className={`font-mono text-sm ${
+                        (trade.confidence_score || 0) >= 90 ? 'text-green-400' : 
+                        (trade.confidence_score || 0) >= 80 ? 'text-yellow-400' : 'text-slate-400'
+                      }`}>
+                        {trade.confidence_score || '-'}
+                      </span>
                     </TableCell>
                     <TableCell className="text-center">
                       {getOutcomeBadge(trade.outcome)}
@@ -229,9 +250,6 @@ const TradeHistory = () => {
                       trade.roi_percent >= 0 ? 'text-green-400' : 'text-red-400'
                     }`}>
                       {formatROI(trade.roi_percent)}
-                    </TableCell>
-                    <TableCell className="text-right text-green-400 font-mono text-sm">
-                      {trade.max_favorable ? `+$${trade.max_favorable.toFixed(2)}` : '-'}
                     </TableCell>
                   </TableRow>
                 ))}
