@@ -115,6 +115,10 @@ class SignalEngine:
         self.forming_1m_volume = 0
         self.forming_1m_start_time = None
         
+        # COOLDOWN: Prevent signal spam
+        self.last_signal_time = {}  # {direction: timestamp}
+        self.signal_cooldown = 300  # 5 minutes between same-direction signals
+        
         # Staleness tracking
         self.last_ticker_time = None
         
@@ -867,6 +871,9 @@ class SignalEngine:
                     
                     # Store score for alert
                     self.signal_state.score = active_result['score']
+                    
+                    # Update cooldown timestamp
+                    self.last_signal_time[active_direction] = current_time
                     
                     if extreme_obi or extreme_cvd:
                         logger.warning(f"⚡ EXTREME VOLATILITY DETECTED ⚡")
