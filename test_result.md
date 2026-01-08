@@ -101,3 +101,116 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: |
+  Crypto scalping signal engine for BTC, ETH, and SOL perpetual futures with OKX data. 
+  Real-time WebSocket data processing, technical indicators, advanced scoring model, 
+  web dashboard, and Telegram alerts. Current task: Complete State Persistence integration 
+  to prevent "data amnesia" on restarts.
+
+backend:
+  - task: "State Persistence - Load state on startup"
+    implemented: true
+    working: true
+    file: "/app/backend/signal_engine_v2.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Implemented _load_state() method that loads recent_trades, CVD/OBI history, signal cooldowns from JSON files on startup. Logs confirm successful restoration."
+
+  - task: "State Persistence - Periodic save (every 60s)"
+    implemented: true
+    working: true
+    file: "/app/backend/signal_engine_v2.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Implemented _periodic_save() background task that saves state every 60 seconds. Task is started in engine.start() method."
+
+  - task: "State Persistence - Save on shutdown"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Modified shutdown_event() to call save_state() for all engines before stopping WebSocket connections. Logs confirm successful saves on shutdown."
+
+  - task: "API Endpoint /api/status"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Returns complete status for all symbols (BTC, ETH, SOL) including price, indicators, regime, gates, and signals."
+
+  - task: "WebSocket endpoint /api/ws"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Pushes real-time status updates to connected frontend clients every 500ms."
+
+frontend:
+  - task: "Multi-symbol Dashboard (BTC/ETH/SOL)"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Tabbed interface showing live data for all three symbols. Screenshot confirms data is displaying correctly."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "State Persistence - Load state on startup"
+    - "State Persistence - Periodic save"
+    - "State Persistence - Save on shutdown"
+    - "API Endpoint /api/status"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: |
+      Completed State Persistence integration:
+      1. Added StatePersistence import to signal_engine_v2.py
+      2. Implemented _load_state() to restore recent_trades, CVD/OBI history, cooldowns on startup
+      3. Implemented _get_state_to_save() and save_state() methods
+      4. Implemented _periodic_save() background task (60s interval)
+      5. Started periodic save task in engine.start()
+      6. Updated server.py shutdown_event to save state for all engines
+      7. Fixed indicators_live -> indicators typo in _check_signals_event_driven()
+      
+      Testing needed:
+      - Verify /api/status returns correct data including CVD/OBI
+      - Verify state files exist in /app/data/
+      - Verify state is properly loaded on restart (CVD/OBI non-zero immediately)
