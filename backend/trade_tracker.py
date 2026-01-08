@@ -384,7 +384,7 @@ class TradeTracker:
             cursor.execute("""
                 SELECT 
                     id, symbol, direction, entry_time, entry_price,
-                    exit_time, exit_price, tp1, sl, outcome,
+                    exit_time, exit_price, tp1, sl, confidence_score, outcome,
                     pnl_absolute, pnl_percent, roi_percent, max_favorable, max_adverse,
                     price_snapshots_json, created_at
                 FROM trades
