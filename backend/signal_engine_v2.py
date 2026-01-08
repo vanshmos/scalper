@@ -1232,13 +1232,13 @@ class SignalEngine:
                     'all_pass': self.regime_detector.spread_gate.current_state and self.regime_detector.depth_gate.current_state,
                     'spread': {
                         'pass': self.regime_detector.spread_gate.current_state,
-                        'value': indicators.get('spread', 0),
+                        'value': live_ind.get('spread', 0),
                         'threshold': self.spread_stats.percentile(90) if self.spread_stats.count() >= 10 else 2.5,
                         'mode': 'dynamic' if self.spread_stats.count() >= 10 else 'static'
                     },
                     'depth': {
                         'pass': self.regime_detector.depth_gate.current_state,
-                        'value': indicators.get('depth', 0),
+                        'value': live_ind.get('depth', 0),
                         'threshold': self.depth_stats.percentile(10) if self.depth_stats.count() >= 10 else 30000,
                         'mode': 'dynamic' if self.depth_stats.count() >= 10 else 'static'
                     },
