@@ -7,7 +7,7 @@ import asyncio
 import json
 from pathlib import Path
 from signal_engine_v2 import SignalEngine
-from trade_tracker import get_all_recent_trades, get_aggregate_stats
+from trade_tracker import get_all_recent_trades, get_aggregate_stats, migrate_trades_to_capital_based
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
