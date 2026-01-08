@@ -184,6 +184,66 @@ backend:
         agent: "testing"
         comment: "✅ VERIFIED: WebSocket endpoint is accessible and properly configured. Endpoint responds appropriately to HTTP requests (expected behavior for WebSocket endpoints)."
 
+  - task: "Trade Accountability System - TradeTracker class"
+    implemented: true
+    working: true
+    file: "/app/backend/trade_tracker.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Created TradeTracker class with SQLite storage at /app/data/trades.db. Tracks active trades in memory, persists completed trades with MFE/MAE metrics, P&L calculations, and price snapshots."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: TradeTracker implementation working correctly. Database exists with proper schema (16 columns), all three engines (BTC, ETH, SOL) have TradeTracker initialized as confirmed in backend logs. Currently 0 trades (expected - no signals fired yet)."
+
+  - task: "Trade Accountability System - Signal Engine Integration"
+    implemented: true
+    working: true
+    file: "/app/backend/signal_engine_v2.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Integrated TradeTracker into signal engines. start_trade() called when signal becomes ACTIVE, update() called on every trade tick in _on_trade() method."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: TradeTracker integration working correctly. Backend logs show successful initialization for all symbols: 'BTC-USDT-SWAP: TradeTracker initialized', 'ETH-USDT-SWAP: TradeTracker initialized', 'SOL-USDT-SWAP: TradeTracker initialized'."
+
+  - task: "API Endpoint /api/trades"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Added GET /api/trades endpoint that returns trade history with outcomes, P&L, and MFE/MAE metrics across all symbols."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: /api/trades endpoint working perfectly. Returns correct JSON structure: {trades: [], stats: {total_trades, wins, losses, win_rate, total_pnl, avg_pnl}, count: 0}. Currently empty (expected - no signals fired yet)."
+
+  - task: "API Endpoint /api/trades/{symbol}"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Added GET /api/trades/{symbol} endpoint for symbol-specific trade history with individual TradeTracker stats."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: /api/trades/{symbol} endpoints working correctly for all symbols (BTC, ETH, SOL). Each returns proper JSON structure with symbol-specific data: {symbol, trades, stats, count}. Stats include additional avg_mfe and avg_mae fields."
+
 frontend:
   - task: "Multi-symbol Dashboard (BTC/ETH/SOL)"
     implemented: true
