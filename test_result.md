@@ -130,11 +130,14 @@ backend:
     file: "/app/backend/signal_engine_v2.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: true
         agent: "main"
         comment: "Implemented _periodic_save() background task that saves state every 60 seconds. Task is started in engine.start() method."
+      - working: true
+        agent: "testing"
+        comment: "✅ VERIFIED: Periodic save working correctly. Backend logs show 'Periodic state save task started (every 60s)' for all engines. State files are being updated with recent timestamps."
 
   - task: "State Persistence - Save on shutdown"
     implemented: true
