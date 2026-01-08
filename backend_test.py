@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 Backend Test Suite for Crypto Scalping Signal Engine
-Tests the State Persistence feature implementation
+Tests the Trade Accountability System implementation
 """
 
 import requests
 import json
 import os
 import sys
+import sqlite3
 from pathlib import Path
 
 # Get the backend URL from frontend .env file
