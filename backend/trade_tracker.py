@@ -40,7 +40,7 @@ class TradeTracker:
     Tracks active trades in memory and persists completed trades to SQLite.
     Non-blocking: Only writes to DB when a trade closes.
     P&L calculated based on $100,000 capital with 10x leverage.
-    Includes OKX perpetual futures fees.
+    Assumes zero fees (Lighter.xyz execution).
     """
     
     # Capital and leverage for P&L calculation
@@ -48,9 +48,8 @@ class TradeTracker:
     LEVERAGE = 10           # 10x leverage
     POSITION_SIZE = CAPITAL * LEVERAGE  # $1M effective position
     
-    # OKX Perpetual Futures Fees (Taker - market orders)
-    TAKER_FEE_RATE = 0.0005  # 0.05% per side
-    ROUND_TRIP_FEE = POSITION_SIZE * TAKER_FEE_RATE * 2  # Entry + Exit = $1,000
+    # Lighter.xyz has ZERO trading fees
+    ROUND_TRIP_FEE = 0.0
     
     def __init__(self, symbol: str, db_path: str = "/app/data/trades.db"):
         self.symbol = symbol
