@@ -495,7 +495,9 @@ class SignalDetector:
             result['alpha_checks'] = {
                 'velocity': velocity_check,
                 'liquidity_sweep': sweep_check,
-                'vwap_distance': vwap_check
+                'vwap_distance': vwap_check,
+                'mean_reversion': mean_reversion_check,
+                'candle_color': candle_color_check
             }
             
             # HARD VETO: VWAP distance check
@@ -504,6 +506,24 @@ class SignalDetector:
                 result['breakdown']['VETO'] = {
                     'points': 0,
                     'detail': f"🚫 VWAP VETO: {vwap_check['detail']}"
+                }
+                return result
+            
+            # SURVIVAL FIX VETO: Mean Reversion Guard
+            if not mean_reversion_check['pass']:
+                result['signal_ready'] = False
+                result['breakdown']['VETO'] = {
+                    'points': 0,
+                    'detail': f"🚫 MEAN REVERSION VETO: {mean_reversion_check['detail']}"
+                }
+                return result
+            
+            # SURVIVAL FIX VETO: Candle Color Guard (Falling Knife Protection)
+            if not candle_color_check['pass']:
+                result['signal_ready'] = False
+                result['breakdown']['VETO'] = {
+                    'points': 0,
+                    'detail': f"🚫 FALLING KNIFE VETO: {candle_color_check['detail']}"
                 }
                 return result
             
