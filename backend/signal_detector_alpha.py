@@ -274,6 +274,82 @@ class SignalDetector:
         
         return vwap_check
     
+    def check_mean_reversion_guard(
+        self,
+        direction: SignalDirection,
+        current_price: Optional[float],
+        bollinger: Optional[Dict]
+    ) -> Dict:
+        """
+        SURVIVAL FIX: Mean Reversion Guard
+        
+        Prevents entering at extremes:
+        - LONG: Fail if Price > Bollinger Upper (overextended)
+        - SHORT: Fail if Price < Bollinger Lower (oversold bounce)
+        """
+        result = {'pass': True, 'detail': 'No Bollinger data'}
+        
+        if not bollinger or not current_price:
+            return result
+        
+        upper = bollinger.get('upper')
+        lower = bollinger.get('lower')
+        
+        if upper is None or lower is None:
+            return result
+        
+        if direction == SignalDirection.LONG:
+            if current_price > upper:
+                result['pass'] = False
+                result['detail'] = f'✗ Price ${current_price:.2f} > BB Upper ${upper:.2f} - Overextended'
+            else:
+                result['pass'] = True
+                result['detail'] = f'✓ Price below BB Upper - Room to run'
+        else:  # SHORT
+            if current_price < lower:
+                result['pass'] = False
+                result['detail'] = f'✗ Price ${current_price:.2f} < BB Lower ${lower:.2f} - Oversold'
+            else:
+                result['pass'] = True
+                result['detail'] = f'✓ Price above BB Lower - Room to fall'
+        
+        return result
+    
+    def check_candle_color_guard(
+        self,
+        direction: SignalDirection,
+        current_price: Optional[float],
+        forming_candle_open: Optional[float]
+    ) -> Dict:
+        """
+        SURVIVAL FIX: Falling Knife Protection
+        
+        Prevents catching falling knives:
+        - LONG: Fail if Price < Open (red candle forming - downward momentum)
+        - SHORT: Fail if Price > Open (green candle forming - upward momentum)
+        """
+        result = {'pass': True, 'detail': 'No candle data'}
+        
+        if current_price is None or forming_candle_open is None:
+            return result
+        
+        if direction == SignalDirection.LONG:
+            if current_price < forming_candle_open:
+                result['pass'] = False
+                result['detail'] = f'✗ Red candle forming (Price < Open) - Falling knife'
+            else:
+                result['pass'] = True
+                result['detail'] = f'✓ Green candle forming - Bullish momentum'
+        else:  # SHORT
+            if current_price > forming_candle_open:
+                result['pass'] = False
+                result['detail'] = f'✗ Green candle forming (Price > Open) - Rising knife'
+            else:
+                result['pass'] = True
+                result['detail'] = f'✓ Red candle forming - Bearish momentum'
+        
+        return result
+    
     def calculate_adaptive_targets(
         self,
         atr: float,
@@ -281,15 +357,16 @@ class SignalDetector:
         hurst: Optional[float] = None
     ) -> Dict:
         """
-        ALPHA ENHANCEMENT 4: VOLATILITY-ADAPTIVE TARGETS (Sharpe Optimizer)
+        SURVIVAL FIX V2.0: VOLATILITY-ADAPTIVE TARGETS (Wider for Profitability)
         
-        Logic:
-        - Weak trends (choppy): Tight targets (0.8 * ATR) - bank quick scalps
-        - Strong trends (persistent): Wide targets (3.0 * ATR) - ride momentum
+        FIXED: Previous multipliers were too tight, causing:
+        - TP hits being missed by small margins
+        - Poor risk/reward ratios
         
-        Uses Hurst Exponent or Trend Strength:
-        - Hurst < 0.5 or TrendStrength < 0.3: Mean-reverting (tight)
-        - Hurst > 0.5 or TrendStrength > 0.7: Trending (wide)
+        NEW TARGETS (wider to ensure profitability):
+        - Strong Trend (>0.7): TP1 2.0x, TP2 3.5x, SL 1.0x (R:R = 2:1)
+        - Choppy (<0.3): TP1 1.5x, TP2 2.5x, SL 1.2x (R:R = 1.25:1)
+        - Normal: TP1 1.8x, TP2 3.0x, SL 1.0x (R:R = 1.8:1)
         
         Returns: {
             'tp1_multiplier': float,
@@ -299,13 +376,13 @@ class SignalDetector:
             'regime_detail': str
         }
         """
-        # Default targets (baseline)
+        # Default targets (NORMAL regime - balanced)
         targets = {
-            'tp1_multiplier': 2.0,
-            'tp2_multiplier': 3.5,
-            'sl_multiplier': 1.5,
+            'tp1_multiplier': 1.8,
+            'tp2_multiplier': 3.0,
+            'sl_multiplier': 1.0,
             'use_trailing': False,
-            'regime_detail': 'Neutral'
+            'regime_detail': 'Normal'
         }
         
         try:
@@ -319,29 +396,29 @@ class SignalDetector:
             else:
                 return targets  # No data, use defaults
             
-            # CHOPPY MARKET (Mean-Reverting): Tight Targets
+            # CHOPPY MARKET (Mean-Reverting): Conservative targets
             if strength < 0.3:
-                targets['tp1_multiplier'] = 0.8  # Quick scalp
-                targets['tp2_multiplier'] = 1.5
-                targets['sl_multiplier'] = 1.0   # Tight stop
+                targets['tp1_multiplier'] = 1.5   # Tighter but still profitable
+                targets['tp2_multiplier'] = 2.5
+                targets['sl_multiplier'] = 1.2    # Slightly wider SL for noise
                 targets['use_trailing'] = False
-                targets['regime_detail'] = f'CHOPPY ({metric}={strength:.2f}) - SCALP MODE'
+                targets['regime_detail'] = f'CHOPPY ({metric}={strength:.2f}) - CONSERVATIVE'
             
-            # MODERATE TREND
+            # NORMAL/MODERATE TREND
             elif 0.3 <= strength <= 0.7:
-                targets['tp1_multiplier'] = 2.0
-                targets['tp2_multiplier'] = 3.5
-                targets['sl_multiplier'] = 1.5
+                targets['tp1_multiplier'] = 1.8
+                targets['tp2_multiplier'] = 3.0
+                targets['sl_multiplier'] = 1.0
                 targets['use_trailing'] = False
                 targets['regime_detail'] = f'MODERATE ({metric}={strength:.2f}) - STANDARD'
             
             # STRONG TREND: Wide Targets + Trailing
             else:  # strength > 0.7
-                targets['tp1_multiplier'] = 2.5
-                targets['tp2_multiplier'] = 4.0
-                targets['sl_multiplier'] = 2.0   # Wider stop to ride trend
-                targets['use_trailing'] = True   # Let winners run
-                targets['regime_detail'] = f'TRENDING ({metric}={strength:.2f}) - RIDE IT'
+                targets['tp1_multiplier'] = 2.0
+                targets['tp2_multiplier'] = 3.5
+                targets['sl_multiplier'] = 1.0    # Tight SL, let TP do the work
+                targets['use_trailing'] = True    # Let winners run
+                targets['regime_detail'] = f'TRENDING ({metric}={strength:.2f}) - AGGRESSIVE'
         
         except Exception as e:
             logger.error(f"Error calculating adaptive targets: {e}")
