@@ -61,10 +61,17 @@ class OKXWebSocketClient:
         """Connect to OKX WebSocket and subscribe to all channels"""
         while self.is_running:
             try:
-                logger.info(f"Connecting to {self.url}...")
-                async with websockets.connect(self.url, ping_interval=20, ping_timeout=10) as ws:
+                logger.info(f"Connecting to {self.url}... (attempt {self.reconnect_attempts + 1})")
+                async with websockets.connect(
+                    self.url, 
+                    ping_interval=20, 
+                    ping_timeout=10,
+                    close_timeout=5
+                ) as ws:
                     self.ws = ws
-                    logger.info("Connected to OKX WebSocket")
+                    self.connected_since = time.time()
+                    self.reconnect_attempts = 0  # Reset on successful connection
+                    logger.info(f"Connected to OKX WebSocket for {self.symbol}")
                     
                     # Subscribe to all channels with 300ms delay
                     subscriptions = [
@@ -95,15 +102,26 @@ class OKXWebSocketClient:
                             logger.error(f"Error handling message: {e}")
                             
             except websockets.exceptions.WebSocketException as e:
+                self.ws = None
+                self.connected_since = None
                 logger.error(f"WebSocket error: {e}")
                 if self.is_running:
-                    logger.info(f"Reconnecting in {self.reconnect_delay} seconds...")
-                    await asyncio.sleep(self.reconnect_delay)
+                    self.reconnect_attempts += 1
+                    self.total_reconnects += 1
+                    # Exponential backoff with cap
+                    delay = min(self.reconnect_delay * (2 ** min(self.reconnect_attempts, 4)), self.max_reconnect_delay)
+                    logger.info(f"Reconnecting in {delay} seconds... (total reconnects: {self.total_reconnects})")
+                    await asyncio.sleep(delay)
             except Exception as e:
+                self.ws = None
+                self.connected_since = None
                 logger.error(f"Unexpected error: {e}")
                 if self.is_running:
-                    logger.info(f"Reconnecting in {self.reconnect_delay} seconds...")
-                    await asyncio.sleep(self.reconnect_delay)
+                    self.reconnect_attempts += 1
+                    self.total_reconnects += 1
+                    delay = min(self.reconnect_delay * (2 ** min(self.reconnect_attempts, 4)), self.max_reconnect_delay)
+                    logger.info(f"Reconnecting in {delay} seconds... (total reconnects: {self.total_reconnects})")
+                    await asyncio.sleep(delay)
     
     async def _handle_message(self, data: dict):
         """Route messages to appropriate handlers"""
