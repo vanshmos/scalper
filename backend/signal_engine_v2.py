@@ -1021,6 +1021,7 @@ class SignalEngine:
             # The cached results are primarily for the signal state machine
             candles_5m_list = list(self.candles_5m)
             candles_15m_list = list(self.candles_15m)
+            candles_1m_list = list(self.candles_1m)
             
             # Detect regime using CONFIRMED indicators (prevents repainting)
             regime = self.regime_detector.detect_regime(
@@ -1032,6 +1033,11 @@ class SignalEngine:
                 conf_ind.get('ema50_15m'),
                 conf_ind.get('atr')
             )
+            
+            # SURVIVAL FIX: Extract forming candle open for display
+            forming_candle_open = None
+            if len(candles_1m_list) > 0:
+                forming_candle_open = candles_1m_list[-1].close
             
             # Calculate signals using detector with LIVE indicators
             long_result = self.detector.detect_signal_with_alpha(
@@ -1054,7 +1060,8 @@ class SignalEngine:
                 bollinger=live_ind.get('bollinger'),
                 vwap=live_ind.get('vwap'),
                 trend_strength=live_ind.get('trend_strength'),
-                hurst=None
+                hurst=None,
+                forming_candle_open=forming_candle_open
             )
             
             short_result = self.detector.detect_signal_with_alpha(
@@ -1077,7 +1084,8 @@ class SignalEngine:
                 bollinger=live_ind.get('bollinger'),
                 vwap=live_ind.get('vwap'),
                 trend_strength=live_ind.get('trend_strength'),
-                hurst=None
+                hurst=None,
+                forming_candle_open=forming_candle_open
             )
             
             long_score = long_result['score']
