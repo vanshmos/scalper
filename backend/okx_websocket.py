@@ -195,14 +195,3 @@ class OKXWebSocketClient:
         if self.ws:
             await self.ws.close()
             logger.info("WebSocket connection closed")
-    
-    def get_health_status(self) -> Dict:
-        """Get health status of data streams"""
-        current_time = time.time()
-        return {
-            'candle_1m_age': current_time - self.last_data_time['candle_1m'],
-            'candle_5m_age': current_time - self.last_data_time['candle_5m'],
-            'ticker_age': current_time - self.last_data_time['ticker'],
-            'orderbook_age': current_time - self.last_data_time['orderbook'],
-            'funding_age': current_time - self.last_data_time['funding']
-        }
