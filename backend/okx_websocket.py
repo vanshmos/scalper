@@ -16,6 +16,8 @@ class OKXWebSocketClient:
         self.ws: Optional[websockets.WebSocketClientProtocol] = None
         self.is_running = False
         self.reconnect_delay = 5
+        self.max_reconnect_delay = 60  # Cap at 60 seconds
+        self.reconnect_attempts = 0
         
         # Callbacks
         self.on_candle_1m: Optional[Callable] = None
@@ -34,6 +36,25 @@ class OKXWebSocketClient:
             'ticker': 0,
             'orderbook': 0,
             'funding': 0
+        }
+        
+        # Connection health tracking
+        self.connected_since = None
+        self.total_reconnects = 0
+        
+    def get_health_status(self) -> Dict:
+        """Get connection health status for monitoring"""
+        now = time.time()
+        last_data = max(self.last_data_time.values()) if self.last_data_time else 0
+        data_age = now - last_data if last_data > 0 else None
+        
+        return {
+            'connected': self.ws is not None and self.is_running,
+            'connected_since': self.connected_since,
+            'uptime_seconds': (now - self.connected_since) if self.connected_since else 0,
+            'last_data_age_seconds': data_age,
+            'total_reconnects': self.total_reconnects,
+            'data_stale': data_age is not None and data_age > 30  # Stale if >30s without data
         }
         
     async def connect(self):
