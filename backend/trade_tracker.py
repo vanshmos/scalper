@@ -172,7 +172,7 @@ class TradeTracker:
         - Updates MFE/MAE (based on $100k capital @ 10x leverage)
         - Captures snapshots at 10s intervals
         - Checks TP/SL hits
-        - Auto-closes after 60s
+        - Auto-closes after 180s (3 minutes)
         
         Args:
             current_price: Current market price
