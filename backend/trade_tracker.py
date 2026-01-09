@@ -263,7 +263,7 @@ class TradeTracker:
         Outcomes:
         - WIN: TP1 was hit
         - LOSS: SL was hit
-        - EXPIRED: 60s time limit reached (P&L determines if profitable or not)
+        - EXPIRED: 180s time limit reached (P&L determines if profitable or not)
         
         Args:
             outcome: WIN, LOSS, or EXPIRED
