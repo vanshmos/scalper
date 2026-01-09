@@ -448,10 +448,18 @@ class SignalDetector:
         bollinger: Optional[Dict] = None,
         vwap: Optional[float] = None,
         trend_strength: Optional[float] = None,
-        hurst: Optional[float] = None
+        hurst: Optional[float] = None,
+        # SURVIVAL FIX inputs
+        forming_candle_open: Optional[float] = None
     ) -> Dict:
         """
-        Comprehensive signal detection with all ALPHA enhancements
+        Comprehensive signal detection with all ALPHA enhancements + SURVIVAL FIXES
+        
+        V2.0 SURVIVAL FIX additions:
+        - Mean Reversion Guard (Bollinger extremes)
+        - Candle Color Guard (Falling Knife protection)
+        - Raised thresholds (forming=80, active=88)
+        - Wider targets for profitability
         
         Returns enhanced signal dict with:
         - Original score
@@ -459,6 +467,8 @@ class SignalDetector:
         - Velocity checks
         - Liquidity sweep detection
         - VWAP distance guard
+        - Mean reversion guard
+        - Candle color guard
         - Adaptive targets
         """
         result = {
@@ -476,6 +486,10 @@ class SignalDetector:
             velocity_check = self.check_velocity_signal(direction, obi, obi_velocity, cvd_5m, cvd_velocity)
             sweep_check = self.check_liquidity_sweep(direction, current_price, bollinger, cvd_5m, rsi_5m)
             vwap_check = self.check_vwap_distance(direction, current_price, vwap)
+            
+            # SURVIVAL FIX: New mandatory guards
+            mean_reversion_check = self.check_mean_reversion_guard(direction, current_price, bollinger)
+            candle_color_check = self.check_candle_color_guard(direction, current_price, forming_candle_open)
             
             # Store alpha check results
             result['alpha_checks'] = {
