@@ -543,6 +543,7 @@ class SignalEngine:
             # Detect regime using CONFIRMED indicators (prevents repainting)
             candles_5m_list = list(self.candles_5m)
             candles_15m_list = list(self.candles_15m)
+            candles_1m_list = list(self.candles_1m)
             regime = self.regime_detector.detect_regime(
                 candles_5m_list,
                 candles_15m_list,
@@ -552,6 +553,12 @@ class SignalEngine:
                 conf_ind.get('ema50_15m'),
                 conf_ind.get('atr')
             )
+            
+            # SURVIVAL FIX: Extract forming candle open for Falling Knife protection
+            # Use last confirmed 1m candle's close as proxy for forming candle's open
+            forming_candle_open = None
+            if len(candles_1m_list) > 0:
+                forming_candle_open = candles_1m_list[-1].close
             
             # CRITICAL: Use institutional SignalDetector for LONG signals
             # Use LIVE indicators for low-latency entry triggers
@@ -576,7 +583,9 @@ class SignalEngine:
                 bollinger=live_ind.get('bollinger'),
                 vwap=live_ind.get('vwap'),
                 trend_strength=live_ind.get('trend_strength'),
-                hurst=None  # Using trend_strength instead
+                hurst=None,
+                # SURVIVAL FIX inputs
+                forming_candle_open=forming_candle_open
             )
             
             # CRITICAL: Use institutional SignalDetector for SHORT signals
@@ -601,7 +610,9 @@ class SignalEngine:
                 bollinger=live_ind.get('bollinger'),
                 vwap=live_ind.get('vwap'),
                 trend_strength=live_ind.get('trend_strength'),
-                hurst=None
+                hurst=None,
+                # SURVIVAL FIX inputs
+                forming_candle_open=forming_candle_open
             )
             
             # Determine which signal is stronger
