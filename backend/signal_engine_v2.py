@@ -952,14 +952,15 @@ class SignalEngine:
                         'entry_price': entry,
                         'tp1': tp1,
                         'sl': sl,
-                        'confidence_score': active_result['score']  # Must be >= 80 to be tracked
+                        'confidence_score': active_result['score']  # Must be >= 88 to be tracked
                     })
                     
             elif self.signal_state.status == "ACTIVE":
-                # Active signals expire after 1 minute (scalping)
+                # SURVIVAL FIX: Extended time window from 60s to 180s
+                # Gives trades room to breathe and reach TP
                 elapsed = current_time - self.signal_state.entry_time
-                if elapsed >= 60:
-                    logger.info("Signal EXPIRED after 1 minute")
+                if elapsed >= 180:  # 3 minutes instead of 1 minute
+                    logger.info("Signal EXPIRED after 3 minutes")
                     self.signal_state.reset()
                     
         except Exception as e:
