@@ -54,6 +54,43 @@ async def route_ticker(symbol: str, data: dict):
     if symbol in signal_engines:
         await signal_engines[symbol].on_ticker(data)
 
+@app.get("/api/health")
+async def health_check():
+    """
+    Health check endpoint for monitoring deployed app.
+    Returns connection status and data freshness for all engines.
+    """
+    try:
+        health = {
+            'status': 'healthy',
+            'timestamp': time.time(),
+            'engines': {}
+        }
+        
+        all_healthy = True
+        for display_name, engine in signal_engines.items():
+            ws_health = engine.ws_client.get_health_status()
+            engine_health = {
+                'connected': ws_health['connected'],
+                'uptime_seconds': ws_health['uptime_seconds'],
+                'last_data_age_seconds': ws_health['last_data_age_seconds'],
+                'data_stale': ws_health['data_stale'],
+                'total_reconnects': ws_health['total_reconnects'],
+                'current_price': engine.current_price
+            }
+            health['engines'][display_name] = engine_health
+            
+            # Mark unhealthy if data is stale or disconnected
+            if ws_health['data_stale'] or not ws_health['connected']:
+                all_healthy = False
+        
+        health['status'] = 'healthy' if all_healthy else 'degraded'
+        return health
+        
+    except Exception as e:
+        logger.error(f"Health check error: {e}")
+        return {'status': 'error', 'message': str(e)}
+
 @app.on_event("startup")
 async def startup_event():
     """Start all signal engines on app startup"""
