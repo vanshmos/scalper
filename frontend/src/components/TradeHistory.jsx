@@ -140,9 +140,10 @@ const TradeHistory = () => {
                     <p className="font-semibold mb-1">P&L Calculation:</p>
                     <p className="text-slate-300">• Capital: $100,000</p>
                     <p className="text-slate-300">• Leverage: 10x</p>
-                    <p className="text-slate-300">• Position Size: $1,000,000</p>
+                    <p className="text-slate-300">• Position: $1,000,000</p>
+                    <p className="text-orange-400 mt-1">• Fees: $1,000/trade (OKX 0.05%)</p>
                     <p className="text-slate-400 mt-2 text-xs">
-                      ROI% = P&L ÷ Capital × 100
+                      NET P&L = Gross P&L − $1,000 fees
                     </p>
                     <p className="text-slate-400 mt-1 text-xs">
                       Only signals with confidence ≥80 are tracked
