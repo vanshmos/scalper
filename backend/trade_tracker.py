@@ -284,12 +284,15 @@ class TradeTracker:
             else:  # SHORT
                 price_change = trade.entry_price - exit_price
             
-            # Calculate P&L based on $100k capital @ 10x leverage ($1M position)
+            # Calculate GROSS P&L based on $100k capital @ 10x leverage ($1M position)
             pnl_percent = (price_change / trade.entry_price) * 100  # Raw price change %
-            pnl_dollar = (price_change / trade.entry_price) * self.POSITION_SIZE
+            gross_pnl = (price_change / trade.entry_price) * self.POSITION_SIZE
             
-            # ROI% = P&L / Capital (shows return on actual capital deployed)
-            roi_percent = (pnl_dollar / self.CAPITAL) * 100
+            # SUBTRACT OKX FEES (entry + exit taker fees)
+            net_pnl = gross_pnl - self.ROUND_TRIP_FEE
+            
+            # ROI% = NET P&L / Capital (shows return on actual capital deployed)
+            roi_percent = (net_pnl / self.CAPITAL) * 100
             
             # Build result dict
             result = {
@@ -304,11 +307,13 @@ class TradeTracker:
                 'sl': trade.sl,
                 'confidence_score': trade.confidence_score,
                 'outcome': outcome,
-                'pnl_absolute': round(pnl_dollar, 2),      # Dollar P&L (with leverage)
-                'pnl_percent': round(pnl_percent, 4),      # Raw price change %
-                'roi_percent': round(roi_percent, 4),      # ROI on capital (leveraged)
-                'max_favorable': round(trade.max_favorable, 2),  # Already in dollars
-                'max_adverse': round(trade.max_adverse, 2),      # Already in dollars
+                'gross_pnl': round(gross_pnl, 2),            # P&L before fees
+                'fees': round(self.ROUND_TRIP_FEE, 2),       # Total fees paid
+                'pnl_absolute': round(net_pnl, 2),           # NET P&L (after fees)
+                'pnl_percent': round(pnl_percent, 4),        # Raw price change %
+                'roi_percent': round(roi_percent, 4),        # ROI on capital (after fees)
+                'max_favorable': round(trade.max_favorable, 2),
+                'max_adverse': round(trade.max_adverse, 2),
                 'duration': round(exit_time - trade.entry_time, 1),
                 'price_snapshots': trade.price_snapshots
             }
