@@ -73,6 +73,23 @@ class RegimeDetector:
         self.last_orderbook_time = 0
         self.data_staleness_threshold = 10  # 10 seconds
         
+    def _calculate_ema(self, candles: List[Candle], period: int) -> Optional[float]:
+        """Calculate EMA for a list of candles"""
+        if len(candles) < period:
+            return None
+        
+        closes = [c.close for c in candles if c.close is not None]
+        if len(closes) < period:
+            return None
+        
+        multiplier = 2 / (period + 1)
+        ema = sum(closes[:period]) / period  # Start with SMA
+        
+        for close in closes[period:]:
+            ema = (close * multiplier) + (ema * (1 - multiplier))
+        
+        return ema
+    
     def detect_regime(
         self,
         candles_5m: List[Candle],
@@ -83,7 +100,14 @@ class RegimeDetector:
         ema50_15m: Optional[float],
         atr_5m: Optional[float]
     ) -> RegimeType:
-        """Detect market regime"""
+        """
+        Detect market regime using TRUE SLOPE calculation.
+        
+        FIXED: Previous implementation used (ema - prev_candle.close) which is mathematically flawed.
+        NEW: Calculate prev_ema using history minus last candle, then slope = current_ema - prev_ema
+        
+        Trend confirmed only if: EMA alignment AND slope matches direction
+        """
         try:
             # Update ATR baseline
             if atr_5m is not None:
@@ -103,43 +127,37 @@ class RegimeDetector:
                 self.current_regime = RegimeType.RANGING
                 return self.current_regime
             
-            if len(candles_5m) < 2 or len(candles_15m) < 2:
+            # Need at least 22 candles to calculate prev EMA20
+            if len(candles_5m) < 22 or len(candles_15m) < 22:
                 self.current_regime = RegimeType.RANGING
                 return self.current_regime
             
-            # Calculate EMA slopes
-            prev_5m = candles_5m[-2]
-            curr_5m = candles_5m[-1]
+            # FIXED: Calculate TRUE SLOPE using previous EMA
+            # Previous EMA = EMA calculated on candles[:-1] (excluding last candle)
+            prev_ema20_5m = self._calculate_ema(candles_5m[:-1], 20)
+            prev_ema20_15m = self._calculate_ema(candles_15m[:-1], 20)
             
-            # Check if we can calculate slopes
-            if prev_5m.close is None or curr_5m.close is None:
+            if prev_ema20_5m is None or prev_ema20_15m is None:
                 self.current_regime = RegimeType.RANGING
                 return self.current_regime
             
-            ema20_5m_slope = ema20_5m - prev_5m.close if prev_5m.close else 0
+            # TRUE SLOPE = current_ema - prev_ema
+            ema20_5m_slope = ema20_5m - prev_ema20_5m
+            ema20_15m_slope = ema20_15m - prev_ema20_15m
             
-            prev_15m = candles_15m[-2]
-            curr_15m = candles_15m[-1]
-            
-            if prev_15m.close is None or curr_15m.close is None:
-                self.current_regime = RegimeType.RANGING
-                return self.current_regime
-                
-            ema20_15m_slope = ema20_15m - prev_15m.close if prev_15m.close else 0
-            
-            # TRENDING_BULL: Both 5m and 15m have EMA20 > EMA50 with positive slope
+            # TRENDING_BULL: EMA20 > EMA50 AND positive slope (trend direction matches alignment)
             if (ema20_5m > ema50_5m and ema20_15m > ema50_15m and 
                 ema20_5m_slope > 0 and ema20_15m_slope > 0):
                 self.current_regime = RegimeType.TRENDING_BULL
                 return self.current_regime
             
-            # TRENDING_BEAR: Both 5m and 15m have EMA20 < EMA50 with negative slope
+            # TRENDING_BEAR: EMA20 < EMA50 AND negative slope (trend direction matches alignment)
             if (ema20_5m < ema50_5m and ema20_15m < ema50_15m and 
                 ema20_5m_slope < 0 and ema20_15m_slope < 0):
                 self.current_regime = RegimeType.TRENDING_BEAR
                 return self.current_regime
             
-            # Default to RANGING
+            # Default to RANGING (EMA alignment doesn't match slope = choppy/transitioning)
             self.current_regime = RegimeType.RANGING
             return self.current_regime
             
