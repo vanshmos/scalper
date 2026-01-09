@@ -323,8 +323,7 @@ class TradeTracker:
             
             logger.info(f"{self.symbol}: Trade {trade.id} CLOSED - {outcome} | "
                        f"Entry: ${trade.entry_price:.2f} → Exit: ${exit_price:.2f} | "
-                       f"TP1: ${trade.tp1:.2f}, SL: ${trade.sl:.2f} | "
-                       f"PnL: ${pnl_dollar:.2f} (ROI: {roi_percent:.2f}%)")
+                       f"Gross: ${gross_pnl:.2f} - Fees: ${self.ROUND_TRIP_FEE:.0f} = NET: ${net_pnl:.2f} (ROI: {roi_percent:.2f}%)")
             
             # Clear active trade
             self.active_trade = None
