@@ -238,8 +238,8 @@ class TradeTracker:
             if sl_hit:
                 return self._close_trade('LOSS', current_price, current_time)
             
-            # Auto-close after 60 seconds
-            if elapsed >= 60.0:
+            # Auto-close after 180 seconds (SURVIVAL FIX: extended from 60s)
+            if elapsed >= 180.0:
                 # Determine outcome based on final P&L
                 if pnl_dollar > 0:
                     outcome = 'WIN'
