@@ -19,12 +19,14 @@ class SignalDetector:
     2. Liquidity Sweep Detection (High Win-Rate Setups)
     3. VWAP Distance Guard (Slippage Protection)
     4. Adaptive Scoring with Confidence Boosts
+    5. Mean Reversion Guard (Bollinger)
+    6. Candle Color Guard (Falling Knife Protection)
     """
     
     def __init__(self):
-        # V1.5 Thresholds
-        self.forming_threshold = 65  # Start forming signal
-        self.active_threshold = 80   # Increased from 70: Fire signal only for high quality
+        # V2.0 SURVIVAL FIX: Raised thresholds for higher quality signals
+        self.forming_threshold = 80   # Raised from 65: Only form high-quality signals
+        self.active_threshold = 88    # Raised from 80: Fire signal only for premium quality
         
         # Hard gate limits
         self.max_ema_distance_pct = 1.0  # Must be within 1% of EMA20
