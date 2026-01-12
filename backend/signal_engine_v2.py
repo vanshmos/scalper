@@ -709,17 +709,19 @@ class SignalEngine:
                 forming_candle_5m = Candle(int(time.time()), '5m')
                 forming_candle_5m.open = last_confirmed_5m.close
                 
-                # Aggregate high/low/volume from recent 1m candles + current price
+                # Aggregate high/low from recent 1m candles + current price
                 if recent_1m:
                     highs = [c.high for c in recent_1m if c.high] + [self.current_price]
                     lows = [c.low for c in recent_1m if c.low] + [self.current_price]
                     forming_candle_5m.high = max(highs)
                     forming_candle_5m.low = min(lows)
-                    forming_candle_5m.volume = sum(c.volume for c in recent_1m if c.volume)
+                    # HFT FIX: Use real-time 5m volume counter (not derived from 1m candles)
+                    forming_candle_5m.volume = self.realtime_5m_volume
                 else:
                     forming_candle_5m.high = max(last_confirmed_5m.close, self.current_price)
                     forming_candle_5m.low = min(last_confirmed_5m.close, self.current_price)
-                    forming_candle_5m.volume = 0
+                    # HFT FIX: Use real-time 5m volume counter
+                    forming_candle_5m.volume = self.realtime_5m_volume
                 
                 forming_candle_5m.close = self.current_price
                 
