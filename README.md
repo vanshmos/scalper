@@ -1,6 +1,23 @@
-# BTC Scalping Signal Engine
+# Crypto Scalping Signal Engine V2.1
 
-A real-time cryptocurrency scalping signal engine for BTC perpetual futures. Generates high-confidence trading signals using multi-timeframe analysis, orderbook dynamics, and volume flow.
+A sophisticated real-time crypto scalping signal engine for BTC, ETH, and SOL perpetual futures. Uses OKX WebSocket data to generate high-quality trading signals with Telegram alerts.
+
+**Current Version:** V2.1 Rebalanced (January 2026)  
+**Signal Threshold:** 75 (forming: 70)  
+**Target Win Rate:** 65-70%  
+**Expected Frequency:** 3-8 signals/day across 3 symbols
+
+## Features
+
+- **Real-time Data:** OKX WebSocket feeds for candles (1m, 5m, 15m), trades, and order books
+- **Multi-Symbol:** Simultaneous monitoring of BTC, ETH, and SOL perpetual swaps
+- **Advanced Indicators:** EMA, RSI, ATR, CVD, OBI, Bollinger Bands, VWAP, and more
+- **Institutional-Grade Logic:** Velocity signals, liquidity sweep detection, regime-aware scoring
+- **Adaptive Targets:** Dynamic TP/SL based on market volatility and trend strength ($100K capital, 10x leverage)
+- **State Persistence:** Survives restarts with saved candle and CVD/OBI history
+- **Trade Accountability:** Full trade tracking with P&L, ROI, and performance analytics (SQLite)
+- **Web Dashboard:** Real-time multi-symbol interface with live indicators and signal status
+- **Telegram Alerts:** Instant notifications for high-quality signals
 
 ## Features
 
