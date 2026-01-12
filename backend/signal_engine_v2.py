@@ -842,6 +842,7 @@ class SignalEngine:
                 },
                 'obi_velocity': obi_velocity,
                 'cvd_velocity': cvd_velocity,
+                'ofi': ofi,  # TOP 0.1% SCALPER: Order Flow Imbalance
                 'bollinger': bollinger,
                 'vwap': vwap,
                 'trend_strength': trend_strength
