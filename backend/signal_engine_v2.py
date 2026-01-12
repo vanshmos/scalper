@@ -117,6 +117,9 @@ class SignalEngine:
         self.forming_1m_volume = 0
         self.forming_1m_start_time = None
         
+        # HFT FIX: Real-time 5m volume (not derived from 1m candles)
+        self.realtime_5m_volume = 0  # Persistent counter across all trades in 5m window
+        
         # COOLDOWN: Prevent signal spam
         self.last_signal_time = {}  # {direction: timestamp}
         self.signal_cooldown = 300  # 5 minutes between same-direction signals
