@@ -812,6 +812,9 @@ class SignalEngine:
             obi_velocity = self.indicators.get_obi_velocity()
             cvd_velocity = self.indicators.get_cvd_velocity()
             
+            # TOP 0.1% SCALPER: Order Flow Imbalance
+            ofi = self.indicators.ofi_smoothed  # Get current OFI value
+            
             bollinger = self.indicators.calculate_bollinger_bands(candles_5m_live, period=20, std_dev=2.0)
             vwap = self.indicators.calculate_vwap(candles_5m_live)
             trend_strength = self.indicators.calculate_trend_strength(candles_5m_live, period=20)
