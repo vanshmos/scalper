@@ -625,6 +625,26 @@ class SignalDetector:
             # Apply ALPHA boosts
             alpha_boost = 0
             
+            # TOP 0.1% SCALPER: Order Flow Imbalance boost (HIGHEST PRIORITY)
+            # This is extracted from kwargs in detect_signal_with_alpha
+            ofi = kwargs.get('ofi')
+            if ofi is not None:
+                ofi_threshold = 0.6  # Institutional-grade threshold
+                if direction == SignalDirection.LONG and ofi > ofi_threshold:
+                    ofi_boost = min(20, int((ofi - ofi_threshold) * 50))  # Up to 20 pts
+                    alpha_boost += ofi_boost
+                    result['breakdown']['order_flow'] = {
+                        'points': ofi_boost,
+                        'detail': f'OFI {ofi:.3f} - Strong buying pressure'
+                    }
+                elif direction == SignalDirection.SHORT and ofi < -ofi_threshold:
+                    ofi_boost = min(20, int((abs(ofi) - ofi_threshold) * 50))  # Up to 20 pts
+                    alpha_boost += ofi_boost
+                    result['breakdown']['order_flow'] = {
+                        'points': ofi_boost,
+                        'detail': f'OFI {ofi:.3f} - Strong selling pressure'
+                    }
+            
             # Velocity boost (WEIGHTED HEAVILY per user request)
             if velocity_check['pass']:
                 alpha_boost += velocity_check['confidence_boost']
