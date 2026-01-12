@@ -475,22 +475,22 @@ class SignalDetector:
         forming_candle_open: Optional[float] = None
     ) -> Dict:
         """
-        Comprehensive signal detection with all ALPHA enhancements + SURVIVAL FIXES
+        Comprehensive signal detection with all ALPHA enhancements + V2.1 REBALANCED
         
-        V2.0 SURVIVAL FIX additions:
-        - Mean Reversion Guard (Bollinger extremes)
-        - Candle Color Guard (Falling Knife protection)
-        - Raised thresholds (forming=80, active=88)
-        - Wider targets for profitability
+        V2.1 REBALANCED changes:
+        - Active threshold: 88 → 75 (realistic)
+        - Candle Color Guard: REMOVED (buy dips with strong flow)
+        - Mean Reversion Guard: ADVISORY only, regime-aware
+        - CVD/OBI thresholds: Lowered (0.05/0.08)
+        - Regime scoring: More generous in RANGING
         
         Returns enhanced signal dict with:
         - Original score
         - Alpha confidence boosts
-        - Velocity checks
+        - Velocity checks (weighted heavily)
         - Liquidity sweep detection
         - VWAP distance guard
-        - Mean reversion guard
-        - Candle color guard
+        - Advisory checks (non-blocking)
         - Adaptive targets
         """
         result = {
@@ -509,8 +509,8 @@ class SignalDetector:
             sweep_check = self.check_liquidity_sweep(direction, current_price, bollinger, cvd_5m, rsi_5m)
             vwap_check = self.check_vwap_distance(direction, current_price, vwap)
             
-            # SURVIVAL FIX: New mandatory guards
-            mean_reversion_check = self.check_mean_reversion_guard(direction, current_price, bollinger)
+            # V2.1: Advisory checks (regime-aware, non-blocking)
+            mean_reversion_check = self.check_mean_reversion_guard(direction, current_price, bollinger, regime)
             candle_color_check = self.check_candle_color_guard(direction, current_price, forming_candle_open)
             
             # Store alpha check results
@@ -522,7 +522,7 @@ class SignalDetector:
                 'candle_color': candle_color_check
             }
             
-            # HARD VETO: VWAP distance check
+            # HARD VETO: VWAP distance check (only remaining hard veto)
             if not vwap_check['pass']:
                 result['signal_ready'] = False
                 result['breakdown']['VETO'] = {
@@ -531,46 +531,37 @@ class SignalDetector:
                 }
                 return result
             
-            # SURVIVAL FIX VETO: Mean Reversion Guard
-            if not mean_reversion_check['pass']:
-                result['signal_ready'] = False
-                result['breakdown']['VETO'] = {
-                    'points': 0,
-                    'detail': f"🚫 MEAN REVERSION VETO: {mean_reversion_check['detail']}"
-                }
-                return result
-            
-            # SURVIVAL FIX VETO: Candle Color Guard (Falling Knife Protection)
-            if not candle_color_check['pass']:
-                result['signal_ready'] = False
-                result['breakdown']['VETO'] = {
-                    'points': 0,
-                    'detail': f"🚫 FALLING KNIFE VETO: {candle_color_check['detail']}"
-                }
-                return result
+            # V2.1: Mean Reversion is now advisory - apply score penalty instead of veto
+            score_penalty = mean_reversion_check.get('score_penalty', 0)
             
             # Calculate base score (simplified version of original logic)
             base_score = 0
             
-            # 1. Regime (20 points)
-            # TREND-FOLLOWING: Aligned regime gets full points
-            # MEAN-REVERSION: RANGING with RSI extremes gets partial points (contrarian)
+            # 1. Regime (20 points) - V2.1: More generous in RANGING
             if direction == SignalDirection.LONG:
                 if regime == RegimeType.TRENDING_BULL:
                     base_score += 20
                     result['breakdown']['regime'] = {'points': 20, 'detail': 'TRENDING_BULL'}
                 elif regime == RegimeType.RANGING and rsi_5m is not None and rsi_5m < 35:
                     # Mean reversion: Oversold in ranging market
-                    base_score += 12
-                    result['breakdown']['regime'] = {'points': 12, 'detail': f'RANGING+OVERSOLD (RSI {rsi_5m:.0f})'}
+                    base_score += 15  # Increased from 12
+                    result['breakdown']['regime'] = {'points': 15, 'detail': f'RANGING+OVERSOLD (RSI {rsi_5m:.0f})'}
+                elif regime == RegimeType.RANGING:
+                    # Partial points for RANGING without extreme RSI
+                    base_score += 8  # NEW: Don't completely handicap RANGING
+                    result['breakdown']['regime'] = {'points': 8, 'detail': 'RANGING (neutral)'}
             else:
                 if regime == RegimeType.TRENDING_BEAR:
                     base_score += 20
                     result['breakdown']['regime'] = {'points': 20, 'detail': 'TRENDING_BEAR'}
                 elif regime == RegimeType.RANGING and rsi_5m is not None and rsi_5m > 65:
                     # Mean reversion: Overbought in ranging market
-                    base_score += 12
-                    result['breakdown']['regime'] = {'points': 12, 'detail': f'RANGING+OVERBOUGHT (RSI {rsi_5m:.0f})'}
+                    base_score += 15  # Increased from 12
+                    result['breakdown']['regime'] = {'points': 15, 'detail': f'RANGING+OVERBOUGHT (RSI {rsi_5m:.0f})'}
+                elif regime == RegimeType.RANGING:
+                    # Partial points for RANGING without extreme RSI
+                    base_score += 8  # NEW: Don't completely handicap RANGING
+                    result['breakdown']['regime'] = {'points': 8, 'detail': 'RANGING (neutral)'}
             
             # 2. Trend Alignment (15 points)
             aligned = 0
@@ -582,21 +573,21 @@ class SignalDetector:
                 base_score += 15
                 result['breakdown']['trends'] = {'points': 15, 'detail': 'Aligned'}
             
-            # 3. CVD (20 points)
+            # 3. CVD (20 points) - V2.1: Lowered threshold to 0.05
             if cvd_5m is not None:
-                if direction == SignalDirection.LONG and cvd_5m > 0.08:
+                if direction == SignalDirection.LONG and cvd_5m > self.min_cvd_threshold:
                     base_score += 20
                     result['breakdown']['cvd'] = {'points': 20, 'detail': f'{cvd_5m:.3f}'}
-                elif direction == SignalDirection.SHORT and cvd_5m < -0.08:
+                elif direction == SignalDirection.SHORT and cvd_5m < -self.min_cvd_threshold:
                     base_score += 20
                     result['breakdown']['cvd'] = {'points': 20, 'detail': f'{cvd_5m:.3f}'}
             
-            # 4. OBI (15 points)
+            # 4. OBI (15 points) - V2.1: Lowered threshold to 0.08
             if obi is not None:
-                if direction == SignalDirection.LONG and obi > 0.1:
+                if direction == SignalDirection.LONG and obi > self.min_obi_threshold:
                     base_score += 15
                     result['breakdown']['obi'] = {'points': 15, 'detail': f'{obi:.3f}'}
-                elif direction == SignalDirection.SHORT and obi < -0.1:
+                elif direction == SignalDirection.SHORT and obi < -self.min_obi_threshold:
                     base_score += 15
                     result['breakdown']['obi'] = {'points': 15, 'detail': f'{obi:.3f}'}
             
@@ -610,7 +601,7 @@ class SignalDetector:
             # Apply ALPHA boosts
             alpha_boost = 0
             
-            # Velocity boost
+            # Velocity boost (WEIGHTED HEAVILY per user request)
             if velocity_check['pass']:
                 alpha_boost += velocity_check['confidence_boost']
                 result['breakdown']['velocity'] = {
@@ -627,9 +618,19 @@ class SignalDetector:
                 }
             
             result['alpha_boost'] = alpha_boost
-            result['score'] = min(100, base_score + alpha_boost)  # Cap at 100
             
-            # Signal ready if score high enough AND all alpha checks pass
+            # Apply advisory penalty from mean reversion
+            total_score = base_score + alpha_boost + score_penalty
+            result['score'] = max(0, min(100, total_score))  # Clamp to [0, 100]
+            
+            if score_penalty < 0:
+                result['breakdown']['mean_reversion_advisory'] = {
+                    'points': score_penalty,
+                    'detail': mean_reversion_check['detail']
+                }
+            
+            # Signal ready if score high enough AND velocity check passes
+            # V2.1: Removed candle color and mean reversion hard checks
             result['signal_ready'] = (
                 result['score'] >= self.active_threshold and
                 velocity_check['pass'] and
