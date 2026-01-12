@@ -379,16 +379,16 @@ class SignalDetector:
         hurst: Optional[float] = None
     ) -> Dict:
         """
-        SURVIVAL FIX V2.0: VOLATILITY-ADAPTIVE TARGETS (Wider for Profitability)
+        V2.2 WIN RATE FIX: WIDER STOP LOSSES (Reduce premature stop-outs)
         
-        FIXED: Previous multipliers were too tight, causing:
-        - TP hits being missed by small margins
-        - Poor risk/reward ratios
+        USER FEEDBACK: Win rate < 50% due to tight SLs
         
-        NEW TARGETS (wider to ensure profitability):
-        - Strong Trend (>0.7): TP1 2.0x, TP2 3.5x, SL 1.0x (R:R = 2:1)
-        - Choppy (<0.3): TP1 1.5x, TP2 2.5x, SL 1.2x (R:R = 1.25:1)
-        - Normal: TP1 1.8x, TP2 3.0x, SL 1.0x (R:R = 1.8:1)
+        SOLUTION: Widen SL multipliers to give trades breathing room
+        - Strong Trend (>0.7): TP1 2.0x, TP2 4.0x, SL 1.5x (R:R = 1.33:1)
+        - Choppy (<0.3): TP1 1.8x, TP2 3.0x, SL 2.0x (R:R = 0.9:1 but higher win rate)
+        - Normal: TP1 2.0x, TP2 3.5x, SL 1.8x (R:R = 1.1:1)
+        
+        PHILOSOPHY: Better to have 65% win rate with 1:1 R:R than 40% with 2:1 R:R
         
         Returns: {
             'tp1_multiplier': float,
@@ -400,9 +400,9 @@ class SignalDetector:
         """
         # Default targets (NORMAL regime - balanced)
         targets = {
-            'tp1_multiplier': 1.8,
-            'tp2_multiplier': 3.0,
-            'sl_multiplier': 1.0,
+            'tp1_multiplier': 2.0,  # Widened from 1.8
+            'tp2_multiplier': 3.5,  # Widened from 3.0
+            'sl_multiplier': 1.8,   # WIDENED from 1.0 (+80%)
             'use_trailing': False,
             'regime_detail': 'Normal'
         }
@@ -418,29 +418,29 @@ class SignalDetector:
             else:
                 return targets  # No data, use defaults
             
-            # CHOPPY MARKET (Mean-Reverting): Conservative targets
+            # CHOPPY MARKET (Mean-Reverting): WIDEST SL (most noise)
             if strength < 0.3:
-                targets['tp1_multiplier'] = 1.5   # Tighter but still profitable
-                targets['tp2_multiplier'] = 2.5
-                targets['sl_multiplier'] = 1.2    # Slightly wider SL for noise
+                targets['tp1_multiplier'] = 1.8   # Slightly wider from 1.5
+                targets['tp2_multiplier'] = 3.0   # Wider from 2.5
+                targets['sl_multiplier'] = 2.0    # WIDENED from 1.2 (+67%)
                 targets['use_trailing'] = False
-                targets['regime_detail'] = f'CHOPPY ({metric}={strength:.2f}) - CONSERVATIVE'
+                targets['regime_detail'] = f'CHOPPY ({metric}={strength:.2f}) - WIDE_SL'
             
             # NORMAL/MODERATE TREND
             elif 0.3 <= strength <= 0.7:
-                targets['tp1_multiplier'] = 1.8
-                targets['tp2_multiplier'] = 3.0
-                targets['sl_multiplier'] = 1.0
+                targets['tp1_multiplier'] = 2.0   # Widened from 1.8
+                targets['tp2_multiplier'] = 3.5   # Widened from 3.0
+                targets['sl_multiplier'] = 1.8    # WIDENED from 1.0 (+80%)
                 targets['use_trailing'] = False
-                targets['regime_detail'] = f'MODERATE ({metric}={strength:.2f}) - STANDARD'
+                targets['regime_detail'] = f'MODERATE ({metric}={strength:.2f}) - WIDE_SL'
             
-            # STRONG TREND: Wide Targets + Trailing
+            # STRONG TREND: Wide Targets + Moderate SL
             else:  # strength > 0.7
-                targets['tp1_multiplier'] = 2.0
-                targets['tp2_multiplier'] = 3.5
-                targets['sl_multiplier'] = 1.0    # Tight SL, let TP do the work
+                targets['tp1_multiplier'] = 2.5   # Widened from 2.0
+                targets['tp2_multiplier'] = 4.0   # Widened from 3.5
+                targets['sl_multiplier'] = 1.5    # WIDENED from 1.0 (+50%)
                 targets['use_trailing'] = True    # Let winners run
-                targets['regime_detail'] = f'TRENDING ({metric}={strength:.2f}) - AGGRESSIVE'
+                targets['regime_detail'] = f'TRENDING ({metric}={strength:.2f}) - MOMENTUM'
         
         except Exception as e:
             logger.error(f"Error calculating adaptive targets: {e}")
