@@ -28,6 +28,12 @@ class Indicators:
         self.cvd_accumulator_1m = {'buy': 0.0, 'sell': 0.0}  # Running totals
         self.cvd_accumulator_5m = {'buy': 0.0, 'sell': 0.0}
         
+        # TOP 0.1% SCALPER: Order Flow Imbalance (Aggressive Trade Classification)
+        self.ofi_window = deque()  # Store (timestamp, aggressor_side, volume) tuples
+        self.ofi_accumulator = {'buy': 0.0, 'sell': 0.0}  # Aggressive buys vs sells
+        self.ofi_smoothed: Optional[float] = None
+        self.ofi_window_seconds = 2  # 2-second rolling window for scalping
+        
     def calculate_ema(self, candles: List[Candle], period: int) -> Optional[float]:
         """Calculate EMA for given period - returns None if insufficient data"""
         try:
