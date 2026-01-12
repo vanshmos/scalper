@@ -434,22 +434,31 @@ class SignalEngine:
             logger.error(f"Error handling orderbook: {e}")
     
     async def _on_trade(self, data: dict):
-        """Handle trade updates - HFT OPTIMIZED with O(1) CVD + real-time 5m volume"""
+        """Handle trade updates - TOP 0.1% SCALPER with Order Flow Imbalance"""
         try:
             # OKX trade format: {side: 'buy'/'sell', sz: size, px: price, ts: timestamp}
             side = data.get('side')
             size = float(data.get('sz', 0))
+            price = float(data.get('px', 0))
             timestamp = int(data.get('ts', 0))  # Keep in milliseconds for indicators.py
             
             # Store trade in format expected by incremental CVD
             trade = {
                 'side': side,
                 'sz': size,
+                'px': price,  # Add price for OFI
                 'ts': timestamp
             }
             
             # HFT OPTIMIZATION: O(1) incremental CVD update (no iteration)
             cvd_result = self.indicators.update_cvd_stream(trade)
+            
+            # TOP 0.1% SCALPER: Order Flow Imbalance (aggressive trade classification)
+            ofi = self.indicators.update_order_flow_imbalance(
+                trade,
+                self.best_bid,
+                self.best_ask
+            )
             
             # LEGACY: Still append to deque for warmup/backfill (consider removing after migration)
             self.recent_trades.append(trade)
@@ -462,7 +471,6 @@ class SignalEngine:
                 self.realtime_5m_volume += size
             
             # Update current price from trade
-            price = data.get('px')
             if price:
                 self.current_price = float(price)
                 
