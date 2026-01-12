@@ -369,6 +369,9 @@ class SignalEngine:
                     self.candles_5m.append(candle)
                     logger.debug(f"Added confirmed 5m candle: {candle.timestamp}")
                     
+                    # HFT FIX: Reset real-time 5m volume when candle closes
+                    self.realtime_5m_volume = 0
+                    
         except Exception as e:
             logger.error(f"Error handling 5m candle: {e}")
     
@@ -420,26 +423,32 @@ class SignalEngine:
             logger.error(f"Error handling orderbook: {e}")
     
     async def _on_trade(self, data: dict):
-        """Handle trade updates - track for CVD and taker buy/sell ratio + EVENT-DRIVEN check"""
+        """Handle trade updates - HFT OPTIMIZED with O(1) CVD + real-time 5m volume"""
         try:
             # OKX trade format: {side: 'buy'/'sell', sz: size, px: price, ts: timestamp}
             side = data.get('side')
             size = float(data.get('sz', 0))
             timestamp = int(data.get('ts', 0))  # Keep in milliseconds for indicators.py
             
-            # Store trade in format expected by indicators.calculate_cvd()
+            # Store trade in format expected by incremental CVD
             trade = {
                 'side': side,
-                'sz': size,  # indicators.py expects 'sz' key
-                'ts': timestamp  # indicators.py expects 'ts' key in milliseconds
+                'sz': size,
+                'ts': timestamp
             }
             
-            # Add to recent trades for CVD calculation
+            # HFT OPTIMIZATION: O(1) incremental CVD update (no iteration)
+            cvd_result = self.indicators.update_cvd_stream(trade)
+            
+            # LEGACY: Still append to deque for warmup/backfill (consider removing after migration)
             self.recent_trades.append(trade)
             
             # CRITICAL: Accumulate volume for forming 1m candle
             if size:
                 self.forming_1m_volume += size
+                
+                # HFT FIX: Accumulate real-time 5m volume
+                self.realtime_5m_volume += size
             
             # Update current price from trade
             price = data.get('px')
