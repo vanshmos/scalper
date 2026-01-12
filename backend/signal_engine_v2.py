@@ -88,6 +88,10 @@ class SignalEngine:
         self.last_orderbook = None
         self.taker_buy_ratio = 0.5  # Neutral default
         
+        # TOP 0.1% SCALPER: Track best bid/ask for Order Flow Imbalance
+        self.best_bid = None
+        self.best_ask = None
+        
         # Signal state
         self.signal_state = SignalState()
         
@@ -405,6 +409,13 @@ class SignalEngine:
         """Handle orderbook updates - EVENT-DRIVEN signal check"""
         try:
             self.last_orderbook = data
+            
+            # TOP 0.1% SCALPER: Extract best bid/ask for OFI calculation
+            bids = data.get('bids', [])
+            asks = data.get('asks', [])
+            if bids and asks:
+                self.best_bid = float(bids[0][0])
+                self.best_ask = float(asks[0][0])
             
             # Feed spread and depth to rolling stats
             if self.last_orderbook:
