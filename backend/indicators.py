@@ -21,6 +21,13 @@ class Indicators:
         self.cvd_history = []  # Track last N CVD values for ROC
         self.max_history_length = 10  # Keep last 10 ticks
         
+        # HFT OPTIMIZATION: O(1) Incremental CVD Calculation
+        from collections import deque
+        self.cvd_window_1m = deque()  # Store (timestamp, side, volume) tuples
+        self.cvd_window_5m = deque()
+        self.cvd_accumulator_1m = {'buy': 0.0, 'sell': 0.0}  # Running totals
+        self.cvd_accumulator_5m = {'buy': 0.0, 'sell': 0.0}
+        
     def calculate_ema(self, candles: List[Candle], period: int) -> Optional[float]:
         """Calculate EMA for given period - returns None if insufficient data"""
         try:
@@ -264,8 +271,96 @@ class Indicators:
             logger.error(f"Error calculating depth: {e}")
             return None
     
+    def update_cvd_stream(self, trade_dict: dict) -> Dict[str, Optional[float]]:
+        """
+        HFT OPTIMIZATION: O(1) Incremental CVD update
+        
+        Updates CVD accumulators instantly on each trade without iterating.
+        Returns both 1m and 5m CVD values.
+        
+        Args:
+            trade_dict: Single trade with keys: 'ts' (timestamp ms), 'side', 'sz' (size)
+        
+        Returns:
+            {'cvd_1m': float, 'cvd_5m': float}
+        """
+        try:
+            import time
+            current_time = int(time.time() * 1000)
+            
+            timestamp = int(trade_dict.get('ts', current_time))
+            side = trade_dict.get('side', '')
+            volume = float(trade_dict.get('sz', 0))
+            
+            if not side or volume == 0:
+                return {'cvd_1m': self.cvd_1m_smoothed, 'cvd_5m': self.cvd_5m_smoothed}
+            
+            # === 1-MINUTE WINDOW ===
+            cutoff_1m = current_time - 60000  # 60 seconds
+            
+            # Remove expired trades from 1m window
+            while self.cvd_window_1m and self.cvd_window_1m[0][0] < cutoff_1m:
+                old_ts, old_side, old_vol = self.cvd_window_1m.popleft()
+                self.cvd_accumulator_1m[old_side] -= old_vol
+            
+            # Add new trade to 1m window
+            self.cvd_window_1m.append((timestamp, side, volume))
+            self.cvd_accumulator_1m[side] += volume
+            
+            # Calculate 1m CVD instantly (O(1))
+            total_1m = self.cvd_accumulator_1m['buy'] + self.cvd_accumulator_1m['sell']
+            if total_1m > 0:
+                cvd_1m = (self.cvd_accumulator_1m['buy'] - self.cvd_accumulator_1m['sell']) / total_1m
+                
+                # Apply smoothing
+                if self.cvd_1m_smoothed is None:
+                    self.cvd_1m_smoothed = cvd_1m
+                else:
+                    self.cvd_1m_smoothed = self.alpha * cvd_1m + (1 - self.alpha) * self.cvd_1m_smoothed
+            
+            # === 5-MINUTE WINDOW ===
+            cutoff_5m = current_time - 300000  # 300 seconds
+            
+            # Remove expired trades from 5m window
+            while self.cvd_window_5m and self.cvd_window_5m[0][0] < cutoff_5m:
+                old_ts, old_side, old_vol = self.cvd_window_5m.popleft()
+                self.cvd_accumulator_5m[old_side] -= old_vol
+            
+            # Add new trade to 5m window
+            self.cvd_window_5m.append((timestamp, side, volume))
+            self.cvd_accumulator_5m[side] += volume
+            
+            # Calculate 5m CVD instantly (O(1))
+            total_5m = self.cvd_accumulator_5m['buy'] + self.cvd_accumulator_5m['sell']
+            if total_5m > 0:
+                cvd_5m = (self.cvd_accumulator_5m['buy'] - self.cvd_accumulator_5m['sell']) / total_5m
+                
+                # Apply smoothing
+                if self.cvd_5m_smoothed is None:
+                    self.cvd_5m_smoothed = cvd_5m
+                else:
+                    self.cvd_5m_smoothed = self.alpha * cvd_5m + (1 - self.alpha) * self.cvd_5m_smoothed
+                
+                # Track history for velocity calculation (5m only)
+                self.cvd_history.append(self.cvd_5m_smoothed)
+                if len(self.cvd_history) > self.max_history_length:
+                    self.cvd_history.pop(0)
+            
+            return {
+                'cvd_1m': self.cvd_1m_smoothed,
+                'cvd_5m': self.cvd_5m_smoothed
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in incremental CVD update: {e}")
+            return {'cvd_1m': self.cvd_1m_smoothed, 'cvd_5m': self.cvd_5m_smoothed}
+    
     def calculate_cvd(self, trades: List[dict], window_seconds: int) -> Optional[float]:
-        """Calculate CVD (Cumulative Volume Delta) for given time window"""
+        """
+        LEGACY METHOD - Kept for backward compatibility during warmup/backfill
+        
+        For real-time updates, use update_cvd_stream() instead (O(1) vs O(N))
+        """
         try:
             if not trades:
                 return None
@@ -302,8 +397,6 @@ class Indicators:
                     self.cvd_1m_smoothed = cvd
                 else:
                     self.cvd_1m_smoothed = self.alpha * cvd + (1 - self.alpha) * self.cvd_1m_smoothed
-                
-                # DO NOT track history for 1m (would corrupt 5m velocity calculation)
                 return self.cvd_1m_smoothed
                 
             elif window_seconds == 300:
@@ -312,7 +405,7 @@ class Indicators:
                 else:
                     self.cvd_5m_smoothed = self.alpha * cvd + (1 - self.alpha) * self.cvd_5m_smoothed
                 
-                # ALPHA ENHANCEMENT: Track CVD history ONLY for 5m (primary timeframe for velocity)
+                # Track CVD history for 5m
                 self.cvd_history.append(self.cvd_5m_smoothed)
                 if len(self.cvd_history) > self.max_history_length:
                     self.cvd_history.pop(0)
