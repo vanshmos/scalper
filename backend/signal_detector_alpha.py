@@ -24,19 +24,20 @@ class SignalDetector:
     """
     
     def __init__(self):
-        # V2.0 SURVIVAL FIX: Raised thresholds for higher quality signals
-        self.forming_threshold = 80   # Raised from 65: Only form high-quality signals
-        self.active_threshold = 88    # Raised from 80: Fire signal only for premium quality
+        # V2.1 REBALANCED: Quality + Usable Frequency
+        self.forming_threshold = 70   # Lowered for better signal detection
+        self.active_threshold = 75    # Rebalanced from 88 (was mathematically impossible)
         
         # Hard gate limits
         self.max_ema_distance_pct = 1.0  # Must be within 1% of EMA20
         self.max_spread_bps = 5.0        # Spread must be < 5 bps
-        self.min_flow_threshold = 0.08   # CVD or OBI must be > 0.08 or < -0.08
+        self.min_cvd_threshold = 0.05    # Lowered from 0.08 for realistic signals
+        self.min_obi_threshold = 0.08    # Lowered from 0.1 for realistic signals
         self.min_atr = 100               # Minimum ATR for sufficient volatility ($100)
         
         # ALPHA ENHANCEMENTS
         self.vwap_distance_threshold = 0.02  # 2% max distance from VWAP (adjusted for crypto volatility)
-        self.min_velocity_threshold = 0.001   # Minimum positive velocity for LONG
+        self.min_velocity_threshold = 0.001   # Minimum positive velocity for LONG (acceleration check)
     
     def check_velocity_signal(
         self,
@@ -278,16 +279,23 @@ class SignalDetector:
         self,
         direction: SignalDirection,
         current_price: Optional[float],
-        bollinger: Optional[Dict]
+        bollinger: Optional[Dict],
+        regime: Optional[RegimeType] = None
     ) -> Dict:
         """
-        SURVIVAL FIX: Mean Reversion Guard
+        V2.1 REBALANCED: Mean Reversion Guard (Advisory Only)
         
-        Prevents entering at extremes:
-        - LONG: Fail if Price > Bollinger Upper (overextended)
-        - SHORT: Fail if Price < Bollinger Lower (oversold bounce)
+        Now REGIME-AWARE:
+        - TRENDING: Allow band pushes (let winners run) - NO PENALTY
+        - RANGING: Warn on extremes but don't veto - ADVISORY
+        
+        Returns score penalty (not a hard veto)
         """
-        result = {'pass': True, 'detail': 'No Bollinger data'}
+        result = {
+            'pass': True, 
+            'detail': 'No Bollinger data',
+            'score_penalty': 0  # NEW: Advisory penalty instead of veto
+        }
         
         if not bollinger or not current_price:
             return result
@@ -298,20 +306,32 @@ class SignalDetector:
         if upper is None or lower is None:
             return result
         
+        # In TRENDING regimes, allow band pushes (momentum continuation)
+        if regime in [RegimeType.TRENDING_BULL, RegimeType.TRENDING_BEAR]:
+            result['pass'] = True
+            result['detail'] = f'✓ TRENDING regime - Band push allowed'
+            result['score_penalty'] = 0
+            return result
+        
+        # In RANGING markets, apply advisory penalty (not veto)
         if direction == SignalDirection.LONG:
             if current_price > upper:
-                result['pass'] = False
-                result['detail'] = f'✗ Price ${current_price:.2f} > BB Upper ${upper:.2f} - Overextended'
+                result['pass'] = True  # Changed from False - advisory only
+                result['detail'] = f'⚠️ Price ${current_price:.2f} > BB Upper ${upper:.2f} (RANGING - risk of pullback)'
+                result['score_penalty'] = -10  # Reduce score but don't block
             else:
                 result['pass'] = True
                 result['detail'] = f'✓ Price below BB Upper - Room to run'
+                result['score_penalty'] = 0
         else:  # SHORT
             if current_price < lower:
-                result['pass'] = False
-                result['detail'] = f'✗ Price ${current_price:.2f} < BB Lower ${lower:.2f} - Oversold'
+                result['pass'] = True  # Changed from False - advisory only
+                result['detail'] = f'⚠️ Price ${current_price:.2f} < BB Lower ${lower:.2f} (RANGING - risk of bounce)'
+                result['score_penalty'] = -10  # Reduce score but don't block
             else:
                 result['pass'] = True
                 result['detail'] = f'✓ Price above BB Lower - Room to fall'
+                result['score_penalty'] = 0
         
         return result
     
@@ -322,31 +342,33 @@ class SignalDetector:
         forming_candle_open: Optional[float]
     ) -> Dict:
         """
-        SURVIVAL FIX: Falling Knife Protection
+        V2.1 REMOVED: Candle Color Guard
         
-        Prevents catching falling knives:
-        - LONG: Fail if Price < Open (red candle forming - downward momentum)
-        - SHORT: Fail if Price > Open (green candle forming - upward momentum)
+        REASON: For scalping, we WANT to buy red candles (dip) if CVD is strong.
+        Waiting for green confirmation is too slow and misses entries.
+        
+        This function now returns advisory info only (no blocking).
         """
-        result = {'pass': True, 'detail': 'No candle data'}
+        result = {'pass': True, 'detail': 'Advisory only (not enforced)'}
         
         if current_price is None or forming_candle_open is None:
             return result
         
+        # Advisory only - provide info but don't block
         if direction == SignalDirection.LONG:
             if current_price < forming_candle_open:
-                result['pass'] = False
-                result['detail'] = f'✗ Red candle forming (Price < Open) - Falling knife'
+                result['pass'] = True  # Changed from False
+                result['detail'] = f'ℹ️ Red candle (buying dip if flow strong)'
             else:
                 result['pass'] = True
-                result['detail'] = f'✓ Green candle forming - Bullish momentum'
+                result['detail'] = f'ℹ️ Green candle (momentum entry)'
         else:  # SHORT
             if current_price > forming_candle_open:
-                result['pass'] = False
-                result['detail'] = f'✗ Green candle forming (Price > Open) - Rising knife'
+                result['pass'] = True  # Changed from False
+                result['detail'] = f'ℹ️ Green candle (selling rip if flow weak)'
             else:
                 result['pass'] = True
-                result['detail'] = f'✓ Red candle forming - Bearish momentum'
+                result['detail'] = f'ℹ️ Red candle (momentum entry)'
         
         return result
     
