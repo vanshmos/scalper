@@ -537,31 +537,55 @@ class SignalDetector:
             # Calculate base score (simplified version of original logic)
             base_score = 0
             
-            # 1. Regime (20 points) - V2.1: More generous in RANGING
+            # 1. Regime (20 points) - V2.1: More generous in RANGING + HFT Mean Reversion
             if direction == SignalDirection.LONG:
                 if regime == RegimeType.TRENDING_BULL:
                     base_score += 20
                     result['breakdown']['regime'] = {'points': 20, 'detail': 'TRENDING_BULL'}
-                elif regime == RegimeType.RANGING and rsi_5m is not None and rsi_5m < 35:
-                    # Mean reversion: Oversold in ranging market
-                    base_score += 15  # Increased from 12
-                    result['breakdown']['regime'] = {'points': 15, 'detail': f'RANGING+OVERSOLD (RSI {rsi_5m:.0f})'}
                 elif regime == RegimeType.RANGING:
-                    # Partial points for RANGING without extreme RSI
-                    base_score += 8  # NEW: Don't completely handicap RANGING
-                    result['breakdown']['regime'] = {'points': 8, 'detail': 'RANGING (neutral)'}
+                    # HFT MEAN REVERSION: Enhanced Bollinger + RSI logic for scalping
+                    # HIGH QUALITY: Price < BB Lower AND RSI < 30 (extreme oversold)
+                    if (bollinger and current_price and 
+                        current_price < bollinger.get('lower', float('inf')) and
+                        rsi_5m is not None and rsi_5m < 30):
+                        base_score += 20  # Full points for perfect mean reversion setup
+                        result['breakdown']['regime'] = {
+                            'points': 20, 
+                            'detail': f'RANGING+MEAN_REVERSION (Price<BB_Lower, RSI={rsi_5m:.0f}) - HIGH QUALITY'
+                        }
+                    # GOOD: RSI oversold (< 35) even without Bollinger confirmation
+                    elif rsi_5m is not None and rsi_5m < 35:
+                        base_score += 15  # Good mean reversion signal
+                        result['breakdown']['regime'] = {'points': 15, 'detail': f'RANGING+OVERSOLD (RSI {rsi_5m:.0f})'}
+                    # NEUTRAL: Just ranging
+                    else:
+                        base_score += 8  # Partial credit for ranging
+                        result['breakdown']['regime'] = {'points': 8, 'detail': 'RANGING (neutral)'}
             else:
                 if regime == RegimeType.TRENDING_BEAR:
                     base_score += 20
                     result['breakdown']['regime'] = {'points': 20, 'detail': 'TRENDING_BEAR'}
-                elif regime == RegimeType.RANGING and rsi_5m is not None and rsi_5m > 65:
-                    # Mean reversion: Overbought in ranging market
-                    base_score += 15  # Increased from 12
-                    result['breakdown']['regime'] = {'points': 15, 'detail': f'RANGING+OVERBOUGHT (RSI {rsi_5m:.0f})'}
                 elif regime == RegimeType.RANGING:
-                    # Partial points for RANGING without extreme RSI
-                    base_score += 8  # NEW: Don't completely handicap RANGING
-                    result['breakdown']['regime'] = {'points': 8, 'detail': 'RANGING (neutral)'}
+                    # HFT MEAN REVERSION: Enhanced Bollinger + RSI logic for scalping
+                    # HIGH QUALITY: Price > BB Upper AND RSI > 70 (extreme overbought)
+                    if (bollinger and current_price and 
+                        current_price > bollinger.get('upper', float('-inf')) and
+                        rsi_5m is not None and rsi_5m > 70):
+                        base_score += 20  # Full points for perfect mean reversion setup
+                        result['breakdown']['regime'] = {
+                            'points': 20,
+                            'detail': f'RANGING+MEAN_REVERSION (Price>BB_Upper, RSI={rsi_5m:.0f}) - HIGH QUALITY'
+                        }
+                    # GOOD: RSI overbought (> 65) even without Bollinger confirmation
+                    elif rsi_5m is not None and rsi_5m > 65:
+                        base_score += 15  # Good mean reversion signal
+                        result['breakdown']['regime'] = {'points': 15, 'detail': f'RANGING+OVERBOUGHT (RSI {rsi_5m:.0f})'}
+                    # NEUTRAL: Just ranging
+                    else:
+                        base_score += 8  # Partial credit for ranging
+                        result['breakdown']['regime'] = {'points': 8, 'detail': 'RANGING (neutral)'}
+                        
+
             
             # 2. Trend Alignment (15 points)
             aligned = 0
